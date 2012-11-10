@@ -172,12 +172,64 @@ int shapefile_cmd_bounds(ClientData clientData, Tcl_Interp *interp, int objc, Tc
 	return TCL_OK;
 }
 
+int shapefile_cmd_fields(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
+	ShapefilePtr shapefile = (ShapefilePtr)clientData;
+	int fieldCount, fieldi;
+	Tcl_Obj *fieldSpec;
+	char name[12];
+	int width, precision;
+	DBFFieldType type;
+
+	if (objc > 2) {
+		Tcl_WrongNumArgs(interp, 2, objv, NULL);
+		return TCL_ERROR;
+	}
+	
+	fieldCount = DBFGetFieldCount(shapefile->dbf);
+	
+	fieldSpec = Tcl_NewListObj(0, NULL);
+	
+	for (fieldi = 0; fieldi < fieldCount; fieldi++) {
+		
+		type = DBFGetFieldInfo(shapefile->dbf, fieldi, name, &width, &precision);
+		
+		switch (type) {
+			case FTString:
+				if (Tcl_ListObjAppendElement(interp, fieldSpec, Tcl_NewStringObj("string", -1)) != TCL_OK)
+					return TCL_ERROR;
+				break;
+			case FTInteger:
+				if (Tcl_ListObjAppendElement(interp, fieldSpec, Tcl_NewStringObj("integer", -1)) != TCL_OK)
+					return TCL_ERROR;
+				break;
+			case FTDouble:
+				if (Tcl_ListObjAppendElement(interp, fieldSpec, Tcl_NewStringObj("double", -1)) != TCL_OK)
+					return TCL_ERROR;
+				break;
+			default:
+				/* at this point it's already loaded - either handle it gracefully,
+				   or check for invalid/unsupported field types on open/creation */
+				Tcl_SetResult(interp, "unsupport field type", TCL_STATIC);
+				return TCL_ERROR;
+				break;
+		}
+		
+		if (Tcl_ListObjAppendElement(interp, fieldSpec, Tcl_NewStringObj(name, -1)) != TCL_OK)
+			return TCL_ERROR;
+		if (Tcl_ListObjAppendElement(interp, fieldSpec, Tcl_NewIntObj(width)) != TCL_OK)
+			return TCL_ERROR;
+		if (Tcl_ListObjAppendElement(interp, fieldSpec, Tcl_NewIntObj(precision)) != TCL_OK)
+			return TCL_ERROR;
+	}
+	
+	Tcl_SetObjResult(interp, fieldSpec);
+	return TCL_OK;
+}
+
 /* shapefile_cmd_read */
 
 /* shapefile_cmd_write */
 
-/* shapefile_cmd_fields */
-/* note that the dbf api does support adding/removing fields to extant files */
 
 /* dispatches subcommands */
 int shapefile_commands(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
@@ -200,6 +252,8 @@ int shapefile_commands(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_
 		return shapefile_cmd_bounds(clientData, interp, objc, objv);
 	else if (strcmp(subcommand, "info") == 0)
 		return shapefile_cmd_info(clientData, interp, objc, objv);
+	else if (strcmp(subcommand, "fields") == 0)
+		return shapefile_cmd_fields(clientData, interp, objc, objv);
 	
 	Tcl_SetResult(interp, "unrecognized subcommand", TCL_STATIC);
 	return TCL_ERROR;
