@@ -217,6 +217,57 @@ int shapefile_cmd_fields(ClientData clientData, Tcl_Interp *interp, int objc, Tc
 	return TCL_OK;
 }
 
+int shapefile_cmd_attributes(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
+	ShapefilePtr shapefile = (ShapefilePtr)clientData;
+	int recordId, dbfCount;
+	int fieldCount, fieldi;
+	DBFFieldType fieldType;
+	Tcl_Obj *attributes;
+	
+	if (objc != 3) {
+		Tcl_WrongNumArgs(interp, 2, objv, "ID");
+		return TCL_ERROR;
+	}
+	
+	if (Tcl_GetIntFromObj(interp, objv[2], &recordId) != TCL_OK)
+		return TCL_ERROR;
+	
+	dbfCount = DBFGetRecordCount(shapefile->dbf);
+	if (recordId < 0 || recordId >= dbfCount) {
+		Tcl_SetResult(interp, "invalid record id", TCL_STATIC);
+		return TCL_ERROR;
+	}
+	
+	attributes = Tcl_NewListObj(0, NULL);
+	
+	/* should check DBFIsAttributeNULL first */
+	fieldCount = DBFGetFieldCount(shapefile->dbf);
+	for (fieldi = 0; fieldi < fieldCount; fieldi++) {
+		fieldType = DBFGetFieldInfo(shapefile->dbf, fieldi, NULL, NULL, NULL);
+		switch (fieldType) {
+			case FTInteger:
+				if (Tcl_ListObjAppendElement(interp, attributes,
+						Tcl_NewIntObj(DBFReadIntegerAttribute(shapefile->dbf, recordId, fieldi))) != TCL_OK)
+					return TCL_ERROR;				
+				break;
+			case FTDouble:
+				if (Tcl_ListObjAppendElement(interp, attributes,
+						Tcl_NewDoubleObj(DBFReadDoubleAttribute(shapefile->dbf, recordId, fieldi))) != TCL_OK)
+					return TCL_ERROR;
+				break;
+			case FTString:
+			default:
+				/* for now, just return the string value of any other field types */
+				if (Tcl_ListObjAppendElement(interp, attributes,
+						Tcl_NewStringObj(DBFReadStringAttribute(shapefile->dbf, recordId, fieldi), -1)) != TCL_OK)
+					return TCL_ERROR;
+				break;
+		}
+	}
+	
+	Tcl_SetObjResult(interp, attributes);	
+	return TCL_OK;
+}
 
 /* dispatches subcommands */
 int shapefile_commands(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
@@ -241,6 +292,8 @@ int shapefile_commands(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_
 		return shapefile_cmd_mode(clientData, interp, objc, objv);
 	else if (strcmp(subcommand, "fields") == 0)
 		return shapefile_cmd_fields(clientData, interp, objc, objv);
+	else if (strcmp(subcommand, "attributes") == 0)
+		return shapefile_cmd_attributes(clientData, interp, objc, objv);
 	
 	Tcl_SetResult(interp, "unrecognized subcommand", TCL_STATIC);
 	return TCL_ERROR;
