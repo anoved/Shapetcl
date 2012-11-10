@@ -253,6 +253,9 @@ int shapetcl_command(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Ob
 		
 		const char *shpTypeName = Tcl_GetStringFromObj(objv[2], NULL);
 		int shpType;
+		int fieldSpecCount;
+		Tcl_Obj **fieldSpec;
+		int fieldi;
 		
 		if (strcmp(shpTypeName, "point") == 0)
 			shpType = SHPT_POINT;
@@ -279,6 +282,58 @@ int shapetcl_command(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Ob
 		
 		/* add fields to dbf now based on field specs in objv[3] */
 		
+		if (Tcl_ListObjGetElements(interp, objv[3], &fieldSpecCount, &fieldSpec) != TCL_OK) {
+			return TCL_ERROR;
+		}
+		
+		if (fieldSpecCount % 4 != 0) {
+			Tcl_SetResult(interp, "malformed field specification", TCL_STATIC);
+			return TCL_ERROR;
+		}
+		
+		for (fieldi = 0; fieldi < fieldSpecCount; fieldi += 4) {
+			/*
+				fieldi		type
+				fieldi + 1	name
+				fieldi + 2	width
+				fieldi + 3	precision
+			*/
+			
+			const char *type, *name;
+			int width, precision;
+			
+			type = Tcl_GetStringFromObj(fieldSpec[fieldi], NULL);
+			name = Tcl_GetStringFromObj(fieldSpec[fieldi + 1], NULL);
+			
+			if (Tcl_GetIntFromObj(interp, fieldSpec[fieldi + 2], &width) != TCL_OK)
+				return TCL_ERROR;
+
+			if (Tcl_GetIntFromObj(interp, fieldSpec[fieldi + 3], &precision) != TCL_OK)
+				return TCL_ERROR;
+			
+			if (strcmp(type, "string") == 0) {
+				if (DBFAddField(shapefile->dbf, name, FTString, width, 0) == -1) {
+					Tcl_SetResult(interp, "cannot create string field", TCL_STATIC);
+					return TCL_ERROR;
+				}
+			}
+			else if (strcmp(type, "integer") == 0) {
+				if (DBFAddField(shapefile->dbf, name, FTInteger, width, 0) == -1) {
+					Tcl_SetResult(interp, "cannot create integer field", TCL_STATIC);
+					return TCL_ERROR;
+				}
+			}
+			else if (strcmp(type, "double") == 0) {
+				if (DBFAddField(shapefile->dbf, name, FTDouble, width, precision) == -1) {
+					Tcl_SetResult(interp, "cannot create double field", TCL_STATIC);
+					return TCL_ERROR;
+				}
+			}
+			else {
+				Tcl_SetResult(interp, "unrecognized field type", TCL_STATIC);
+				return TCL_ERROR;
+			}
+		}
 	}
 	else {		
 		if ((shapefile->shp = SHPOpen(path, shapefile->readonly ? "rb" : "rb+")) == NULL) {
