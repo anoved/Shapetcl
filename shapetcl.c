@@ -36,25 +36,18 @@ int shapefile_cmd_close(ClientData clientData, Tcl_Interp *interp, int objc, Tcl
 	return TCL_OK;
 }
 
-/* turn this into a general info getter; allow shapefile path lookup, etc. */
-int shapefile_cmd_info(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
+int shapefile_cmd_mode(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
 	ShapefilePtr shapefile = (ShapefilePtr)clientData;
-	const char *query;
 
-	if (objc != 3) {
-		Tcl_WrongNumArgs(interp, 2, objv, "setting");
+	if (objc != 2) {
+		Tcl_WrongNumArgs(interp, 2, objv, NULL);
 		return TCL_ERROR;
 	}
 	
-	query = Tcl_GetStringFromObj(objv[2], NULL);
-	
-	if (strcmp(query, "readonly") == 0) {
-		Tcl_SetObjResult(interp, Tcl_NewBooleanObj(shapefile->readonly));
-	}
-	else {
-		Tcl_SetResult(interp, "unrecognized setting", TCL_STATIC);
-		return TCL_ERROR;
-	}
+	if (shapefile->readonly)
+		Tcl_SetResult(interp, "rb", TCL_STATIC);
+	else
+		Tcl_SetResult(interp, "rb+", TCL_STATIC);
 	
 	return TCL_OK;
 }
@@ -186,13 +179,11 @@ int shapefile_cmd_fields(ClientData clientData, Tcl_Interp *interp, int objc, Tc
 	}
 	
 	fieldCount = DBFGetFieldCount(shapefile->dbf);
-	
 	fieldSpec = Tcl_NewListObj(0, NULL);
 	
 	for (fieldi = 0; fieldi < fieldCount; fieldi++) {
-		
 		type = DBFGetFieldInfo(shapefile->dbf, fieldi, name, &width, &precision);
-		
+				
 		switch (type) {
 			case FTString:
 				if (Tcl_ListObjAppendElement(interp, fieldSpec, Tcl_NewStringObj("string", -1)) != TCL_OK)
@@ -226,10 +217,6 @@ int shapefile_cmd_fields(ClientData clientData, Tcl_Interp *interp, int objc, Tc
 	return TCL_OK;
 }
 
-/* shapefile_cmd_read */
-
-/* shapefile_cmd_write */
-
 
 /* dispatches subcommands */
 int shapefile_commands(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
@@ -250,8 +237,8 @@ int shapefile_commands(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_
 		return shapefile_cmd_type(clientData, interp, objc, objv);
 	else if (strcmp(subcommand, "bounds") == 0)
 		return shapefile_cmd_bounds(clientData, interp, objc, objv);
-	else if (strcmp(subcommand, "info") == 0)
-		return shapefile_cmd_info(clientData, interp, objc, objv);
+	else if (strcmp(subcommand, "mode") == 0)
+		return shapefile_cmd_mode(clientData, interp, objc, objv);
 	else if (strcmp(subcommand, "fields") == 0)
 		return shapefile_cmd_fields(clientData, interp, objc, objv);
 	
