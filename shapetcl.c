@@ -220,13 +220,15 @@ int shapetcl_command(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Ob
 	ShapefilePtr shapefile;
 	const char *path;
 	char cmdName[16];
-	int readonly = 0;
+	int readonly = 0; /* readwrite access by default */
 	
 	if (objc < 2 || objc > 4) {
 		Tcl_SetResult(interp, "shapetcl path [rb|rb+]|type fields", TCL_STATIC);
 		return TCL_ERROR;
 	}
-	
+
+	path = Tcl_GetStringFromObj(objv[1], NULL);
+
 	if (objc == 3) {
 		/* opening an existing file, and an access mode is explicitly set */
 		const char *mode = Tcl_GetStringFromObj(objv[2], NULL);
@@ -242,28 +244,52 @@ int shapetcl_command(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Ob
 		}
 	}
 	
-	if (objc == 4) {
-		/* create a new file; access is readwrite. */
-		Tcl_SetResult(interp, "shapefile creation is not yet implemented", TCL_STATIC);
-		return TCL_ERROR;	 
-	}
-	
+	/* need to ckfree this manually on any subsequent TCL_ERROR here? */
 	shapefile = (ShapefilePtr)ckalloc(sizeof(shapetcl_shapefile));
 	shapefile->readonly = readonly;
 	
-	path = Tcl_GetStringFromObj(objv[1], NULL);
-	
-	/* Internally, SHPOpen and DBFOpen both strip off any file extension and
-	   append the appropriate suffix - so we can pass the same path to both. */
-	
-	if ((shapefile->shp = SHPOpen(path, shapefile->readonly ? "rb" : "rb+")) == NULL) {
-		Tcl_SetResult(interp, "cannot open .shp", TCL_STATIC);
-		return TCL_ERROR;
+	if (objc == 4) {
+		/* create a new file; access is readwrite. */
+		
+		const char *shpTypeName = Tcl_GetStringFromObj(objv[2], NULL);
+		int shpType;
+		
+		if (strcmp(shpTypeName, "point") == 0)
+			shpType = SHPT_POINT;
+		else if (strcmp(shpTypeName, "arc") == 0)
+			shpType = SHPT_ARC;
+		else if (strcmp(shpTypeName, "polygon") == 0)
+			shpType = SHPT_POLYGON;
+		else if (strcmp(shpTypeName, "multipoint") == 0)
+			shpType = SHPT_MULTIPOINT;
+		else {
+			Tcl_SetResult(interp, "unrecognized shape type", TCL_STATIC);
+			return TCL_ERROR;
+		}
+		
+		if ((shapefile->shp = SHPCreate(path, shpType)) == NULL) {
+			Tcl_SetResult(interp, "cannot create .shp", TCL_STATIC);
+			return TCL_ERROR;
+		}
+		
+		if ((shapefile->dbf = DBFCreate(path)) == NULL) {
+			Tcl_SetResult(interp, "cannot create .dbf", TCL_STATIC);
+			return TCL_ERROR;
+		}
+		
+		/* add fields to dbf now based on field specs in objv[3] */
+		
 	}
-	
-	if ((shapefile->dbf = DBFOpen(path, shapefile->readonly ? "rb" : "rb+")) == NULL) {
-		Tcl_SetResult(interp, "cannot open .dbf", TCL_STATIC);
-		return TCL_ERROR;
+	else {		
+		if ((shapefile->shp = SHPOpen(path, shapefile->readonly ? "rb" : "rb+")) == NULL) {
+			Tcl_SetResult(interp, "cannot open .shp", TCL_STATIC);
+			return TCL_ERROR;
+		}
+		
+		if ((shapefile->dbf = DBFOpen(path, shapefile->readonly ? "rb" : "rb+")) == NULL) {
+			Tcl_SetResult(interp, "cannot open .dbf", TCL_STATIC);
+			return TCL_ERROR;
+		}
 	}
 	
 	sprintf(cmdName, "shapefile.%04X", COMMAND_COUNT++);
