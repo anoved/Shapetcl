@@ -28,7 +28,7 @@ Shapetcl.dylib: shapetcl.o $(SHAPELIB_OBJS)
 			-o Shapetcl.dylib \
 			shapetcl.o $(SHAPELIB_OBJS) \
 			-L$(TCL_PREFIX)/lib -ltcl8.5
-	echo "pkg_mkIndex . shapetcl.dylib" | $(TCL)
+	echo "pkg_mkIndex . Shapetcl.dylib" | $(TCL)
 
 clean:
 	rm -f Shapetcl.dylib shapetcl.o

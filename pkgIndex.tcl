@@ -8,4 +8,4 @@
 # script is sourced, the variable $dir must contain the
 # full path name of this file's directory.
 
-package ifneeded Shapetcl 0.1 [list load [file join $dir shapetcl.dylib]]
+package ifneeded Shapetcl 0.1 [list load [file join $dir Shapetcl.dylib]]
