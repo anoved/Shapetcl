@@ -32,7 +32,7 @@ int shapefile_cmd_close(ClientData clientData, Tcl_Interp *interp, int objc, Tcl
 	shapefile->dbf = NULL;
 	
 	printf("deleting command %s\n", cmdName);
-	/* triggers the deleteProc shapetcl_cleanup */
+	/* triggers the deleteProc shapefile_cleanup */
 	Tcl_DeleteCommand(interp, cmdName);
 	
 	return TCL_OK;
@@ -370,7 +370,7 @@ int shapefile_commands(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_
 	return TCL_ERROR;
 }
 
-void shapetcl_cleanup(ClientData clientData) {
+void shapefile_cleanup(ClientData clientData) {
 	ShapefilePtr shapefile = (ShapefilePtr)clientData;
 	printf("ckfreeing ShapefilePtr\n");
 	ckfree((char *)shapefile);
@@ -513,7 +513,7 @@ int shapetcl_command(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Ob
 	}
 	
 	sprintf(cmdName, "shapefile.%04X", COMMAND_COUNT++);
-	Tcl_CreateObjCommand(interp, cmdName, shapefile_commands, (ClientData)shapefile, shapetcl_cleanup);
+	Tcl_CreateObjCommand(interp, cmdName, shapefile_commands, (ClientData)shapefile, shapefile_cleanup);
 	Tcl_SetObjResult(interp, Tcl_NewStringObj(cmdName, -1));
 		
 	return TCL_OK;
