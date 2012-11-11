@@ -315,8 +315,8 @@ int shapefile_cmd_attributes(ClientData clientData, Tcl_Interp *interp, int objc
 	DBFFieldType fieldType;
 	Tcl_Obj *attributes;
 	
-	if (objc != 3) {
-		Tcl_WrongNumArgs(interp, 2, objv, "ID");
+	if (objc != 3 && objc != 4) {
+		Tcl_WrongNumArgs(interp, 2, objv, "ID [attributes]");
 		return TCL_ERROR;
 	}
 	
@@ -329,34 +329,121 @@ int shapefile_cmd_attributes(ClientData clientData, Tcl_Interp *interp, int objc
 		return TCL_ERROR;
 	}
 	
-	attributes = Tcl_NewListObj(0, NULL);
-	
-	/* should check DBFIsAttributeNULL first */
 	fieldCount = DBFGetFieldCount(shapefile->dbf);
-	for (fieldi = 0; fieldi < fieldCount; fieldi++) {
-		fieldType = DBFGetFieldInfo(shapefile->dbf, fieldi, NULL, NULL, NULL);
-		switch (fieldType) {
-			case FTInteger:
-				if (Tcl_ListObjAppendElement(interp, attributes,
-						Tcl_NewIntObj(DBFReadIntegerAttribute(shapefile->dbf, recordId, fieldi))) != TCL_OK)
-					return TCL_ERROR;				
-				break;
-			case FTDouble:
-				if (Tcl_ListObjAppendElement(interp, attributes,
-						Tcl_NewDoubleObj(DBFReadDoubleAttribute(shapefile->dbf, recordId, fieldi))) != TCL_OK)
-					return TCL_ERROR;
-				break;
-			case FTString:
-			default:
-				/* for now, just return the string value of any other field types */
-				if (Tcl_ListObjAppendElement(interp, attributes,
-						Tcl_NewStringObj(DBFReadStringAttribute(shapefile->dbf, recordId, fieldi), -1)) != TCL_OK)
-					return TCL_ERROR;
-				break;
+	
+	if (objc == 4) {
+		int attrCount;
+		Tcl_Obj *attr;
+		int intValue;
+		double doubleValue;
+		const char *stringValue;
+				
+		/* output mode; objv[3] is attribute list to write to recordId */
+		
+		if (shapefile->readonly) {
+			Tcl_SetResult(interp, "cannot write attributes with readonly access", TCL_STATIC);
+			return TCL_ERROR;
 		}
+		
+		if (Tcl_ListObjLength(interp, objv[3], &attrCount) != TCL_OK)
+			return TCL_ERROR;
+		
+		if (attrCount != fieldCount) {
+			Tcl_SetResult(interp, "attribute count does not match field count", TCL_STATIC);
+			return TCL_ERROR;
+		}
+		
+		for (fieldi = 0; fieldi < fieldCount; fieldi++) {
+			fieldType = DBFGetFieldInfo(shapefile->dbf, fieldi, NULL, NULL, NULL);
+			
+			if (Tcl_ListObjIndex(interp, objv[3], fieldi, &attr) != TCL_OK)
+				return TCL_ERROR;
+			
+			/* note that DBFWrite*Attribute failure may indicate that the value
+			   was truncated - ie, that it was too wide to fit the field */
+			
+			switch (fieldType) {
+				case FTInteger:
+					
+					if (Tcl_GetIntFromObj(interp, attr, &intValue) != TCL_OK)
+						return TCL_ERROR;
+					
+					if (!DBFWriteIntegerAttribute(shapefile->dbf, recordId, fieldi, intValue)) {
+						Tcl_SetResult(interp, "cannot write integer attribute", TCL_STATIC);
+						return TCL_ERROR;
+					}
+					
+					break;
+				
+				case FTDouble:
+				
+					if (Tcl_GetDoubleFromObj(interp, attr, &doubleValue) != TCL_OK)
+						return TCL_ERROR;
+					
+					if (!DBFWriteDoubleAttribute(shapefile->dbf, recordId, fieldi, doubleValue)) {
+						Tcl_SetResult(interp, "cannot write double attribute", TCL_STATIC);
+						return TCL_ERROR;
+					}
+					
+					break;
+				
+				case FTString:
+					
+					if ((stringValue = Tcl_GetStringFromObj(attr, NULL)) == NULL)
+						return TCL_ERROR;
+					
+					if (!DBFWriteStringAttribute(shapefile->dbf, recordId, fieldi, stringValue)) {
+						Tcl_SetResult(interp, "cannot write string attribute", TCL_STATIC);
+						return TCL_ERROR;
+					}
+					
+					break;
+				
+				default:
+					
+					Tcl_SetResult(interp, "cannot write attributes to unsupported field type", TCL_STATIC);
+					return TCL_ERROR;
+					
+					break;
+			}
+		}
+		
+		/* return id of written attribute record */
+		Tcl_SetObjResult(interp, Tcl_NewIntObj(recordId));
+	}
+	else {
+		/* input mode; return list of attributes from recordId */
+		
+		attributes = Tcl_NewListObj(0, NULL);
+		
+		/* should check DBFIsAttributeNULL first */
+		for (fieldi = 0; fieldi < fieldCount; fieldi++) {
+			fieldType = DBFGetFieldInfo(shapefile->dbf, fieldi, NULL, NULL, NULL);
+			switch (fieldType) {
+				case FTInteger:
+					if (Tcl_ListObjAppendElement(interp, attributes,
+							Tcl_NewIntObj(DBFReadIntegerAttribute(shapefile->dbf, recordId, fieldi))) != TCL_OK)
+						return TCL_ERROR;				
+					break;
+				case FTDouble:
+					if (Tcl_ListObjAppendElement(interp, attributes,
+							Tcl_NewDoubleObj(DBFReadDoubleAttribute(shapefile->dbf, recordId, fieldi))) != TCL_OK)
+						return TCL_ERROR;
+					break;
+				case FTString:
+				default:
+					/* for now, just return the string value of any other field types */
+					if (Tcl_ListObjAppendElement(interp, attributes,
+							Tcl_NewStringObj(DBFReadStringAttribute(shapefile->dbf, recordId, fieldi), -1)) != TCL_OK)
+						return TCL_ERROR;
+					break;
+			}
+		}
+		
+		/* return attribute list */
+		Tcl_SetObjResult(interp, attributes);
 	}
 	
-	Tcl_SetObjResult(interp, attributes);	
 	return TCL_OK;
 }
 
