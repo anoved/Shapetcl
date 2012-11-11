@@ -12,6 +12,8 @@ typedef shapetcl_shapefile * ShapefilePtr;
 
 static int COMMAND_COUNT = 0;
 
+/* is there a way to register this to be called automatically if exiting? */
+/* maybe that's what the cleanup proc does... */
 int shapefile_cmd_close(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
 	ShapefilePtr shapefile = (ShapefilePtr)clientData;
 	const char *cmdName = Tcl_GetStringFromObj(objv[0], NULL);
@@ -217,6 +219,73 @@ int shapefile_cmd_fields(ClientData clientData, Tcl_Interp *interp, int objc, Tc
 	return TCL_OK;
 }
 
+int shapefile_cmd_coords(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
+	ShapefilePtr shapefile = (ShapefilePtr)clientData;
+	int featureId;
+	SHPObject *shape;
+	Tcl_Obj *coordParts;
+	int part, partCount, vertex, vertexStart, vertexStop;
+	
+	if (objc != 3) {
+		Tcl_WrongNumArgs(interp, 2, objv, "ID");
+		return TCL_ERROR;
+	}
+	
+	if (Tcl_GetIntFromObj(interp, objv[2], &featureId) != TCL_OK)
+		return TCL_ERROR;
+	
+	if ((shape = SHPReadObject(shapefile->shp, featureId)) == NULL) {
+		Tcl_SetResult(interp, "invalid feature id", TCL_STATIC);
+		return TCL_ERROR;
+	}
+	
+	/* prepare a list of coordinate lists; each member list represents one part
+	   (a "ring") of the feature. Some features only have one part. */
+	coordParts = Tcl_NewListObj(0, NULL);
+	
+	/* initialize vertex indices. if there's only one part, add all vertices;
+	   if there are multiple parts, stop adding vertices at 1st part boundary */
+	part = 0;
+	vertexStart = 0;
+	if (shape->nParts < 2) {
+		partCount = 1;
+		vertexStop = shape->nVertices;
+	} else {
+		partCount = shape->nParts;
+		vertexStop = shape->panPartStart[1];
+	}
+	
+	while (part < partCount) {
+		
+		/* prepare a coordinate list for this part */
+		Tcl_Obj *coords = Tcl_NewListObj(0, NULL);
+		
+		/* get the vertex coordinates for this part */
+		for (vertex = vertexStart; vertex < vertexStop; vertex++) {
+			if (Tcl_ListObjAppendElement(interp, coords, Tcl_NewDoubleObj(shape->padfX[vertex])) != TCL_OK)
+				return TCL_ERROR;
+			if (Tcl_ListObjAppendElement(interp, coords, Tcl_NewDoubleObj(shape->padfY[vertex])) != TCL_OK)
+				return TCL_ERROR;
+		}
+		
+		/* add this part's coordinate list to the feature's part list */
+		Tcl_ListObjAppendElement(interp, coordParts, coords);
+		
+		/* advance vertex indices to the next part (disregarded if none) */
+		vertexStart = vertex;
+		if (part + 2 < partCount)
+			vertexStop = shape->panPartStart[part + 1];
+		else
+			vertexStop = shape->nVertices;
+		part++;
+	}
+	
+	SHPDestroyObject(shape);
+	
+	Tcl_SetObjResult(interp, coordParts);
+	return TCL_OK;
+}
+
 int shapefile_cmd_attributes(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
 	ShapefilePtr shapefile = (ShapefilePtr)clientData;
 	int recordId, dbfCount;
@@ -294,6 +363,8 @@ int shapefile_commands(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_
 		return shapefile_cmd_fields(clientData, interp, objc, objv);
 	else if (strcmp(subcommand, "attributes") == 0)
 		return shapefile_cmd_attributes(clientData, interp, objc, objv);
+	else if (strcmp(subcommand, "coords") == 0)
+		return shapefile_cmd_coords(clientData, interp, objc, objv);
 	
 	Tcl_SetResult(interp, "unrecognized subcommand", TCL_STATIC);
 	return TCL_ERROR;
