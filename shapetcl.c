@@ -242,7 +242,7 @@ int shapefile_cmd_fields(ClientData clientData, Tcl_Interp *interp, int objc, Tc
 /* coords - get 2d coordinates of specified feature */
 int shapefile_cmd_coords(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
 	ShapefilePtr shapefile = (ShapefilePtr)clientData;
-	int featureId;
+	int featureId, featureCount;
 	SHPObject *shape;
 	Tcl_Obj *coordParts;
 	int part, partCount, vertex, vertexStart, vertexStop;
@@ -255,8 +255,14 @@ int shapefile_cmd_coords(ClientData clientData, Tcl_Interp *interp, int objc, Tc
 	if (Tcl_GetIntFromObj(interp, objv[2], &featureId) != TCL_OK)
 		return TCL_ERROR;
 	
-	if ((shape = SHPReadObject(shapefile->shp, featureId)) == NULL) {
+	SHPGetInfo(shapefile->shp, &featureCount, NULL, NULL, NULL);
+	if (featureId < 0 || featureId >= featureCount) {
 		Tcl_SetResult(interp, "invalid feature id", TCL_STATIC);
+		return TCL_ERROR;
+	}
+	
+	if ((shape = SHPReadObject(shapefile->shp, featureId)) == NULL) {
+		Tcl_SetResult(interp, "cannot read feature", TCL_STATIC);
 		return TCL_ERROR;
 	}
 	
