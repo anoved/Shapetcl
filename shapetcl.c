@@ -12,32 +12,48 @@ typedef shapetcl_shapefile * ShapefilePtr;
 
 static int COMMAND_COUNT = 0;
 
-/* is there a way to register this to be called automatically if exiting? */
-/* maybe that's what the cleanup proc does... */
+/* shapefile closer - invoked if manually closed or automatically on exit */
+void shapefile_util_close(ClientData clientData) {
+	ShapefilePtr shapefile = (ShapefilePtr)clientData;
+	/*printf("shapefile_util_close %lX\n", (unsigned long int)shapefile);*/
+	SHPClose(shapefile->shp);
+	shapefile->shp = NULL;
+	DBFClose(shapefile->dbf);
+	shapefile->dbf = NULL;
+}
+
+/* exit handler - invoked if shapefile is not manually closed prior to exit */
+void shapefile_util_exit(ClientData clientData) {
+	ShapefilePtr shapefile = (ShapefilePtr)clientData;
+	/*printf("shapefile_util_exit %lX\n", (long unsigned int)shapefile);*/
+	shapefile_util_close(shapefile);
+}
+
+/* delete proc - invoked if shapefile is manually closed. deletes exit handler */
+void shapefile_util_delete(ClientData clientData) {
+	ShapefilePtr shapefile = (ShapefilePtr)clientData;
+	/*printf("shapefile_util_delete %lX\n", (long unsigned int)shapefile);*/
+	Tcl_DeleteExitHandler(shapefile_util_exit, shapefile);
+	ckfree((char *)shapefile);
+}
+
+/* close - flush shapefile and delete associated command */
 int shapefile_cmd_close(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
 	ShapefilePtr shapefile = (ShapefilePtr)clientData;
-	const char *cmdName = Tcl_GetStringFromObj(objv[0], NULL);
 
 	if (objc > 2) {
 		Tcl_WrongNumArgs(interp, 2, objv, NULL);
 		return TCL_ERROR;
 	}
 	
-	printf("closing shp\n");
-	SHPClose(shapefile->shp);
-	shapefile->shp = NULL;
+	shapefile_util_close(shapefile);
 	
-	printf("closing dbf\n");
-	DBFClose(shapefile->dbf);
-	shapefile->dbf = NULL;
-	
-	printf("deleting command %s\n", cmdName);
-	/* triggers the deleteProc shapefile_cleanup */
-	Tcl_DeleteCommand(interp, cmdName);
+	Tcl_DeleteCommand(interp, Tcl_GetStringFromObj(objv[0], NULL));
 	
 	return TCL_OK;
 }
 
+/* mode - report shapefile access mode (rb readonly, rb+ readwrite) */
 int shapefile_cmd_mode(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
 	ShapefilePtr shapefile = (ShapefilePtr)clientData;
 
@@ -54,6 +70,7 @@ int shapefile_cmd_mode(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_
 	return TCL_OK;
 }
 
+/* count - report number of entities in shapefile (shp & dbf should match) */
 int shapefile_cmd_count(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
 	ShapefilePtr shapefile = (ShapefilePtr)clientData;
 	int shpCount, dbfCount;
@@ -76,6 +93,7 @@ int shapefile_cmd_count(ClientData clientData, Tcl_Interp *interp, int objc, Tcl
 	return TCL_OK;
 }
 
+/* type - report type of geometry in shapefile */
 int shapefile_cmd_type(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
 	ShapefilePtr shapefile = (ShapefilePtr)clientData;
 	int shpType;
@@ -111,6 +129,7 @@ int shapefile_cmd_type(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_
 	return TCL_OK;
 }
 
+/* bounds - report 2d bounds of shapefile or specified feature */
 int shapefile_cmd_bounds(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
 	ShapefilePtr shapefile = (ShapefilePtr)clientData;
 	int shpCount;
@@ -167,6 +186,7 @@ int shapefile_cmd_bounds(ClientData clientData, Tcl_Interp *interp, int objc, Tc
 	return TCL_OK;
 }
 
+/* fields - report attribute table field definitions */
 int shapefile_cmd_fields(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
 	ShapefilePtr shapefile = (ShapefilePtr)clientData;
 	int fieldCount, fieldi;
@@ -219,6 +239,7 @@ int shapefile_cmd_fields(ClientData clientData, Tcl_Interp *interp, int objc, Tc
 	return TCL_OK;
 }
 
+/* coords - get 2d coordinates of specified feature */
 int shapefile_cmd_coords(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
 	ShapefilePtr shapefile = (ShapefilePtr)clientData;
 	int featureId;
@@ -286,6 +307,7 @@ int shapefile_cmd_coords(ClientData clientData, Tcl_Interp *interp, int objc, Tc
 	return TCL_OK;
 }
 
+/* attributes - get dbf attribute values of specified feature */
 int shapefile_cmd_attributes(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
 	ShapefilePtr shapefile = (ShapefilePtr)clientData;
 	int recordId, dbfCount;
@@ -338,7 +360,7 @@ int shapefile_cmd_attributes(ClientData clientData, Tcl_Interp *interp, int objc
 	return TCL_OK;
 }
 
-/* dispatches subcommands */
+/* dispatches subcommands - to be replaced with namespace ensemble mechanism? */
 int shapefile_commands(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
 	const char *subcommand;
 	
@@ -370,18 +392,12 @@ int shapefile_commands(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_
 	return TCL_ERROR;
 }
 
-void shapefile_cleanup(ClientData clientData) {
-	ShapefilePtr shapefile = (ShapefilePtr)clientData;
-	printf("ckfreeing ShapefilePtr\n");
-	ckfree((char *)shapefile);
-}
-
 /*
 	The shapetcl command opens a new or existing shapefile.
 	This command creates and returns a uniquely named new ensemble command
 	associated with the opened shapefile (handled by shapefile_commands).
 */	
-int shapetcl_command(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
+int shapetcl_cmd(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
 	ShapefilePtr shapefile;
 	const char *path;
 	char cmdName[16];
@@ -513,9 +529,10 @@ int shapetcl_command(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Ob
 	}
 	
 	sprintf(cmdName, "shapefile.%04X", COMMAND_COUNT++);
-	Tcl_CreateObjCommand(interp, cmdName, shapefile_commands, (ClientData)shapefile, shapefile_cleanup);
+	Tcl_CreateObjCommand(interp, cmdName, shapefile_commands, (ClientData)shapefile, shapefile_util_delete);
+	Tcl_CreateExitHandler(shapefile_util_exit, (ClientData)shapefile);
 	Tcl_SetObjResult(interp, Tcl_NewStringObj(cmdName, -1));
-		
+	
 	return TCL_OK;
 }
 
@@ -529,7 +546,7 @@ int Shapetcl_Init(Tcl_Interp *interp) {
 		return TCL_ERROR;
 	}
 	
-	Tcl_CreateObjCommand(interp, "shapetcl", shapetcl_command, NULL, NULL);
+	Tcl_CreateObjCommand(interp, "shapetcl", shapetcl_cmd, NULL, NULL);
 	
 	return TCL_OK;
 }
