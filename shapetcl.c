@@ -246,70 +246,167 @@ int shapefile_cmd_coords(ClientData clientData, Tcl_Interp *interp, int objc, Tc
 	SHPObject *shape;
 	Tcl_Obj *coordParts;
 	int part, partCount, vertex, vertexStart, vertexStop;
+	int shapeType;
 	
-	if (objc != 3) {
-		Tcl_WrongNumArgs(interp, 2, objv, "ID");
+	if (objc != 3 && objc != 4) {
+		Tcl_WrongNumArgs(interp, 2, objv, "ID [coordinates]");
 		return TCL_ERROR;
 	}
 	
 	if (Tcl_GetIntFromObj(interp, objv[2], &featureId) != TCL_OK)
 		return TCL_ERROR;
 	
-	SHPGetInfo(shapefile->shp, &featureCount, NULL, NULL, NULL);
+	SHPGetInfo(shapefile->shp, &featureCount, &shapeType, NULL, NULL);
 	if (featureId < 0 || featureId >= featureCount) {
 		Tcl_SetResult(interp, "invalid feature id", TCL_STATIC);
 		return TCL_ERROR;
 	}
 	
-	if ((shape = SHPReadObject(shapefile->shp, featureId)) == NULL) {
-		Tcl_SetResult(interp, "cannot read feature", TCL_STATIC);
-		return TCL_ERROR;
-	}
-	
-	/* prepare a list of coordinate lists; each member list represents one part
-	   (a "ring") of the feature. Some features only have one part. */
-	coordParts = Tcl_NewListObj(0, NULL);
-	
-	/* initialize vertex indices. if there's only one part, add all vertices;
-	   if there are multiple parts, stop adding vertices at 1st part boundary */
-	part = 0;
-	vertexStart = 0;
-	if (shape->nParts < 2) {
-		partCount = 1;
-		vertexStop = shape->nVertices;
-	} else {
-		partCount = shape->nParts;
-		vertexStop = shape->panPartStart[1];
-	}
-	
-	while (part < partCount) {
+	if (objc == 4) {
+		int writtenId;
+		int *partStarts;
+		Tcl_Obj *coords, *coord;
+		int partCoord, partCoordCount;
+		int vertexCount, partVertexCount;
+		double *xCoords, *yCoords, x, y;
 		
-		/* prepare a coordinate list for this part */
-		Tcl_Obj *coords = Tcl_NewListObj(0, NULL);
+		/* output mode */
 		
-		/* get the vertex coordinates for this part */
-		for (vertex = vertexStart; vertex < vertexStop; vertex++) {
-			if (Tcl_ListObjAppendElement(interp, coords, Tcl_NewDoubleObj(shape->padfX[vertex])) != TCL_OK)
-				return TCL_ERROR;
-			if (Tcl_ListObjAppendElement(interp, coords, Tcl_NewDoubleObj(shape->padfY[vertex])) != TCL_OK)
-				return TCL_ERROR;
+		if (shapefile->readonly) {
+			Tcl_SetResult(interp, "cannot write coordinates with readonly access", TCL_STATIC);
+			return TCL_ERROR;
 		}
 		
-		/* add this part's coordinate list to the feature's part list */
-		Tcl_ListObjAppendElement(interp, coordParts, coords);
+		if (Tcl_ListObjLength(interp, objv[3], &partCount) != TCL_OK)
+			return TCL_ERROR;
+				
+		partStarts = (int *)ckalloc(sizeof(int) * partCount);
+		xCoords = NULL; yCoords = NULL;
+
+		vertex = 0;
+		vertexCount = 0;
 		
-		/* advance vertex indices to the next part (disregarded if none) */
-		vertexStart = vertex;
-		if (part + 2 < partCount)
-			vertexStop = shape->panPartStart[part + 1];
-		else
+		for (part = 0; part < partCount; part++) {
+			partStarts[part] = vertex;
+			
+			/* get the coordinates that comprise this part */
+			if (Tcl_ListObjIndex(interp, objv[3], part, &coords) != TCL_OK)
+				return TCL_ERROR;
+			
+			/* verify that the coordinate list has a valid number of elements */
+			if (Tcl_ListObjLength(interp, coords, &partCoordCount) != TCL_OK)
+				return TCL_ERROR;
+			if (partCoordCount % 2 != 0) {
+				Tcl_SetResult(interp, "coordinate list malformed", TCL_STATIC);
+				return TCL_ERROR;
+			}
+			partVertexCount = partCoordCount / 2;
+			
+			/* do we handle empty parts? */
+			/* some shape types have minimum number of vertices */
+			/* some shapes have maximum number of parts (eg SHPT_POINT) */
+			
+			/* add space for this part's vertices */
+			vertexCount += partVertexCount;
+			xCoords = (double *)ckrealloc((char *)xCoords, sizeof(double) * vertexCount);
+			yCoords = (double *)ckrealloc((char *)yCoords, sizeof(double) * vertexCount);
+			
+			for (partCoord = 0; partCoord < partCoordCount; partCoord += 2) {
+				
+				if (Tcl_ListObjIndex(interp, coords, partCoord, &coord) != TCL_OK)
+					return TCL_ERROR;
+				if (Tcl_GetDoubleFromObj(interp, coord, &x) != TCL_OK)
+					return TCL_ERROR;
+				xCoords[vertex] = x;
+				
+				if (Tcl_ListObjIndex(interp, coords, partCoord + 1, &coord) != TCL_OK)
+					return TCL_ERROR;
+				if (Tcl_GetDoubleFromObj(interp, coord, &y) != TCL_OK)
+					return TCL_ERROR;
+				yCoords[vertex] = y;
+				
+				vertex++;
+			}
+			
+		}
+				
+		if ((shape = SHPCreateObject(shapeType, featureId, partCount,
+				partStarts, NULL, vertexCount, xCoords, yCoords, NULL, NULL)) == NULL) {
+			Tcl_SetResult(interp, "cannot create shape", TCL_STATIC);
+			return TCL_ERROR;
+		}
+		
+		/* correct vertex order, if necessary */
+		SHPRewindObject(shapefile->shp, shape);
+		
+		/* writtenId is presumably equal to featureId - unless we give -1 as
+		   featureId, in which case SHPWriteObject will append it as new... */
+		if ((writtenId = SHPWriteObject(shapefile->shp, featureId, shape)) == -1) {
+			Tcl_SetResult(interp, "cannot write shape", TCL_STATIC);
+			return TCL_ERROR;
+		}
+		SHPDestroyObject(shape);
+		
+		ckfree((char *)partStarts);
+		ckfree((char *)xCoords);
+		ckfree((char *)yCoords);
+		
+		Tcl_SetObjResult(interp, Tcl_NewIntObj(writtenId));
+	}
+	else {
+		/* input mode - read and return coordinates from featureId */
+		
+		if ((shape = SHPReadObject(shapefile->shp, featureId)) == NULL) {
+			Tcl_SetResult(interp, "cannot read feature", TCL_STATIC);
+			return TCL_ERROR;
+		}
+		
+		/* prepare a list of coordinate lists; each member list represents one part
+		   (a "ring") of the feature. Some features only have one part. */
+		coordParts = Tcl_NewListObj(0, NULL);
+		
+		/* initialize vertex indices. if there's only one part, add all vertices;
+		   if there are multiple parts, stop adding vertices at 1st part boundary */
+		part = 0;
+		vertexStart = 0;
+		if (shape->nParts < 2) {
+			partCount = 1;
 			vertexStop = shape->nVertices;
-		part++;
+		} else {
+			partCount = shape->nParts;
+			vertexStop = shape->panPartStart[1];
+		}
+		
+		while (part < partCount) {
+			
+			/* prepare a coordinate list for this part */
+			Tcl_Obj *coords = Tcl_NewListObj(0, NULL);
+			
+			/* get the vertex coordinates for this part */
+			for (vertex = vertexStart; vertex < vertexStop; vertex++) {
+				if (Tcl_ListObjAppendElement(interp, coords, Tcl_NewDoubleObj(shape->padfX[vertex])) != TCL_OK)
+					return TCL_ERROR;
+				if (Tcl_ListObjAppendElement(interp, coords, Tcl_NewDoubleObj(shape->padfY[vertex])) != TCL_OK)
+					return TCL_ERROR;
+			}
+			
+			/* add this part's coordinate list to the feature's part list */
+			Tcl_ListObjAppendElement(interp, coordParts, coords);
+			
+			/* advance vertex indices to the next part (disregarded if none) */
+			vertexStart = vertex;
+			if (part + 2 < partCount)
+				vertexStop = shape->panPartStart[part + 1];
+			else
+				vertexStop = shape->nVertices;
+			part++;
+		}
+		
+		SHPDestroyObject(shape);
+		
+		Tcl_SetObjResult(interp, coordParts);
 	}
 	
-	SHPDestroyObject(shape);
-	
-	Tcl_SetObjResult(interp, coordParts);
 	return TCL_OK;
 }
 
