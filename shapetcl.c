@@ -413,8 +413,7 @@ int shapefile_cmd_coords(ClientData clientData, Tcl_Interp *interp, int objc, Tc
 /* attributes - get dbf attribute values of specified feature */
 int shapefile_cmd_attributes(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
 	ShapefilePtr shapefile = (ShapefilePtr)clientData;
-	int recordId, dbfCount;
-	int fieldCount, fieldi;
+	int recordId, dbfCount, fieldCount, fieldi;
 	DBFFieldType fieldType;
 	
 	if (objc != 3 && objc != 4) {
@@ -425,14 +424,13 @@ int shapefile_cmd_attributes(ClientData clientData, Tcl_Interp *interp, int objc
 	if (Tcl_GetIntFromObj(interp, objv[2], &recordId) != TCL_OK)
 		return TCL_ERROR;
 	
+	fieldCount = DBFGetFieldCount(shapefile->dbf);
 	dbfCount = DBFGetRecordCount(shapefile->dbf);
 	if (recordId < 0 || recordId >= dbfCount) {
 		Tcl_SetResult(interp, "invalid record id", TCL_STATIC);
 		return TCL_ERROR;
 	}
-	
-	fieldCount = DBFGetFieldCount(shapefile->dbf);
-	
+		
 	if (objc == 4) {
 
 		/* output mode; objv[3] is attribute list to write to recordId */
@@ -441,16 +439,15 @@ int shapefile_cmd_attributes(ClientData clientData, Tcl_Interp *interp, int objc
 		int intValue;
 		double doubleValue;
 		const char *stringValue;
-				
 		
 		if (shapefile->readonly) {
 			Tcl_SetResult(interp, "cannot write attributes with readonly access", TCL_STATIC);
 			return TCL_ERROR;
 		}
 		
+		/* verify the provided attribute value list matches field count */
 		if (Tcl_ListObjLength(interp, objv[3], &attrCount) != TCL_OK)
 			return TCL_ERROR;
-		
 		if (attrCount != fieldCount) {
 			Tcl_SetResult(interp, "attribute count does not match field count", TCL_STATIC);
 			return TCL_ERROR;
@@ -471,47 +468,26 @@ int shapefile_cmd_attributes(ClientData clientData, Tcl_Interp *interp, int objc
 				continue;
 			}
 			
-			/* note that DBFWrite*Attribute failure may indicate that the value
-			   was truncated - ie, that it was too wide to fit the field */
-			
+			/* write attribute values according to field type */
+			/* attribute writer functions may fail, but failure most commonly
+			   indicates truncation due to values exceeding field width. */
 			fieldType = DBFGetFieldInfo(shapefile->dbf, fieldi, NULL, NULL, NULL);
 			switch (fieldType) {
 				case FTInteger:
-					
 					if (Tcl_GetIntFromObj(interp, attr, &intValue) != TCL_OK)
 						return TCL_ERROR;
-					
-					if (!DBFWriteIntegerAttribute(shapefile->dbf, recordId, fieldi, intValue)) {
-						Tcl_SetResult(interp, "cannot write integer attribute", TCL_STATIC);
-						return TCL_ERROR;
-					}
-					
+					DBFWriteIntegerAttribute(shapefile->dbf, recordId, fieldi, intValue);
 					break;
-				
 				case FTDouble:
-				
 					if (Tcl_GetDoubleFromObj(interp, attr, &doubleValue) != TCL_OK)
 						return TCL_ERROR;
-					
-					if (!DBFWriteDoubleAttribute(shapefile->dbf, recordId, fieldi, doubleValue)) {
-						Tcl_SetResult(interp, "cannot write double attribute", TCL_STATIC);
-						return TCL_ERROR;
-					}
-					
+					DBFWriteDoubleAttribute(shapefile->dbf, recordId, fieldi, doubleValue);
 					break;
-				
 				case FTString:
-					
 					if ((stringValue = Tcl_GetStringFromObj(attr, NULL)) == NULL)
 						return TCL_ERROR;
-					
-					if (!DBFWriteStringAttribute(shapefile->dbf, recordId, fieldi, stringValue)) {
-						Tcl_SetResult(interp, "cannot write string attribute", TCL_STATIC);
-						return TCL_ERROR;
-					}
-					
+					DBFWriteStringAttribute(shapefile->dbf, recordId, fieldi, stringValue);
 					break;
-				
 				default:
 					/* ignore provided value and write NULL to any unsupported field types */
 					if (!DBFWriteNULLAttribute(shapefile->dbf, recordId, fieldi)) {
