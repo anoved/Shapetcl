@@ -416,7 +416,6 @@ int shapefile_cmd_attributes(ClientData clientData, Tcl_Interp *interp, int objc
 	int recordId, dbfCount;
 	int fieldCount, fieldi;
 	DBFFieldType fieldType;
-	Tcl_Obj *attributes;
 	
 	if (objc != 3 && objc != 4) {
 		Tcl_WrongNumArgs(interp, 2, objv, "ID [attributes]");
@@ -435,13 +434,14 @@ int shapefile_cmd_attributes(ClientData clientData, Tcl_Interp *interp, int objc
 	fieldCount = DBFGetFieldCount(shapefile->dbf);
 	
 	if (objc == 4) {
+
+		/* output mode; objv[3] is attribute list to write to recordId */
 		int attrCount;
 		Tcl_Obj *attr;
 		int intValue;
 		double doubleValue;
 		const char *stringValue;
 				
-		/* output mode; objv[3] is attribute list to write to recordId */
 		
 		if (shapefile->readonly) {
 			Tcl_SetResult(interp, "cannot write attributes with readonly access", TCL_STATIC);
@@ -470,12 +470,11 @@ int shapefile_cmd_attributes(ClientData clientData, Tcl_Interp *interp, int objc
 				}
 				continue;
 			}
-	
-			fieldType = DBFGetFieldInfo(shapefile->dbf, fieldi, NULL, NULL, NULL);
 			
 			/* note that DBFWrite*Attribute failure may indicate that the value
 			   was truncated - ie, that it was too wide to fit the field */
 			
+			fieldType = DBFGetFieldInfo(shapefile->dbf, fieldi, NULL, NULL, NULL);
 			switch (fieldType) {
 				case FTInteger:
 					
@@ -514,10 +513,11 @@ int shapefile_cmd_attributes(ClientData clientData, Tcl_Interp *interp, int objc
 					break;
 				
 				default:
-					
-					Tcl_SetResult(interp, "cannot write attributes to unsupported field type", TCL_STATIC);
-					return TCL_ERROR;
-					
+					/* ignore provided value and write NULL to any unsupported field types */
+					if (!DBFWriteNULLAttribute(shapefile->dbf, recordId, fieldi)) {
+						Tcl_SetResult(interp, "cannot write null attribute value to unsupported field type", TCL_STATIC);
+						return TCL_ERROR;
+					}
 					break;
 			}
 		}
@@ -526,9 +526,9 @@ int shapefile_cmd_attributes(ClientData clientData, Tcl_Interp *interp, int objc
 		Tcl_SetObjResult(interp, Tcl_NewIntObj(recordId));
 	}
 	else {
+	
 		/* input mode; return list of attributes from recordId */
-		
-		attributes = Tcl_NewListObj(0, NULL);
+		Tcl_Obj *attributes = Tcl_NewListObj(0, NULL);
 		
 		for (fieldi = 0; fieldi < fieldCount; fieldi++) {
 			
@@ -539,6 +539,7 @@ int shapefile_cmd_attributes(ClientData clientData, Tcl_Interp *interp, int objc
 				continue;
 			}
 			
+			/* interpret attribute value according to field type and append to result list */
 			fieldType = DBFGetFieldInfo(shapefile->dbf, fieldi, NULL, NULL, NULL);
 			switch (fieldType) {
 				case FTInteger:
@@ -552,10 +553,13 @@ int shapefile_cmd_attributes(ClientData clientData, Tcl_Interp *interp, int objc
 						return TCL_ERROR;
 					break;
 				case FTString:
-				default:
-					/* for now, just return the string value of any other field types */
 					if (Tcl_ListObjAppendElement(interp, attributes,
 							Tcl_NewStringObj(DBFReadStringAttribute(shapefile->dbf, recordId, fieldi), -1)) != TCL_OK)
+						return TCL_ERROR;
+					break;
+				default:
+					/* represent any unsupported field type values as {} (same as NULL) */
+					if (Tcl_ListObjAppendElement(interp, attributes, Tcl_NewObj()) != TCL_OK)
 						return TCL_ERROR;
 					break;
 			}
@@ -564,7 +568,7 @@ int shapefile_cmd_attributes(ClientData clientData, Tcl_Interp *interp, int objc
 		/* return attribute list */
 		Tcl_SetObjResult(interp, attributes);
 	}
-	
+		
 	return TCL_OK;
 }
 
