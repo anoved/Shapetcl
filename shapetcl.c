@@ -457,10 +457,21 @@ int shapefile_cmd_attributes(ClientData clientData, Tcl_Interp *interp, int objc
 		}
 		
 		for (fieldi = 0; fieldi < fieldCount; fieldi++) {
-			fieldType = DBFGetFieldInfo(shapefile->dbf, fieldi, NULL, NULL, NULL);
 			
+			/* grab the attr provided for this field */
 			if (Tcl_ListObjIndex(interp, objv[3], fieldi, &attr) != TCL_OK)
 				return TCL_ERROR;
+			
+			/* if it is an empty string {}, write it as a NULL value */
+			if (Tcl_GetCharLength(attr) == 0) {
+				if (!DBFWriteNULLAttribute(shapefile->dbf, recordId, fieldi)) {
+					Tcl_SetResult(interp, "cannot write null attribute", TCL_STATIC);
+					return TCL_ERROR;
+				}
+				continue;
+			}
+	
+			fieldType = DBFGetFieldInfo(shapefile->dbf, fieldi, NULL, NULL, NULL);
 			
 			/* note that DBFWrite*Attribute failure may indicate that the value
 			   was truncated - ie, that it was too wide to fit the field */
@@ -519,8 +530,15 @@ int shapefile_cmd_attributes(ClientData clientData, Tcl_Interp *interp, int objc
 		
 		attributes = Tcl_NewListObj(0, NULL);
 		
-		/* should check DBFIsAttributeNULL first */
 		for (fieldi = 0; fieldi < fieldCount; fieldi++) {
+			
+			/* represent NULL attribute values as {} in return list */
+			if (DBFIsAttributeNULL(shapefile->dbf, recordId, fieldi)) {
+				if (Tcl_ListObjAppendElement(interp, attributes, Tcl_NewObj()) != TCL_OK)
+					return TCL_ERROR;
+				continue;
+			}
+			
 			fieldType = DBFGetFieldInfo(shapefile->dbf, fieldi, NULL, NULL, NULL);
 			switch (fieldType) {
 				case FTInteger:
