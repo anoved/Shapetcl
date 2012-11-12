@@ -193,7 +193,7 @@ int shapefile_cmd_fields(ClientData clientData, Tcl_Interp *interp, int objc, Tc
 	Tcl_Obj *fieldSpec;
 	char name[12];
 	int width, precision;
-	DBFFieldType type;
+	DBFFieldType fieldType;
 
 	if (objc > 2) {
 		Tcl_WrongNumArgs(interp, 2, objv, NULL);
@@ -204,9 +204,8 @@ int shapefile_cmd_fields(ClientData clientData, Tcl_Interp *interp, int objc, Tc
 	fieldSpec = Tcl_NewListObj(0, NULL);
 	
 	for (fieldi = 0; fieldi < fieldCount; fieldi++) {
-		type = DBFGetFieldInfo(shapefile->dbf, fieldi, name, &width, &precision);
-				
-		switch (type) {
+		fieldType = DBFGetFieldInfo(shapefile->dbf, fieldi, name, &width, &precision);		
+		switch (fieldType) {
 			case FTString:
 				if (Tcl_ListObjAppendElement(interp, fieldSpec, Tcl_NewStringObj("string", -1)) != TCL_OK)
 					return TCL_ERROR;
@@ -220,10 +219,9 @@ int shapefile_cmd_fields(ClientData clientData, Tcl_Interp *interp, int objc, Tc
 					return TCL_ERROR;
 				break;
 			default:
-				/* at this point it's already loaded - either handle it gracefully,
-				   or check for invalid/unsupported field types on open/creation */
-				Tcl_SetResult(interp, "unsupport field type", TCL_STATIC);
-				return TCL_ERROR;
+				/* represent unsupported field types by numeric type ID instead of descriptive name */
+				if (Tcl_ListObjAppendElement(interp, fieldSpec, Tcl_NewIntObj((int)fieldType)) != TCL_OK)
+					return TCL_ERROR;
 				break;
 		}
 		
