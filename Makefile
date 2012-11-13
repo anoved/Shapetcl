@@ -16,22 +16,22 @@ TCL = tclsh
 
 .PHONY: all clean test
 
-all: Shapetcl.dylib
+all: Shapetcl.so
 
 shapetcl.o: shapetcl.c
 	$(CC) $(CFLAGS) -c shapetcl.c \
 			-I$(SHAPELIB_PREFIX) \
-			-I$(TCL_PREFIX)/include
+			-I$(TCL_PREFIX)/include/tcl8.5
 
-Shapetcl.dylib: shapetcl.o $(SHAPELIB_OBJS)
+Shapetcl.so: shapetcl.o $(SHAPELIB_OBJS)
 	$(CC) -shared -W1,-soname,Shapetcl \
-			-o Shapetcl.dylib \
+			-o Shapetcl.so \
 			shapetcl.o $(SHAPELIB_OBJS) \
 			-L$(TCL_PREFIX)/lib -ltcl8.5
-	echo "pkg_mkIndex . Shapetcl.dylib" | $(TCL)
+	echo "pkg_mkIndex . Shapetcl.so" | $(TCL)
 
 clean:
-	rm -f Shapetcl.dylib shapetcl.o
+	rm -f Shapetcl.so shapetcl.o
 
 test:
 	@echo "No tests defined."
