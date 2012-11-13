@@ -410,43 +410,33 @@ int shapefile_cmd_coords(ClientData clientData, Tcl_Interp *interp, int objc, Tc
 	return TCL_OK;
 }
 
-/* attributes - get dbf attribute values of specified feature */
-int shapefile_cmd_attributes(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
-	ShapefilePtr shapefile = (ShapefilePtr)clientData;
-	int recordId, dbfCount, fieldCount, fieldi;
-	DBFFieldType fieldType;
-	
-	if (objc != 3 && objc != 4) {
-		Tcl_WrongNumArgs(interp, 2, objv, "ID [attributes]");
-		return TCL_ERROR;
-	}
-	
-	if (Tcl_GetIntFromObj(interp, objv[2], &recordId) != TCL_OK)
-		return TCL_ERROR;
-	
-	fieldCount = DBFGetFieldCount(shapefile->dbf);
-	dbfCount = DBFGetRecordCount(shapefile->dbf);
-	if (recordId < 0 || recordId >= dbfCount) {
-		Tcl_SetResult(interp, "invalid record id", TCL_STATIC);
-		return TCL_ERROR;
-	}
-		
-	if (objc == 4) {
-
-		/* output mode; objv[3] is attribute list to write to recordId */
-		int attrCount;
+int shapefile_util_attrWrite(Tcl_Interp *interp, ShapefilePtr shapefile, int recordId, Tcl_Obj *attrList) {
 		Tcl_Obj *attr;
+		int fieldi, fieldCount, attrCount, dbfCount;
+		DBFFieldType fieldType;
 		int intValue;
 		double doubleValue;
 		const char *stringValue;
-		
+	
 		if (shapefile->readonly) {
 			Tcl_SetResult(interp, "cannot write attributes with readonly access", TCL_STATIC);
 			return TCL_ERROR;
 		}
+
+		dbfCount = DBFGetRecordCount(shapefile->dbf);
+		if (recordId < -1 || recordId >= dbfCount) {
+			Tcl_SetResult(interp, "invalid record id", TCL_STATIC);
+			return TCL_ERROR;
+		}
+		if (recordId == -1)
+			recordId = dbfCount;
+		
+		// so now recordId is either the id of an existing record to overwrite,
+		// or the id-elect of a new record we will create.
 		
 		/* verify the provided attribute value list matches field count */
-		if (Tcl_ListObjLength(interp, objv[3], &attrCount) != TCL_OK)
+		fieldCount = DBFGetFieldCount(shapefile->dbf);
+		if (Tcl_ListObjLength(interp, attrList, &attrCount) != TCL_OK)
 			return TCL_ERROR;
 		if (attrCount != fieldCount) {
 			Tcl_SetResult(interp, "attribute count does not match field count", TCL_STATIC);
@@ -456,7 +446,7 @@ int shapefile_cmd_attributes(ClientData clientData, Tcl_Interp *interp, int objc
 		for (fieldi = 0; fieldi < fieldCount; fieldi++) {
 			
 			/* grab the attr provided for this field */
-			if (Tcl_ListObjIndex(interp, objv[3], fieldi, &attr) != TCL_OK)
+			if (Tcl_ListObjIndex(interp, attrList, fieldi, &attr) != TCL_OK)
 				return TCL_ERROR;
 			
 			/* if it is an empty string {}, write it as a NULL value */
@@ -498,14 +488,44 @@ int shapefile_cmd_attributes(ClientData clientData, Tcl_Interp *interp, int objc
 			}
 		}
 		
-		/* return id of written attribute record */
 		Tcl_SetObjResult(interp, Tcl_NewIntObj(recordId));
+		return TCL_OK;
+}
+
+/* attributes - get dbf attribute values of specified feature */
+int shapefile_cmd_attributes(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
+	ShapefilePtr shapefile = (ShapefilePtr)clientData;
+	int recordId;
+	
+	if (objc != 3 && objc != 4) {
+		Tcl_WrongNumArgs(interp, 2, objv, "ID [attributes]");
+		return TCL_ERROR;
+	}
+	
+	if (Tcl_GetIntFromObj(interp, objv[2], &recordId) != TCL_OK)
+		return TCL_ERROR;
+	/* validation of recordId is performed within the individual output/input blocks */
+	
+	if (objc == 4) {
+	
+		/* output mode */
+		/* if successful, sets interp's result to the recordId of the written record */
+		if (shapefile_util_attrWrite(interp, shapefile, recordId, objv[3]) != TCL_OK)
+			return TCL_ERROR;
 	}
 	else {
 	
 		/* input mode; return list of attributes from recordId */
 		Tcl_Obj *attributes = Tcl_NewListObj(0, NULL);
+		int fieldi, fieldCount = DBFGetFieldCount(shapefile->dbf);
+		DBFFieldType fieldType;
+		int dbfCount = DBFGetRecordCount(shapefile->dbf);
 		
+		if (recordId < 0 || recordId >= dbfCount) {
+			Tcl_SetResult(interp, "invalid record id", TCL_STATIC);
+			return TCL_ERROR;
+		}
+
 		for (fieldi = 0; fieldi < fieldCount; fieldi++) {
 			
 			/* represent NULL attribute values as {} in return list */
@@ -547,6 +567,23 @@ int shapefile_cmd_attributes(ClientData clientData, Tcl_Interp *interp, int objc
 		
 	return TCL_OK;
 }
+
+/* write - create a new record */
+/*int shapefile_cmd_write(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
+	ShapefilePtr shapefile = (ShapefilePtr)clientData;
+	
+	if (objc != 4) {
+		Tcl_WrongNumArgs(interp, 2, objv, "attributes coords");
+		return TCL_ERROR;
+	}
+	
+	
+	dbfId = shapefile_util_attrWrite(shapefile, -1, objv[2]);
+	
+	shpId = shapefile_util_coordsWrite(shapefile, -1, objv[3]);
+	
+	return TCL_OK;
+} */
 
 /* dispatches subcommands - to be replaced with namespace ensemble mechanism? */
 int shapefile_commands(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
