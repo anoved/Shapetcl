@@ -707,6 +707,11 @@ int shapefile_cmd_write(ClientData clientData, Tcl_Interp *interp, int objc, Tcl
 		return TCL_ERROR;
 	}
 	
+	if (shapefile->readonly) {
+		Tcl_SetResult(interp, "cannot write new entity with readonly access", TCL_STATIC);
+		return TCL_ERROR;
+	}
+	
 	/* errors in either Write function may leave the shapefile in an invalid
 	   state (mismatched number of features and attributes). one strategy to
 	   minimize the likelihood of that outcome is to put argument validation
