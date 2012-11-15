@@ -2,9 +2,17 @@
 # Tested with Shapelib 1.3.0, made with no modifications.
 SHAPELIB_PREFIX = ../shapelib-1.3.0
 
-# Path to directory containing /include and /lib subdirectories
-# containing Tcl headers and shared library, respectively.
-TCL_PREFIX = /usr
+ifeq ($(TARGET), linux)
+	# invoked with eg "make TARGET=linux"
+	SHAPETCL_LIB = Shapetcl.so
+	TCL_INCLUDE_DIR = /usr/include/tcl8.5
+	TCL_LIBRARY_DIR = /usr/lib
+else
+	# default values (Mac OS X)
+	SHAPETCL_LIB = Shapetcl.dylib
+	TCL_INCLUDE_DIR = /usr/include
+	TCL_LIBRARY_DIR = /usr/lib
+endif
 
 SHAPELIB_OBJS = $(SHAPELIB_PREFIX)/shpopen.o \
 				$(SHAPELIB_PREFIX)/dbfopen.o \
@@ -16,22 +24,22 @@ TCL = tclsh
 
 .PHONY: all clean test
 
-all: Shapetcl.dylib
+all: $(SHAPETCL_LIB)
 
 shapetcl.o: shapetcl.c
 	$(CC) $(CFLAGS) -c shapetcl.c \
 			-I$(SHAPELIB_PREFIX) \
-			-I$(TCL_PREFIX)/include
+			-I$(TCL_INCLUDE_DIR)
 
-Shapetcl.dylib: shapetcl.o $(SHAPELIB_OBJS)
+$(SHAPETCL_LIB): shapetcl.o $(SHAPELIB_OBJS)
 	$(CC) -shared -W1,-soname,Shapetcl \
-			-o Shapetcl.dylib \
+			-o $(SHAPETCL_LIB) \
 			shapetcl.o $(SHAPELIB_OBJS) \
-			-L$(TCL_PREFIX)/lib -ltcl8.5
-	echo "pkg_mkIndex . Shapetcl.dylib" | $(TCL)
+			-L$(TCL_LIBRARY_DIR) -ltcl8.5
+	echo "pkg_mkIndex . " $(SHAPETCL_LIB) | $(TCL)
 
 clean:
-	rm -f Shapetcl.dylib shapetcl.o
+	rm -f $(SHAPETCL_LIB) shapetcl.o
 
 test:
 	@echo "No tests defined."
