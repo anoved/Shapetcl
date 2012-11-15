@@ -48,7 +48,7 @@ int shapefile_cmd_close(ClientData clientData, Tcl_Interp *interp, int objc, Tcl
 	
 	shapefile_util_close(shapefile);
 	
-	Tcl_DeleteCommand(interp, Tcl_GetStringFromObj(objv[0], NULL));
+	Tcl_DeleteCommand(interp, Tcl_GetString(objv[0]));
 	
 	return TCL_OK;
 }
@@ -753,7 +753,7 @@ int shapefile_commands(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_
 		return TCL_ERROR;
 	}
 	
-	subcommand = Tcl_GetStringFromObj(objv[1], NULL);
+	subcommand = Tcl_GetString(objv[1]);
 	
 	if (strcmp(subcommand, "close") == 0)
 		return shapefile_cmd_close(clientData, interp, objc, objv);
@@ -796,11 +796,11 @@ int shapetcl_cmd(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *C
 		return TCL_ERROR;
 	}
 
-	path = Tcl_GetStringFromObj(objv[1], NULL);
+	path = Tcl_GetString(objv[1]);
 
 	if (objc == 3) {
 		/* opening an existing file, and an access mode is explicitly set */
-		const char *mode = Tcl_GetStringFromObj(objv[2], NULL);
+		const char *mode = Tcl_GetString(objv[2]);
 		if (strcmp(mode, "rb") == 0) {
 			readonly = 1;
 		}
@@ -816,7 +816,7 @@ int shapetcl_cmd(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *C
 	if (objc == 4) {
 		/* create a new file; access is readwrite. */
 		
-		const char *shpTypeName = Tcl_GetStringFromObj(objv[2], NULL);
+		const char *shpTypeName = Tcl_GetString(objv[2]);
 		int shpType;
 		int fieldSpecCount;
 		Tcl_Obj **fieldSpec;
@@ -874,8 +874,8 @@ int shapetcl_cmd(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *C
 			const char *type, *name;
 			int width, precision;
 			
-			type = Tcl_GetStringFromObj(fieldSpec[fieldi], NULL);
-			name = Tcl_GetStringFromObj(fieldSpec[fieldi + 1], NULL);
+			type = Tcl_GetString(fieldSpec[fieldi]);
+			name = Tcl_GetString(fieldSpec[fieldi + 1]);
 			
 			if (Tcl_GetIntFromObj(interp, fieldSpec[fieldi + 2], &width) != TCL_OK)
 				return TCL_ERROR;
