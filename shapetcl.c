@@ -340,9 +340,6 @@ int shapefile_util_coordWrite(Tcl_Interp *interp, ShapefilePtr shapefile, int fe
 int shapefile_cmd_coords(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
 	ShapefilePtr shapefile = (ShapefilePtr)clientData;
 	int featureId;
-	SHPObject *shape;
-	Tcl_Obj *coordParts;
-	int part, partCount, vertex, vertexStart, vertexStop;
 	
 	if (objc != 3 && objc != 4) {
 		Tcl_WrongNumArgs(interp, 2, objv, "ID [coordinates]");
@@ -363,8 +360,9 @@ int shapefile_cmd_coords(ClientData clientData, Tcl_Interp *interp, int objc, Tc
 	}
 	else {
 		/* input mode - read and return coordinates from featureId */
-		
-		int featureCount;
+		SHPObject *shape;
+		Tcl_Obj *coordParts;
+		int featureCount, part, partCount, vertex, vertexStart, vertexStop;
 		
 		SHPGetInfo(shapefile->shp, &featureCount, NULL, NULL, NULL);
 		if (featureId < 0 || featureId >= featureCount) {
@@ -658,7 +656,7 @@ int shapefile_commands(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_
 	else if (strcmp(subcommand, "coords") == 0)
 		return shapefile_cmd_coords(clientData, interp, objc, objv);
 	else if (strcmp(subcommand, "write") == 0)
-		return shapefile_cmd_write(clientData, interp, objc, objv);
+		return shapefile_cmd_write(clientData, interp, objc, objv);	
 	
 	Tcl_SetResult(interp, "unrecognized subcommand", TCL_STATIC);
 	return TCL_ERROR;
