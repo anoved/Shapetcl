@@ -836,17 +836,7 @@ int shapetcl_cmd(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *C
 			Tcl_SetResult(interp, "unrecognized shape type", TCL_STATIC);
 			return TCL_ERROR;
 		}
-		
-		if ((shapefile->shp = SHPCreate(path, shpType)) == NULL) {
-			Tcl_SetResult(interp, "cannot create .shp", TCL_STATIC);
-			return TCL_ERROR;
-		}
-		
-		if ((shapefile->dbf = DBFCreate(path)) == NULL) {
-			Tcl_SetResult(interp, "cannot create .dbf", TCL_STATIC);
-			return TCL_ERROR;
-		}
-		
+				
 		/* add fields to dbf now based on field specs in objv[3] */
 		
 		if (Tcl_ListObjGetElements(interp, objv[3], &fieldSpecCount, &fieldSpec) != TCL_OK) {
@@ -855,6 +845,23 @@ int shapetcl_cmd(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *C
 		
 		if (fieldSpecCount % 4 != 0) {
 			Tcl_SetResult(interp, "malformed field specification", TCL_STATIC);
+			return TCL_ERROR;
+		}
+		
+		if (fieldSpecCount == 0) {
+			Tcl_SetResult(interp, "at least one field required", TCL_STATIC);
+			return TCL_ERROR;
+		}
+		
+		/* ideally, should validate fieldSpec before creating files */
+		
+		if ((shapefile->shp = SHPCreate(path, shpType)) == NULL) {
+			Tcl_SetResult(interp, "cannot create .shp", TCL_STATIC);
+			return TCL_ERROR;
+		}
+		
+		if ((shapefile->dbf = DBFCreate(path)) == NULL) {
+			Tcl_SetResult(interp, "cannot create .dbf", TCL_STATIC);
 			return TCL_ERROR;
 		}
 		
@@ -903,13 +910,20 @@ int shapetcl_cmd(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *C
 		}
 	}
 	else {		
-		if ((shapefile->shp = SHPOpen(path, shapefile->readonly ? "rb" : "rb+")) == NULL) {
-			Tcl_SetResult(interp, "cannot open .shp", TCL_STATIC);
-			return TCL_ERROR;
-		}
 		
 		if ((shapefile->dbf = DBFOpen(path, shapefile->readonly ? "rb" : "rb+")) == NULL) {
 			Tcl_SetResult(interp, "cannot open .dbf", TCL_STATIC);
+			return TCL_ERROR;
+		}
+		
+		if (DBFGetFieldCount(shapefile->dbf) == 0) {
+			Tcl_SetResult(interp, "attribute table contains no fields", TCL_STATIC);
+			DBFClose(shapefile->dbf);
+			return TCL_ERROR;
+		}
+		
+		if ((shapefile->shp = SHPOpen(path, shapefile->readonly ? "rb" : "rb+")) == NULL) {
+			Tcl_SetResult(interp, "cannot open .shp", TCL_STATIC);
 			return TCL_ERROR;
 		}
 	}
