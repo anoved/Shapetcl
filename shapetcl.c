@@ -589,21 +589,46 @@ int shapefile_cmd_attributes(ClientData clientData, Tcl_Interp *interp, int objc
 }
 
 /* write - create a new record */
-/*int shapefile_cmd_write(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
+int shapefile_cmd_write(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
 	ShapefilePtr shapefile = (ShapefilePtr)clientData;
+	int outputFeatureId, outputAttributeId;
 	
 	if (objc != 4) {
-		Tcl_WrongNumArgs(interp, 2, objv, "attributes coords");
+		Tcl_WrongNumArgs(interp, 2, objv, "coords attributes");
 		return TCL_ERROR;
 	}
 	
+	/* errors in either Write function may leave the shapefile in an invalid
+	   state (mismatched number of features and attributes). one strategy to
+	   minimize the likelihood of that outcome is to put argument validation
+	   in a separate util function that can be called for both first, before
+	   proceeding to write. the coord validater may return a SHPObject, and
+	   the attributes validator may return a list of values (Tcl_Obj list?) */
 	
-	dbfId = shapefile_util_attrWrite(shapefile, -1, objv[2]);
+	/* write the new feature coords */
+	if (shapefile_util_coordWrite(interp, shapefile, -1, objv[2]) != TCL_OK)
+		return TCL_ERROR;
+	if (Tcl_GetIntFromObj(interp, Tcl_GetObjResult(interp), &outputFeatureId) != TCL_OK)
+		return TCL_ERROR;
 	
-	shpId = shapefile_util_coordsWrite(shapefile, -1, objv[3]);
+	Tcl_ResetResult(interp);
 	
+	/* write the new attribute record */
+	if (shapefile_util_attrWrite(interp, shapefile, -1, objv[3]) != TCL_OK)
+		return TCL_ERROR;
+	if (Tcl_GetIntFromObj(interp, Tcl_GetObjResult(interp), &outputAttributeId) != TCL_OK)
+		return TCL_ERROR;
+	
+	/* assert that the new feature and attribute record ids match */
+	if (outputFeatureId != outputAttributeId) {
+		Tcl_SetResult(interp, "output coord and attribute ids do not match", TCL_STATIC);
+		return TCL_ERROR;
+	}
+	
+	/* return the id of the new entity */
+	Tcl_SetObjResult(interp, Tcl_NewIntObj(outputFeatureId));
 	return TCL_OK;
-} */
+}
 
 /* dispatches subcommands - to be replaced with namespace ensemble mechanism? */
 int shapefile_commands(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
@@ -632,6 +657,8 @@ int shapefile_commands(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_
 		return shapefile_cmd_attributes(clientData, interp, objc, objv);
 	else if (strcmp(subcommand, "coords") == 0)
 		return shapefile_cmd_coords(clientData, interp, objc, objv);
+	else if (strcmp(subcommand, "write") == 0)
+		return shapefile_cmd_write(clientData, interp, objc, objv);
 	
 	Tcl_SetResult(interp, "unrecognized subcommand", TCL_STATIC);
 	return TCL_ERROR;
