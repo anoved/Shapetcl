@@ -237,14 +237,112 @@ int shapefile_cmd_fields(ClientData clientData, Tcl_Interp *interp, int objc, Tc
 	return TCL_OK;
 }
 
+int shapefile_util_coordWrite(Tcl_Interp *interp, ShapefilePtr shapefile, int featureId, Tcl_Obj *coordParts) {
+	int shapeType, featureCount;
+	int outputFeatureId;
+	int *partStarts;
+	Tcl_Obj *coords, *coord;
+	int part, partCount, partCoord, partCoordCount;
+	int vertex, vertexCount, partVertexCount;
+	double *xCoords, *yCoords, x, y;
+	SHPObject *shape;
+	
+	if (shapefile->readonly) {
+		Tcl_SetResult(interp, "cannot write coordinates with readonly access", TCL_STATIC);
+		return TCL_ERROR;
+	}
+	
+	SHPGetInfo(shapefile->shp, &featureCount, &shapeType, NULL, NULL);
+	if (featureId < -1 || featureId >= featureCount) {
+		Tcl_SetResult(interp, "invalid output feature id", TCL_STATIC);
+		return TCL_ERROR;
+	}
+	/* a featureId of -1 indicates a new feature should be output */
+	
+	if (Tcl_ListObjLength(interp, coordParts, &partCount) != TCL_OK)
+		return TCL_ERROR;
+	
+	partStarts = (int *)ckalloc(sizeof(int) * partCount);
+	xCoords = NULL; yCoords = NULL;
+
+	vertex = 0;
+	vertexCount = 0;
+	
+	for (part = 0; part < partCount; part++) {
+		partStarts[part] = vertex;
+		
+		/* get the coordinates that comprise this part */
+		if (Tcl_ListObjIndex(interp, coordParts, part, &coords) != TCL_OK)
+			return TCL_ERROR;
+		
+		/* verify that the coordinate list has a valid number of elements */
+		if (Tcl_ListObjLength(interp, coords, &partCoordCount) != TCL_OK)
+			return TCL_ERROR;
+		if (partCoordCount % 2 != 0) {
+			Tcl_SetResult(interp, "coordinate list malformed", TCL_STATIC);
+			return TCL_ERROR;
+		}
+		partVertexCount = partCoordCount / 2;
+		
+		/* do we handle empty parts? */
+		/* some shape types have minimum number of vertices */
+		/* some shapes have maximum number of parts (eg SHPT_POINT) */
+		
+		/* add space for this part's vertices */
+		vertexCount += partVertexCount;
+		xCoords = (double *)ckrealloc((char *)xCoords, sizeof(double) * vertexCount);
+		yCoords = (double *)ckrealloc((char *)yCoords, sizeof(double) * vertexCount);
+		
+		for (partCoord = 0; partCoord < partCoordCount; partCoord += 2) {
+			
+			if (Tcl_ListObjIndex(interp, coords, partCoord, &coord) != TCL_OK)
+				return TCL_ERROR;
+			if (Tcl_GetDoubleFromObj(interp, coord, &x) != TCL_OK)
+				return TCL_ERROR;
+			xCoords[vertex] = x;
+			
+			if (Tcl_ListObjIndex(interp, coords, partCoord + 1, &coord) != TCL_OK)
+				return TCL_ERROR;
+			if (Tcl_GetDoubleFromObj(interp, coord, &y) != TCL_OK)
+				return TCL_ERROR;
+			yCoords[vertex] = y;
+			
+			vertex++;
+		}
+	}
+	
+	/* assemble the coordinate lists into a new shape */
+	if ((shape = SHPCreateObject(shapeType, featureId, partCount,
+			partStarts, NULL, vertexCount, xCoords, yCoords, NULL, NULL)) == NULL) {
+		Tcl_SetResult(interp, "cannot create shape", TCL_STATIC);
+		return TCL_ERROR;
+	}
+	
+	/* correct the shape's vertex order, if necessary */
+	SHPRewindObject(shapefile->shp, shape);
+	
+	/* write the shape to the shapefile */
+	if ((outputFeatureId = SHPWriteObject(shapefile->shp, featureId, shape)) == -1) {
+		Tcl_SetResult(interp, "cannot write shape", TCL_STATIC);
+		return TCL_ERROR;
+	}
+	
+	SHPDestroyObject(shape);
+	ckfree((char *)partStarts);
+	ckfree((char *)xCoords);
+	ckfree((char *)yCoords);
+	
+	Tcl_SetObjResult(interp, Tcl_NewIntObj(outputFeatureId));
+	return TCL_OK;
+}
+
 /* coords - get 2d coordinates of specified feature */
 int shapefile_cmd_coords(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
 	ShapefilePtr shapefile = (ShapefilePtr)clientData;
-	int featureId, featureCount;
+	int featureId;
 	SHPObject *shape;
 	Tcl_Obj *coordParts;
 	int part, partCount, vertex, vertexStart, vertexStop;
-	int shapeType;
 	
 	if (objc != 3 && objc != 4) {
 		Tcl_WrongNumArgs(interp, 2, objv, "ID [coordinates]");
@@ -254,105 +352,25 @@ int shapefile_cmd_coords(ClientData clientData, Tcl_Interp *interp, int objc, Tc
 	if (Tcl_GetIntFromObj(interp, objv[2], &featureId) != TCL_OK)
 		return TCL_ERROR;
 	
-	SHPGetInfo(shapefile->shp, &featureCount, &shapeType, NULL, NULL);
-	if (featureId < 0 || featureId >= featureCount) {
-		Tcl_SetResult(interp, "invalid feature id", TCL_STATIC);
-		return TCL_ERROR;
-	}
+	/* validation of featureId is performed by coord input/output blocks */
 	
 	if (objc == 4) {
-		int writtenId;
-		int *partStarts;
-		Tcl_Obj *coords, *coord;
-		int partCoord, partCoordCount;
-		int vertexCount, partVertexCount;
-		double *xCoords, *yCoords, x, y;
-		
+	
 		/* output mode */
-		
-		if (shapefile->readonly) {
-			Tcl_SetResult(interp, "cannot write coordinates with readonly access", TCL_STATIC);
+		/* if shape output is successful, interp result is set to output feature id */
+		if (shapefile_util_coordWrite(interp, shapefile, featureId, objv[3]) != TCL_OK)
 			return TCL_ERROR;
-		}
-		
-		if (Tcl_ListObjLength(interp, objv[3], &partCount) != TCL_OK)
-			return TCL_ERROR;
-				
-		partStarts = (int *)ckalloc(sizeof(int) * partCount);
-		xCoords = NULL; yCoords = NULL;
-
-		vertex = 0;
-		vertexCount = 0;
-		
-		for (part = 0; part < partCount; part++) {
-			partStarts[part] = vertex;
-			
-			/* get the coordinates that comprise this part */
-			if (Tcl_ListObjIndex(interp, objv[3], part, &coords) != TCL_OK)
-				return TCL_ERROR;
-			
-			/* verify that the coordinate list has a valid number of elements */
-			if (Tcl_ListObjLength(interp, coords, &partCoordCount) != TCL_OK)
-				return TCL_ERROR;
-			if (partCoordCount % 2 != 0) {
-				Tcl_SetResult(interp, "coordinate list malformed", TCL_STATIC);
-				return TCL_ERROR;
-			}
-			partVertexCount = partCoordCount / 2;
-			
-			/* do we handle empty parts? */
-			/* some shape types have minimum number of vertices */
-			/* some shapes have maximum number of parts (eg SHPT_POINT) */
-			
-			/* add space for this part's vertices */
-			vertexCount += partVertexCount;
-			xCoords = (double *)ckrealloc((char *)xCoords, sizeof(double) * vertexCount);
-			yCoords = (double *)ckrealloc((char *)yCoords, sizeof(double) * vertexCount);
-			
-			for (partCoord = 0; partCoord < partCoordCount; partCoord += 2) {
-				
-				if (Tcl_ListObjIndex(interp, coords, partCoord, &coord) != TCL_OK)
-					return TCL_ERROR;
-				if (Tcl_GetDoubleFromObj(interp, coord, &x) != TCL_OK)
-					return TCL_ERROR;
-				xCoords[vertex] = x;
-				
-				if (Tcl_ListObjIndex(interp, coords, partCoord + 1, &coord) != TCL_OK)
-					return TCL_ERROR;
-				if (Tcl_GetDoubleFromObj(interp, coord, &y) != TCL_OK)
-					return TCL_ERROR;
-				yCoords[vertex] = y;
-				
-				vertex++;
-			}
-			
-		}
-				
-		if ((shape = SHPCreateObject(shapeType, featureId, partCount,
-				partStarts, NULL, vertexCount, xCoords, yCoords, NULL, NULL)) == NULL) {
-			Tcl_SetResult(interp, "cannot create shape", TCL_STATIC);
-			return TCL_ERROR;
-		}
-		
-		/* correct vertex order, if necessary */
-		SHPRewindObject(shapefile->shp, shape);
-		
-		/* writtenId is presumably equal to featureId - unless we give -1 as
-		   featureId, in which case SHPWriteObject will append it as new... */
-		if ((writtenId = SHPWriteObject(shapefile->shp, featureId, shape)) == -1) {
-			Tcl_SetResult(interp, "cannot write shape", TCL_STATIC);
-			return TCL_ERROR;
-		}
-		SHPDestroyObject(shape);
-		
-		ckfree((char *)partStarts);
-		ckfree((char *)xCoords);
-		ckfree((char *)yCoords);
-		
-		Tcl_SetObjResult(interp, Tcl_NewIntObj(writtenId));
 	}
 	else {
 		/* input mode - read and return coordinates from featureId */
+		
+		int featureCount;
+		
+		SHPGetInfo(shapefile->shp, &featureCount, NULL, NULL, NULL);
+		if (featureId < 0 || featureId >= featureCount) {
+			Tcl_SetResult(interp, "invalid feature id", TCL_STATIC);
+			return TCL_ERROR;
+		}
 		
 		if ((shape = SHPReadObject(shapefile->shp, featureId)) == NULL) {
 			Tcl_SetResult(interp, "cannot read feature", TCL_STATIC);
@@ -430,7 +448,10 @@ int shapefile_util_attrWrite(Tcl_Interp *interp, ShapefilePtr shapefile, int rec
 		recordId = dbfCount;
 	
 	/* now recordId is either the id of an existing record to overwrite,
-	   or the id-elect of a new record we will create. */
+	   or the id-elect of a new record we will create. Unlike shape output,
+	   we use predicted id instead of -1 because each field value must be
+	   written by a separate DBF*Writer function call, and we don't want
+	   to write each value to a different new record! */
 	
 	/* verify the provided attribute value list matches field count */
 	fieldCount = DBFGetFieldCount(shapefile->dbf);
