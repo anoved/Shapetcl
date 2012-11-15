@@ -516,6 +516,58 @@ int shapefile_util_attrWrite(Tcl_Interp *interp, ShapefilePtr shapefile, int rec
 	return TCL_OK;
 }
 
+int shapefile_util_attrRead(Tcl_Interp *interp, ShapefilePtr shapefile, int recordId) {
+	Tcl_Obj *attributes = Tcl_NewListObj(0, NULL);
+	int fieldi, fieldCount, dbfCount;
+	DBFFieldType fieldType;
+	
+	fieldCount  = DBFGetFieldCount(shapefile->dbf);
+	dbfCount = DBFGetRecordCount(shapefile->dbf);
+	if (recordId < 0 || recordId >= dbfCount) {
+		Tcl_SetResult(interp, "invalid record id", TCL_STATIC);
+		return TCL_ERROR;
+	}
+
+	for (fieldi = 0; fieldi < fieldCount; fieldi++) {
+		
+		/* represent NULL attribute values as {} in return list */
+		if (DBFIsAttributeNULL(shapefile->dbf, recordId, fieldi)) {
+			if (Tcl_ListObjAppendElement(interp, attributes, Tcl_NewObj()) != TCL_OK)
+				return TCL_ERROR;
+			continue;
+		}
+		
+		/* interpret attribute value according to field type and append to result list */
+		fieldType = DBFGetFieldInfo(shapefile->dbf, fieldi, NULL, NULL, NULL);
+		switch (fieldType) {
+			case FTInteger:
+				if (Tcl_ListObjAppendElement(interp, attributes,
+						Tcl_NewIntObj(DBFReadIntegerAttribute(shapefile->dbf, recordId, fieldi))) != TCL_OK)
+					return TCL_ERROR;				
+				break;
+			case FTDouble:
+				if (Tcl_ListObjAppendElement(interp, attributes,
+						Tcl_NewDoubleObj(DBFReadDoubleAttribute(shapefile->dbf, recordId, fieldi))) != TCL_OK)
+					return TCL_ERROR;
+				break;
+			case FTString:
+				if (Tcl_ListObjAppendElement(interp, attributes,
+						Tcl_NewStringObj(DBFReadStringAttribute(shapefile->dbf, recordId, fieldi), -1)) != TCL_OK)
+					return TCL_ERROR;
+				break;
+			default:
+				/* represent any unsupported field type values as {} (same as NULL) */
+				if (Tcl_ListObjAppendElement(interp, attributes, Tcl_NewObj()) != TCL_OK)
+					return TCL_ERROR;
+				break;
+		}
+	}
+	
+	/* return attribute list */
+	Tcl_SetObjResult(interp, attributes);
+	return TCL_OK;
+}
+
 /* attributes - get dbf attribute values of specified feature */
 int shapefile_cmd_attributes(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
 	ShapefilePtr shapefile = (ShapefilePtr)clientData;
@@ -532,62 +584,16 @@ int shapefile_cmd_attributes(ClientData clientData, Tcl_Interp *interp, int objc
 	/* validation of recordId is performed within the individual output/input blocks */
 	
 	if (objc == 4) {
-	
 		/* output mode */
 		/* if successful, sets interp's result to the recordId of the written record */
 		if (shapefile_util_attrWrite(interp, shapefile, recordId, objv[3]) != TCL_OK)
 			return TCL_ERROR;
 	}
 	else {
-	
 		/* input mode; return list of attributes from recordId */
-		Tcl_Obj *attributes = Tcl_NewListObj(0, NULL);
-		int fieldi, fieldCount = DBFGetFieldCount(shapefile->dbf);
-		DBFFieldType fieldType;
-		int dbfCount = DBFGetRecordCount(shapefile->dbf);
-		
-		if (recordId < 0 || recordId >= dbfCount) {
-			Tcl_SetResult(interp, "invalid record id", TCL_STATIC);
+		/* if successful, sets interp result to attribute record value list */
+		if (shapefile_util_attrRead(interp, shapefile, recordId) != TCL_OK)
 			return TCL_ERROR;
-		}
-
-		for (fieldi = 0; fieldi < fieldCount; fieldi++) {
-			
-			/* represent NULL attribute values as {} in return list */
-			if (DBFIsAttributeNULL(shapefile->dbf, recordId, fieldi)) {
-				if (Tcl_ListObjAppendElement(interp, attributes, Tcl_NewObj()) != TCL_OK)
-					return TCL_ERROR;
-				continue;
-			}
-			
-			/* interpret attribute value according to field type and append to result list */
-			fieldType = DBFGetFieldInfo(shapefile->dbf, fieldi, NULL, NULL, NULL);
-			switch (fieldType) {
-				case FTInteger:
-					if (Tcl_ListObjAppendElement(interp, attributes,
-							Tcl_NewIntObj(DBFReadIntegerAttribute(shapefile->dbf, recordId, fieldi))) != TCL_OK)
-						return TCL_ERROR;				
-					break;
-				case FTDouble:
-					if (Tcl_ListObjAppendElement(interp, attributes,
-							Tcl_NewDoubleObj(DBFReadDoubleAttribute(shapefile->dbf, recordId, fieldi))) != TCL_OK)
-						return TCL_ERROR;
-					break;
-				case FTString:
-					if (Tcl_ListObjAppendElement(interp, attributes,
-							Tcl_NewStringObj(DBFReadStringAttribute(shapefile->dbf, recordId, fieldi), -1)) != TCL_OK)
-						return TCL_ERROR;
-					break;
-				default:
-					/* represent any unsupported field type values as {} (same as NULL) */
-					if (Tcl_ListObjAppendElement(interp, attributes, Tcl_NewObj()) != TCL_OK)
-						return TCL_ERROR;
-					break;
-			}
-		}
-		
-		/* return attribute list */
-		Tcl_SetObjResult(interp, attributes);
 	}
 		
 	return TCL_OK;
