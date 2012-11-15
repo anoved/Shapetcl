@@ -788,6 +788,8 @@ int shapetcl_cmd(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *C
 	const char *path;
 	char cmdName[16];
 	int readonly = 0; /* readwrite access by default */
+	SHPHandle shp;
+	DBFHandle dbf;
 	
 	if (objc < 2 || objc > 4) {
 		Tcl_SetResult(interp, "shapetcl path [rb|rb+]|type fields", TCL_STATIC);
@@ -810,10 +812,6 @@ int shapetcl_cmd(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *C
 			return TCL_ERROR;
 		}
 	}
-	
-	/* need to ckfree this manually on any subsequent TCL_ERROR here? */
-	shapefile = (ShapefilePtr)ckalloc(sizeof(shapetcl_shapefile));
-	shapefile->readonly = readonly;
 	
 	if (objc == 4) {
 		/* create a new file; access is readwrite. */
@@ -855,12 +853,12 @@ int shapetcl_cmd(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *C
 		
 		/* ideally, should validate fieldSpec before creating files */
 		
-		if ((shapefile->shp = SHPCreate(path, shpType)) == NULL) {
+		if ((shp = SHPCreate(path, shpType)) == NULL) {
 			Tcl_SetResult(interp, "cannot create .shp", TCL_STATIC);
 			return TCL_ERROR;
 		}
 		
-		if ((shapefile->dbf = DBFCreate(path)) == NULL) {
+		if ((dbf = DBFCreate(path)) == NULL) {
 			Tcl_SetResult(interp, "cannot create .dbf", TCL_STATIC);
 			return TCL_ERROR;
 		}
@@ -886,19 +884,19 @@ int shapetcl_cmd(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *C
 				return TCL_ERROR;
 			
 			if (strcmp(type, "string") == 0) {
-				if (DBFAddField(shapefile->dbf, name, FTString, width, 0) == -1) {
+				if (DBFAddField(dbf, name, FTString, width, 0) == -1) {
 					Tcl_SetResult(interp, "cannot create string field", TCL_STATIC);
 					return TCL_ERROR;
 				}
 			}
 			else if (strcmp(type, "integer") == 0) {
-				if (DBFAddField(shapefile->dbf, name, FTInteger, width, 0) == -1) {
+				if (DBFAddField(dbf, name, FTInteger, width, 0) == -1) {
 					Tcl_SetResult(interp, "cannot create integer field", TCL_STATIC);
 					return TCL_ERROR;
 				}
 			}
 			else if (strcmp(type, "double") == 0) {
-				if (DBFAddField(shapefile->dbf, name, FTDouble, width, precision) == -1) {
+				if (DBFAddField(dbf, name, FTDouble, width, precision) == -1) {
 					Tcl_SetResult(interp, "cannot create double field", TCL_STATIC);
 					return TCL_ERROR;
 				}
@@ -911,22 +909,27 @@ int shapetcl_cmd(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *C
 	}
 	else {		
 		
-		if ((shapefile->dbf = DBFOpen(path, shapefile->readonly ? "rb" : "rb+")) == NULL) {
+		if ((dbf = DBFOpen(path, readonly ? "rb" : "rb+")) == NULL) {
 			Tcl_SetResult(interp, "cannot open .dbf", TCL_STATIC);
 			return TCL_ERROR;
 		}
 		
-		if (DBFGetFieldCount(shapefile->dbf) == 0) {
+		if (DBFGetFieldCount(dbf) == 0) {
 			Tcl_SetResult(interp, "attribute table contains no fields", TCL_STATIC);
-			DBFClose(shapefile->dbf);
+			DBFClose(dbf);
 			return TCL_ERROR;
 		}
 		
-		if ((shapefile->shp = SHPOpen(path, shapefile->readonly ? "rb" : "rb+")) == NULL) {
+		if ((shp = SHPOpen(path, readonly ? "rb" : "rb+")) == NULL) {
 			Tcl_SetResult(interp, "cannot open .shp", TCL_STATIC);
 			return TCL_ERROR;
 		}
 	}
+	
+	shapefile = (ShapefilePtr)ckalloc(sizeof(shapetcl_shapefile));
+	shapefile->shp = shp;
+	shapefile->dbf = dbf;	
+	shapefile->readonly = readonly;
 	
 	sprintf(cmdName, "shapefile.%04X", COMMAND_COUNT++);
 	Tcl_CreateObjCommand(interp, cmdName, shapefile_commands, (ClientData)shapefile, shapefile_util_delete);
