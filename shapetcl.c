@@ -434,10 +434,14 @@ int shapefile_cmd_coords(ClientData clientData, Tcl_Interp *interp, int objc, Tc
 int shapefile_util_attrWrite(Tcl_Interp *interp, ShapefilePtr shapefile, int recordId, Tcl_Obj *attrList) {
 	Tcl_Obj *attr;
 	int fieldi, fieldCount, attrCount, dbfCount;
-	DBFFieldType fieldType;
-	int intValue;
-	double doubleValue;
-	const char *stringValue;
+	DBFFieldType *fieldTypes;
+	int *fieldWidths, *fieldPrecisions;
+	int *intValues;
+	double *doubleValues;
+	const char **stringValues;
+	char numericStringValue[64];
+	int *nullValues;
+	int checkForTruncation = 1;
 	
 	if (shapefile->readonly) {
 		Tcl_SetResult(interp, "cannot write attributes with readonly access", TCL_STATIC);
@@ -467,6 +471,17 @@ int shapefile_util_attrWrite(Tcl_Interp *interp, ShapefilePtr shapefile, int rec
 		return TCL_ERROR;
 	}
 	
+	/* currently prone to memory leaks if any error occurs before the end - not free()ed */
+	fieldTypes = (DBFFieldType *)ckalloc(sizeof(DBFFieldType) * fieldCount);
+	fieldWidths = (int *)ckalloc(sizeof(int) * fieldCount);
+	fieldPrecisions = (int *)ckalloc(sizeof(int) * fieldCount);
+	intValues = (int *)ckalloc(sizeof(int) * fieldCount);
+	doubleValues = (double *)ckalloc(sizeof(double) * fieldCount);
+	stringValues = (const char **)ckalloc(sizeof(const char *) * fieldCount);
+	nullValues = (int *)ckalloc(sizeof(int) * fieldCount);
+	
+	/* validation pass - confirm field values can be parsed as field type
+	   (and perhaps check for obvious cases of truncation) before output */
 	for (fieldi = 0; fieldi < fieldCount; fieldi++) {
 		
 		/* grab the attr provided for this field */
@@ -475,42 +490,114 @@ int shapefile_util_attrWrite(Tcl_Interp *interp, ShapefilePtr shapefile, int rec
 		
 		/* if it is an empty string {}, write it as a NULL value */
 		if (Tcl_GetCharLength(attr) == 0) {
+			nullValues[fieldi] = 1;
+			continue;
+		} else {
+			nullValues[fieldi] = 0;
+		}
+		
+		/* stash the type, width, and precision of this field */
+		fieldTypes[fieldi] = DBFGetFieldInfo(shapefile->dbf, fieldi, NULL,
+				&fieldWidths[fieldi], &fieldPrecisions[fieldi]);
+		
+		switch (fieldTypes[fieldi]) {
+			case FTInteger:
+				
+				/* can this value be parsed as an integer? */
+				if (Tcl_GetIntFromObj(interp, attr, &intValues[fieldi]) != TCL_OK)
+					return TCL_ERROR;
+				
+				/* does this integer fit within the field width? */
+				if (checkForTruncation) {
+					sprintf(numericStringValue, "%d", intValues[fieldi]);
+					if (strlen(numericStringValue) > fieldWidths[fieldi]) {
+						Tcl_SetResult(interp, "integer value would be truncated", TCL_STATIC);
+						return TCL_ERROR;
+					}
+				}
+				break;
+			case FTDouble:
+				
+				/* can this value be parsed as a double? */
+				if (Tcl_GetDoubleFromObj(interp, attr, &doubleValues[fieldi]) != TCL_OK)
+					return TCL_ERROR;
+				
+				/* does this double fit within the field width? */
+				if (checkForTruncation) {
+					sprintf(numericStringValue, "%.*lf", fieldPrecisions[fieldi], doubleValues[fieldi]);
+					if (strlen(numericStringValue) > fieldWidths[fieldi]) {
+						Tcl_SetResult(interp, "double value would be truncated", TCL_STATIC);
+						return TCL_ERROR;
+					}
+				}
+				break;
+			case FTString:
+			
+				/* can this value be parsed as a string? */
+				if ((stringValues[fieldi] = Tcl_GetString(attr)) == NULL)
+					return TCL_ERROR;
+				
+				/* does this string fit within the field width? */
+				if (checkForTruncation && (strlen(stringValues[fieldi]) > fieldWidths[fieldi])) {
+					Tcl_SetResult(interp, "string value would be truncated", TCL_STATIC);
+					return TCL_ERROR;
+				}
+				break;
+			default:
+				/* write NULL values for all unsupported field types */
+				nullValues[fieldi] = 1;
+				break;
+		}
+	}
+	
+	/* output pass - once the fields are validated, write 'em out. Output is
+	   performed separately from validation to avoid mangled/partial output. */
+	for (fieldi = 0; fieldi < fieldCount; fieldi++) {
+		
+		/* null value */
+		if (nullValues[fieldi]) {
 			if (!DBFWriteNULLAttribute(shapefile->dbf, recordId, fieldi)) {
-				Tcl_SetResult(interp, "cannot write null attribute", TCL_STATIC);
+				Tcl_SetResult(interp, "cannot write NULL attribute. dbf may be invalid", TCL_STATIC);
 				return TCL_ERROR;
 			}
 			continue;
 		}
 		
-		/* write attribute values according to field type */
-		/* attribute writer functions may fail, but failure most commonly
-		   indicates truncation due to values exceeding field width. */
-		fieldType = DBFGetFieldInfo(shapefile->dbf, fieldi, NULL, NULL, NULL);
-		switch (fieldType) {
+		/* regular values */
+		switch (fieldTypes[fieldi]) {
 			case FTInteger:
-				if (Tcl_GetIntFromObj(interp, attr, &intValue) != TCL_OK)
-					return TCL_ERROR;
-				DBFWriteIntegerAttribute(shapefile->dbf, recordId, fieldi, intValue);
-				break;
-			case FTDouble:
-				if (Tcl_GetDoubleFromObj(interp, attr, &doubleValue) != TCL_OK)
-					return TCL_ERROR;
-				DBFWriteDoubleAttribute(shapefile->dbf, recordId, fieldi, doubleValue);
-				break;
-			case FTString:
-				if ((stringValue = Tcl_GetStringFromObj(attr, NULL)) == NULL)
-					return TCL_ERROR;
-				DBFWriteStringAttribute(shapefile->dbf, recordId, fieldi, stringValue);
-				break;
-			default:
-				/* ignore provided value and write NULL to any unsupported field types */
-				if (!DBFWriteNULLAttribute(shapefile->dbf, recordId, fieldi)) {
-					Tcl_SetResult(interp, "cannot write null attribute value to unsupported field type", TCL_STATIC);
+				if (!DBFWriteIntegerAttribute(shapefile->dbf, recordId, fieldi, intValues[fieldi])) {
+					Tcl_SetResult(interp, "cannot write integer attribute. dbf may be invalid", TCL_STATIC);
 					return TCL_ERROR;
 				}
 				break;
+			case FTDouble:
+				if (!DBFWriteDoubleAttribute(shapefile->dbf, recordId, fieldi, doubleValues[fieldi])) {
+					Tcl_SetResult(interp, "cannot write double attribute. dbf may be invalid", TCL_STATIC);
+					return TCL_ERROR;
+				}
+				break;
+			case FTString:
+				if (!DBFWriteStringAttribute(shapefile->dbf, recordId, fieldi, stringValues[fieldi])) {
+					Tcl_SetResult(interp, "cannot write string attribute. dbf may be invalid", TCL_STATIC);
+					return TCL_ERROR;
+				}
+				break;
+			default:
+				/* any other field types should have been marked as null during
+				   validation pass, and therefore already written as null above */
+				break;
 		}
+		
 	}
+	
+	ckfree((char *)fieldTypes);
+	ckfree((char *)fieldWidths);
+	ckfree((char *)fieldPrecisions);
+	ckfree((char *)intValues);
+	ckfree((char *)doubleValues);
+	ckfree((char *)stringValues);
+	ckfree((char *)nullValues);
 	
 	Tcl_SetObjResult(interp, Tcl_NewIntObj(recordId));
 	return TCL_OK;
