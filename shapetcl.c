@@ -262,6 +262,16 @@ int shapefile_util_coordWrite(Tcl_Interp *interp, ShapefilePtr shapefile, int fe
 	if (Tcl_ListObjLength(interp, coordParts, &partCount) != TCL_OK)
 		return TCL_ERROR;
 	
+	/* validate feature by number of parts according to shape type */
+	if (shapeType == SHPT_POINT && partCount != 1) {
+		Tcl_SetResult(interp, "point features must have exactly one part", TCL_STATIC);
+		return TCL_ERROR;
+	}
+	if ((shapeType == SHPT_MULTIPOINT || shapeType == SHPT_ARC || shapeType == SHPT_POLYGON) && partCount < 1) {
+		Tcl_SetResult(interp, "multipoint, arc, and polygon features must have at least one part", TCL_STATIC);
+		return TCL_ERROR;
+	}
+	
 	partStarts = (int *)ckalloc(sizeof(int) * partCount);
 	xCoords = NULL; yCoords = NULL;
 
@@ -284,10 +294,20 @@ int shapefile_util_coordWrite(Tcl_Interp *interp, ShapefilePtr shapefile, int fe
 		}
 		partVertexCount = partCoordCount / 2;
 		
-		/* do we handle empty parts? */
-		/* some shape types have minimum number of vertices */
-		/* some shapes have maximum number of parts (eg SHPT_POINT) */
-		
+		/* validate part by number of vertices according to shape type */
+		if ((shapeType == SHPT_POINT || shapeType == SHPT_MULTIPOINT) && partVertexCount != 1) {
+			Tcl_SetResult(interp, "point or multipoint features must have exactly one vertex", TCL_STATIC);
+			return TCL_ERROR;
+		}
+		if (shapeType == SHPT_ARC && partVertexCount < 2) {
+			Tcl_SetResult(interp, "arc feature must have at least two vertices per part", TCL_STATIC);
+			return TCL_ERROR;
+		}
+		if (shapeType == SHPT_POLYGON && partVertexCount < 4) {
+			Tcl_SetResult(interp, "polygon features must have at least four vertices per ring", TCL_STATIC);
+			return TCL_ERROR;
+		}
+				
 		/* add space for this part's vertices */
 		vertexCount += partVertexCount;
 		xCoords = (double *)ckrealloc((char *)xCoords, sizeof(double) * vertexCount);
@@ -724,7 +744,7 @@ int shapefile_cmd_write(ClientData clientData, Tcl_Interp *interp, int objc, Tcl
 		return TCL_ERROR;
 	if (Tcl_GetIntFromObj(interp, Tcl_GetObjResult(interp), &outputFeatureId) != TCL_OK)
 		return TCL_ERROR;
-	
+
 	Tcl_ResetResult(interp);
 	
 	/* write the new attribute record */
@@ -732,7 +752,7 @@ int shapefile_cmd_write(ClientData clientData, Tcl_Interp *interp, int objc, Tcl
 		return TCL_ERROR;
 	if (Tcl_GetIntFromObj(interp, Tcl_GetObjResult(interp), &outputAttributeId) != TCL_OK)
 		return TCL_ERROR;
-	
+
 	/* assert that the new feature and attribute record ids match */
 	if (outputFeatureId != outputAttributeId) {
 		Tcl_SetResult(interp, "output coord and attribute ids do not match", TCL_STATIC);
