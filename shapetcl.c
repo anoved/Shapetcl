@@ -1006,13 +1006,24 @@ int shapetcl_cmd(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *C
 		}
 	}
 	
-	shapefile = (ShapefilePtr)ckalloc(sizeof(shapetcl_shapefile));
+	if ((shapefile = (ShapefilePtr)ckalloc(sizeof(shapetcl_shapefile))) == NULL) {
+		Tcl_SetResult(interp, "failed to allocate memory for shapefile cmd data", TCL_STATIC);
+		DBFClose(dbf);
+		SHPClose(shp);
+		return TCL_ERROR;
+	}
 	shapefile->shp = shp;
 	shapefile->dbf = dbf;	
 	shapefile->readonly = readonly;
 	
 	sprintf(cmdName, "shapefile.%04X", COMMAND_COUNT++);
-	Tcl_CreateObjCommand(interp, cmdName, shapefile_commands, (ClientData)shapefile, shapefile_util_delete);
+	if (Tcl_CreateObjCommand(interp, cmdName, shapefile_commands, (ClientData)shapefile, shapefile_util_delete) == NULL) {
+		Tcl_SetResult(interp, "cannot create command for shapefile", TCL_STATIC);
+		DBFClose(dbf);
+		SHPClose(shp);
+		ckfree((char *)shapefile);
+		return TCL_ERROR;
+	}
 	Tcl_CreateExitHandler(shapefile_util_exit, (ClientData)shapefile);
 	Tcl_SetObjResult(interp, Tcl_NewStringObj(cmdName, -1));
 	
