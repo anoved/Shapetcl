@@ -790,6 +790,7 @@ int shapetcl_cmd(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *C
 	int readonly = 0; /* readwrite access by default */
 	SHPHandle shp;
 	DBFHandle dbf;
+	int shpType;
 	
 	if (objc < 2 || objc > 4) {
 		Tcl_SetResult(interp, "shapetcl path [rb|rb+]|type fields", TCL_STATIC);
@@ -817,7 +818,6 @@ int shapetcl_cmd(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *C
 		/* create a new file; access is readwrite. */
 		
 		const char *shpTypeName = Tcl_GetString(objv[2]);
-		int shpType;
 		int fieldSpecCount;
 		Tcl_Obj **fieldSpec;
 		int fieldi;
@@ -939,6 +939,15 @@ int shapetcl_cmd(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *C
 		if ((shp = SHPOpen(path, readonly ? "rb" : "rb+")) == NULL) {
 			Tcl_SetResult(interp, "cannot open .shp", TCL_STATIC);
 			DBFClose(dbf);
+			return TCL_ERROR;
+		}
+		
+		SHPGetInfo(shp, NULL, &shpType, NULL, NULL);
+		if (shpType != SHPT_POINT && shpType != SHPT_ARC &&
+				shpType != SHPT_POLYGON && shpType != SHPT_MULTIPOINT) {
+			Tcl_SetResult(interp, "unsupported shapefile geometry type", TCL_STATIC);
+			DBFClose(dbf);
+			SHPClose(shp);
 			return TCL_ERROR;
 		}
 	}
