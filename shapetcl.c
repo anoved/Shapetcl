@@ -821,7 +821,9 @@ int shapetcl_cmd(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *C
 		int fieldSpecCount;
 		Tcl_Obj **fieldSpec;
 		int fieldi;
-		
+		const char *type, *name;
+		int width, precision;
+
 		if (strcmp(shpTypeName, "point") == 0)
 			shpType = SHPT_POINT;
 		else if (strcmp(shpTypeName, "arc") == 0)
@@ -831,12 +833,10 @@ int shapetcl_cmd(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *C
 		else if (strcmp(shpTypeName, "multipoint") == 0)
 			shpType = SHPT_MULTIPOINT;
 		else {
-			Tcl_SetResult(interp, "unrecognized shape type", TCL_STATIC);
+			Tcl_SetResult(interp, "unsupported shape type", TCL_STATIC);
 			return TCL_ERROR;
 		}
 				
-		/* add fields to dbf now based on field specs in objv[3] */
-		
 		if (Tcl_ListObjGetElements(interp, objv[3], &fieldSpecCount, &fieldSpec) != TCL_OK) {
 			return TCL_ERROR;
 		}
@@ -851,11 +851,24 @@ int shapetcl_cmd(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *C
 			return TCL_ERROR;
 		}
 		
-		/* ideally, should validate fieldSpec before creating files */
-		
-		if ((shp = SHPCreate(path, shpType)) == NULL) {
-			Tcl_SetResult(interp, "cannot create .shp", TCL_STATIC);
-			return TCL_ERROR;
+		/* validate field specifications before creating dbf */	
+		for (fieldi = 0; fieldi < fieldSpecCount; fieldi += 4) {			
+			
+			type = Tcl_GetString(fieldSpec[fieldi]);
+			if (strcmp(type, "string") != 0 && strcmp(type, "integer") != 0 && strcmp(type, "double") != 0) {
+				Tcl_SetResult(interp, "unsupported field type", TCL_STATIC);
+				return TCL_ERROR;
+			}
+			
+			name = Tcl_GetString(fieldSpec[fieldi + 1]);
+						
+			if (Tcl_GetIntFromObj(interp, fieldSpec[fieldi + 2], &width) != TCL_OK)
+				return TCL_ERROR;
+			
+			if (Tcl_GetIntFromObj(interp, fieldSpec[fieldi + 3], &precision) != TCL_OK)
+				return TCL_ERROR;
+			
+			/* width and precision should probably be subject to additional type-specific tests */
 		}
 		
 		if ((dbf = DBFCreate(path)) == NULL) {
@@ -863,48 +876,39 @@ int shapetcl_cmd(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *C
 			return TCL_ERROR;
 		}
 		
-		for (fieldi = 0; fieldi < fieldSpecCount; fieldi += 4) {
-			/*
-				fieldi		type
-				fieldi + 1	name
-				fieldi + 2	width
-				fieldi + 3	precision
-			*/
-			
-			const char *type, *name;
-			int width, precision;
-			
+		/* add fields to the dbf */
+		for (fieldi = 0; fieldi <  fieldSpecCount; fieldi += 4) {
 			type = Tcl_GetString(fieldSpec[fieldi]);
 			name = Tcl_GetString(fieldSpec[fieldi + 1]);
-			
-			if (Tcl_GetIntFromObj(interp, fieldSpec[fieldi + 2], &width) != TCL_OK)
-				return TCL_ERROR;
-
-			if (Tcl_GetIntFromObj(interp, fieldSpec[fieldi + 3], &precision) != TCL_OK)
-				return TCL_ERROR;
-			
-			if (strcmp(type, "string") == 0) {
-				if (DBFAddField(dbf, name, FTString, width, 0) == -1) {
-					Tcl_SetResult(interp, "cannot create string field", TCL_STATIC);
-					return TCL_ERROR;
-				}
-			}
-			else if (strcmp(type, "integer") == 0) {
+			Tcl_GetIntFromObj(interp, fieldSpec[fieldi + 2], &width);
+			Tcl_GetIntFromObj(interp, fieldSpec[fieldi + 3], &precision);
+			if (strcmp(type, "integer") == 0) {
 				if (DBFAddField(dbf, name, FTInteger, width, 0) == -1) {
 					Tcl_SetResult(interp, "cannot create integer field", TCL_STATIC);
+					DBFClose(dbf);
 					return TCL_ERROR;
 				}
 			}
 			else if (strcmp(type, "double") == 0) {
 				if (DBFAddField(dbf, name, FTDouble, width, precision) == -1) {
 					Tcl_SetResult(interp, "cannot create double field", TCL_STATIC);
+					DBFClose(dbf);
 					return TCL_ERROR;
 				}
 			}
-			else {
-				Tcl_SetResult(interp, "unrecognized field type", TCL_STATIC);
-				return TCL_ERROR;
+			else if (strcmp(type, "string") == 0) {
+				if (DBFAddField(dbf, name, FTString, width, 0) == -1) {
+					Tcl_SetResult(interp, "cannot create string field", TCL_STATIC);
+					DBFClose(dbf);
+					return TCL_ERROR;
+				}
 			}
+		}
+		
+		if ((shp = SHPCreate(path, shpType)) == NULL) {
+			Tcl_SetResult(interp, "cannot create .shp", TCL_STATIC);
+			DBFClose(dbf);
+			return TCL_ERROR;
 		}
 	}
 	else {		
@@ -922,6 +926,7 @@ int shapetcl_cmd(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *C
 		
 		if ((shp = SHPOpen(path, readonly ? "rb" : "rb+")) == NULL) {
 			Tcl_SetResult(interp, "cannot open .shp", TCL_STATIC);
+			DBFClose(dbf);
 			return TCL_ERROR;
 		}
 	}
