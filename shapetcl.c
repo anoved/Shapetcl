@@ -852,7 +852,7 @@ int shapetcl_cmd(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *C
 		}
 		
 		/* validate field specifications before creating dbf */	
-		for (fieldi = 0; fieldi < fieldSpecCount; fieldi += 4) {			
+		for (fieldi = 0; fieldi < fieldSpecCount; fieldi += 4) {
 			
 			type = Tcl_GetString(fieldSpec[fieldi]);
 			if (strcmp(type, "string") != 0 && strcmp(type, "integer") != 0 && strcmp(type, "double") != 0) {
@@ -861,14 +861,24 @@ int shapetcl_cmd(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *C
 			}
 			
 			name = Tcl_GetString(fieldSpec[fieldi + 1]);
-						
+			if (strlen(name) > 10) {
+				Tcl_SetResult(interp, "field name exceeds maximum length of 10 characters", TCL_STATIC);
+				return TCL_ERROR;
+			}
+			
 			if (Tcl_GetIntFromObj(interp, fieldSpec[fieldi + 2], &width) != TCL_OK)
 				return TCL_ERROR;
+			if (strcmp(type, "integer") == 0 && width > 10) {
+				Tcl_SetResult(interp, "integer field width over 10 would be changed to double", TCL_STATIC);
+				return TCL_ERROR;
+			}
 			
 			if (Tcl_GetIntFromObj(interp, fieldSpec[fieldi + 3], &precision) != TCL_OK)
 				return TCL_ERROR;
-			
-			/* width and precision should probably be subject to additional type-specific tests */
+			if (strcmp(type, "double") == 0 && width <= 10 && precision == 0) {
+				Tcl_SetResult(interp, "double width 10 or less with 0 precision would be changed to integer", TCL_STATIC);
+				return TCL_ERROR;
+			}
 		}
 		
 		if ((dbf = DBFCreate(path)) == NULL) {
@@ -912,6 +922,8 @@ int shapetcl_cmd(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *C
 		}
 	}
 	else {		
+		
+		/* open an existing shapefile */
 		
 		if ((dbf = DBFOpen(path, readonly ? "rb" : "rb+")) == NULL) {
 			Tcl_SetResult(interp, "cannot open .dbf", TCL_STATIC);
