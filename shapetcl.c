@@ -246,6 +246,7 @@ int shapefile_util_coordWrite(Tcl_Interp *interp, ShapefilePtr shapefile, int fe
 	int vertex, vertexCount, partVertexCount;
 	double *xCoords, *yCoords, x, y;
 	SHPObject *shape;
+	int returnValue = TCL_OK;
 	
 	if (shapefile->readonly) {
 		Tcl_SetResult(interp, "cannot write coordinates with readonly access", TCL_STATIC);
@@ -272,7 +273,10 @@ int shapefile_util_coordWrite(Tcl_Interp *interp, ShapefilePtr shapefile, int fe
 		return TCL_ERROR;
 	}
 	
-	partStarts = (int *)ckalloc(sizeof(int) * partCount);
+	if ((partStarts = (int *)ckalloc(sizeof(int) * partCount)) == NULL) {
+		Tcl_SetResult(interp, "cannot allocate part index array", TCL_STATIC);
+		return TCL_ERROR;
+	}
 	xCoords = NULL; yCoords = NULL;
 
 	vertex = 0;
@@ -282,49 +286,73 @@ int shapefile_util_coordWrite(Tcl_Interp *interp, ShapefilePtr shapefile, int fe
 		partStarts[part] = vertex;
 		
 		/* get the coordinates that comprise this part */
-		if (Tcl_ListObjIndex(interp, coordParts, part, &coords) != TCL_OK)
-			return TCL_ERROR;
+		if (Tcl_ListObjIndex(interp, coordParts, part, &coords) != TCL_OK) {
+			returnValue = TCL_ERROR;
+			goto cwRelease;
+		}
 		
 		/* verify that the coordinate list has a valid number of elements */
-		if (Tcl_ListObjLength(interp, coords, &partCoordCount) != TCL_OK)
-			return TCL_ERROR;
+		if (Tcl_ListObjLength(interp, coords, &partCoordCount) != TCL_OK) {
+			returnValue = TCL_ERROR;
+			goto cwRelease;
+		}
 		if (partCoordCount % 2 != 0) {
 			Tcl_SetResult(interp, "coordinate list malformed", TCL_STATIC);
-			return TCL_ERROR;
+			returnValue = TCL_ERROR;
+			goto cwRelease;
 		}
 		partVertexCount = partCoordCount / 2;
 		
 		/* validate part by number of vertices according to shape type */
 		if ((shapeType == SHPT_POINT || shapeType == SHPT_MULTIPOINT) && partVertexCount != 1) {
 			Tcl_SetResult(interp, "point or multipoint features must have exactly one vertex", TCL_STATIC);
-			return TCL_ERROR;
+			returnValue = TCL_ERROR;
+			goto cwRelease;
 		}
 		if (shapeType == SHPT_ARC && partVertexCount < 2) {
 			Tcl_SetResult(interp, "arc feature must have at least two vertices per part", TCL_STATIC);
-			return TCL_ERROR;
+			returnValue = TCL_ERROR;
+			goto cwRelease;
 		}
 		if (shapeType == SHPT_POLYGON && partVertexCount < 4) {
 			Tcl_SetResult(interp, "polygon features must have at least four vertices per ring", TCL_STATIC);
-			return TCL_ERROR;
+			returnValue = TCL_ERROR;
+			goto cwRelease;
 		}
 				
 		/* add space for this part's vertices */
 		vertexCount += partVertexCount;
-		xCoords = (double *)ckrealloc((char *)xCoords, sizeof(double) * vertexCount);
-		yCoords = (double *)ckrealloc((char *)yCoords, sizeof(double) * vertexCount);
+		if ((xCoords = (double *)ckrealloc((char *)xCoords, sizeof(double) * vertexCount)) == NULL) {
+			Tcl_SetResult(interp, "cannot reallocate memory for x coordinate array", TCL_STATIC);
+			returnValue = TCL_ERROR;
+			goto cwRelease;
+		}
+		if ((yCoords = (double *)ckrealloc((char *)yCoords, sizeof(double) * vertexCount)) == NULL) {
+			Tcl_SetResult(interp, "cannot reallocate memory for y coordinate array", TCL_STATIC);
+			returnValue = TCL_ERROR;
+			goto cwRelease;
+		}
 		
 		for (partCoord = 0; partCoord < partCoordCount; partCoord += 2) {
 			
-			if (Tcl_ListObjIndex(interp, coords, partCoord, &coord) != TCL_OK)
-				return TCL_ERROR;
-			if (Tcl_GetDoubleFromObj(interp, coord, &x) != TCL_OK)
-				return TCL_ERROR;
+			if (Tcl_ListObjIndex(interp, coords, partCoord, &coord) != TCL_OK) {
+				returnValue = TCL_ERROR;
+				goto cwRelease;
+			}
+			if (Tcl_GetDoubleFromObj(interp, coord, &x) != TCL_OK) {
+				returnValue = TCL_ERROR;
+				goto cwRelease;
+			}
 			xCoords[vertex] = x;
 			
-			if (Tcl_ListObjIndex(interp, coords, partCoord + 1, &coord) != TCL_OK)
-				return TCL_ERROR;
-			if (Tcl_GetDoubleFromObj(interp, coord, &y) != TCL_OK)
-				return TCL_ERROR;
+			if (Tcl_ListObjIndex(interp, coords, partCoord + 1, &coord) != TCL_OK) {
+				returnValue = TCL_ERROR;
+				goto cwRelease;
+			}
+			if (Tcl_GetDoubleFromObj(interp, coord, &y) != TCL_OK) {
+				returnValue = TCL_ERROR;
+				goto cwRelease;
+			}
 			yCoords[vertex] = y;
 			
 			vertex++;
@@ -335,7 +363,8 @@ int shapefile_util_coordWrite(Tcl_Interp *interp, ShapefilePtr shapefile, int fe
 	if ((shape = SHPCreateObject(shapeType, featureId, partCount,
 			partStarts, NULL, vertexCount, xCoords, yCoords, NULL, NULL)) == NULL) {
 		Tcl_SetResult(interp, "cannot create shape", TCL_STATIC);
-		return TCL_ERROR;
+		returnValue = TCL_ERROR;
+		goto cwRelease;
 	}
 	
 	/* correct the shape's vertex order, if necessary */
@@ -344,16 +373,21 @@ int shapefile_util_coordWrite(Tcl_Interp *interp, ShapefilePtr shapefile, int fe
 	/* write the shape to the shapefile */
 	if ((outputFeatureId = SHPWriteObject(shapefile->shp, featureId, shape)) == -1) {
 		Tcl_SetResult(interp, "cannot write shape", TCL_STATIC);
-		return TCL_ERROR;
+		returnValue = TCL_ERROR;
+		goto cwDestroyRelease;
 	}
-	
-	SHPDestroyObject(shape);
-	ckfree((char *)partStarts);
-	ckfree((char *)xCoords);
-	ckfree((char *)yCoords);
-	
+
 	Tcl_SetObjResult(interp, Tcl_NewIntObj(outputFeatureId));
-	return TCL_OK;
+	
+   cwDestroyRelease:
+	SHPDestroyObject(shape);
+	
+   cwRelease:
+	if (partStarts != NULL) ckfree((char *)partStarts);
+	if (xCoords != NULL) ckfree((char *)xCoords);
+	if (yCoords != NULL) ckfree((char *)yCoords);
+	
+	return returnValue;
 }
 
 int shapefile_util_coordRead(Tcl_Interp *interp, ShapefilePtr shapefile, int featureId) {
