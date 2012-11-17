@@ -15,7 +15,6 @@ static int COMMAND_COUNT = 0;
 /* shapefile closer - invoked if manually closed or automatically on exit */
 void shapefile_util_close(ClientData clientData) {
 	ShapefilePtr shapefile = (ShapefilePtr)clientData;
-	/*printf("shapefile_util_close %lX\n", (unsigned long int)shapefile);*/
 	SHPClose(shapefile->shp);
 	shapefile->shp = NULL;
 	DBFClose(shapefile->dbf);
@@ -25,14 +24,12 @@ void shapefile_util_close(ClientData clientData) {
 /* exit handler - invoked if shapefile is not manually closed prior to exit */
 void shapefile_util_exit(ClientData clientData) {
 	ShapefilePtr shapefile = (ShapefilePtr)clientData;
-	/*printf("shapefile_util_exit %lX\n", (long unsigned int)shapefile);*/
 	shapefile_util_close(shapefile);
 }
 
 /* delete proc - invoked if shapefile is manually closed. deletes exit handler */
 void shapefile_util_delete(ClientData clientData) {
 	ShapefilePtr shapefile = (ShapefilePtr)clientData;
-	/*printf("shapefile_util_delete %lX\n", (long unsigned int)shapefile);*/
 	Tcl_DeleteExitHandler(shapefile_util_exit, shapefile);
 	ckfree((char *)shapefile);
 }
