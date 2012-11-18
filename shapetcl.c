@@ -779,28 +779,55 @@ int shapefile_cmd_attributes(ClientData clientData, Tcl_Interp *interp, int objc
 	ShapefilePtr shapefile = (ShapefilePtr)clientData;
 	int recordId;
 	
-	if (objc != 3 && objc != 4) {
-		Tcl_WrongNumArgs(interp, 2, objv, "index ?attributes?");
+	if (objc < 2 || objc > 4) {
+		Tcl_WrongNumArgs(interp, 2, objv, "?index ?attributes??");
 		return TCL_ERROR;
 	}
 	
-	if (Tcl_GetIntFromObj(interp, objv[2], &recordId) != TCL_OK) {
-		return TCL_ERROR;
+	/* if reading or writing a specific record, get the record index */
+	if (objc == 3 || objc == 4) {
+		if (Tcl_GetIntFromObj(interp, objv[2], &recordId) != TCL_OK) {
+			return TCL_ERROR;
+		}
 	}
-		
+	
 	if (objc == 4) {
-		/* output mode */
+		/* output; write provided attributes to specified record index */
 		/* if successful, sets interp's result to the recordId of the written record */
 		if (shapefile_util_attrWrite(interp, shapefile, recordId, 1 /* validate */, objv[3]) != TCL_OK) {
 			return TCL_ERROR;
 		}
 	}
-	else {
-		/* input mode; return list of attributes from recordId */
+	else if (objc == 3) {
+		/* input; return attributes read from specified record index */
 		/* if successful, sets interp result to attribute record value list */
 		if (shapefile_util_attrRead(interp, shapefile, recordId) != TCL_OK) {
 			return TCL_ERROR;
 		}
+	} 
+	else {
+		/* slurp input; return list of all records (each an attribute list) */
+		Tcl_Obj *recordList;
+		int dbfCount;
+		
+		recordList = Tcl_NewListObj(0, NULL);
+		dbfCount = DBFGetRecordCount(shapefile->dbf);
+
+		for (recordId = 0; recordId < dbfCount; recordId++) {
+			
+			if (shapefile_util_attrRead(interp, shapefile, recordId) != TCL_OK) {
+				return TCL_ERROR;
+			}
+						
+			/* append this record's attribute list to the record list */
+			if (Tcl_ListObjAppendElement(interp, recordList, Tcl_GetObjResult(interp)) != TCL_OK) {
+				return TCL_ERROR;
+			}
+			
+			Tcl_ResetResult(interp);
+		}
+		
+		Tcl_SetObjResult(interp, recordList);
 	}
 		
 	return TCL_OK;
