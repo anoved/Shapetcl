@@ -60,9 +60,9 @@ int shapefile_cmd_mode(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_
 	}
 	
 	if (shapefile->readonly) {
-		Tcl_SetResult(interp, "readonly", TCL_STATIC);
+		Tcl_SetObjResult(interp, Tcl_ObjPrintf("readonly"));
 	} else {
-		Tcl_SetResult(interp, "readwrite", TCL_STATIC);
+		Tcl_SetObjResult(interp, Tcl_ObjPrintf("readwrite"));
 	}
 	
 	return TCL_OK;
@@ -83,7 +83,7 @@ int shapefile_cmd_count(ClientData clientData, Tcl_Interp *interp, int objc, Tcl
 	dbfCount = DBFGetRecordCount(shapefile->dbf);
 	
 	if (shpCount != dbfCount) {
-		Tcl_SetResult(interp, "shp count does not match dbf count", TCL_STATIC);
+		Tcl_SetObjResult(interp, Tcl_ObjPrintf("shapefile feature count (%d) does not match attribute table record count (%d)", shpCount, dbfCount));
 		return TCL_ERROR;
 	}
 	
@@ -105,21 +105,21 @@ int shapefile_cmd_type(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_
 	
 	switch (shpType) {
 		case SHPT_POINT:
-			Tcl_SetResult(interp, "point", TCL_STATIC);
+			Tcl_SetObjResult(interp, Tcl_ObjPrintf("point"));
 			break;
 		case SHPT_ARC:
-			Tcl_SetResult(interp, "arc", TCL_STATIC);
+			Tcl_SetObjResult(interp, Tcl_ObjPrintf("arc"));
 			break;
 		case SHPT_POLYGON:
-			Tcl_SetResult(interp, "polygon", TCL_STATIC);
+			Tcl_SetObjResult(interp, Tcl_ObjPrintf("polygon"));
 			break;
 		case SHPT_MULTIPOINT:
-			Tcl_SetResult(interp, "multipoint", TCL_STATIC);
+			Tcl_SetObjResult(interp, Tcl_ObjPrintf("multipoint"));
 			break;
 		default:
 			/* unsupported type */
 			/* should try to notice unsupported types on open */
-			Tcl_SetResult(interp, "unsupported type", TCL_STATIC);
+			Tcl_SetObjResult(interp, Tcl_ObjPrintf("unsupported shape type (%d)", shpType));
 			return TCL_ERROR;
 			break;
 	}
@@ -152,17 +152,17 @@ int shapefile_cmd_bounds(ClientData clientData, Tcl_Interp *interp, int objc, Tc
 		}
 		
 		if (featureId < 0 || featureId >= shpCount) {
-			Tcl_SetResult(interp, "index out of bounds", TCL_STATIC);
+			Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid index (%d): should be >=0 and <%d", featureId, shpCount));
 			return TCL_ERROR;
 		}
 		
 		if ((obj = SHPReadObject(shapefile->shp, featureId)) == NULL) {
-			Tcl_SetResult(interp, "cannot read shape", TCL_STATIC);
+			Tcl_SetObjResult(interp, Tcl_ObjPrintf("failed to read feature %d", featureId));
 			return TCL_ERROR;
 		}
 		
 		if (obj->nSHPType == SHPT_NULL) {
-			Tcl_SetResult(interp, "no bounds for null feature", TCL_STATIC);
+			Tcl_SetObjResult(interp, Tcl_ObjPrintf("no bounds for null feature"));
 			return TCL_ERROR;
 		}
 		
@@ -255,13 +255,13 @@ int shapefile_util_coordWrite(Tcl_Interp *interp, ShapefilePtr shapefile, int fe
 	int addClosingVertex = 0;
 
 	if (shapefile->readonly) {
-		Tcl_SetResult(interp, "cannot write coordinates with readonly access", TCL_STATIC);
+		Tcl_SetObjResult(interp, Tcl_ObjPrintf("cannot write coords to readonly shapefile"));
 		return TCL_ERROR;
 	}
 	
 	SHPGetInfo(shapefile->shp, &featureCount, &shapeType, NULL, NULL);
 	if (featureId < -1 || featureId >= featureCount) {
-		Tcl_SetResult(interp, "invalid output feature id", TCL_STATIC);
+		Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid feature index (%d): should be >=-1 and <%d", featureId, featureCount));
 		return TCL_ERROR;
 	}
 	/* a featureId of -1 indicates a new feature should be output */
@@ -272,16 +272,16 @@ int shapefile_util_coordWrite(Tcl_Interp *interp, ShapefilePtr shapefile, int fe
 	
 	/* validate feature by number of parts according to shape type */
 	if (shapeType == SHPT_POINT && partCount != 1) {
-		Tcl_SetResult(interp, "point features must have exactly one part", TCL_STATIC);
+		Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid part count (%d): point features must have exactly 1 part", partCount));
 		return TCL_ERROR;
 	}
 	if ((shapeType == SHPT_MULTIPOINT || shapeType == SHPT_ARC || shapeType == SHPT_POLYGON) && partCount < 1) {
-		Tcl_SetResult(interp, "multipoint, arc, and polygon features must have at least one part", TCL_STATIC);
+		Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid part count (%d): arc, polygon, and multipoint features must have at least 1 part", partCount));
 		return TCL_ERROR;
 	}
 	
 	if ((partStarts = (int *)ckalloc(sizeof(int) * partCount)) == NULL) {
-		Tcl_SetResult(interp, "cannot allocate part index array", TCL_STATIC);
+		Tcl_SetObjResult(interp, Tcl_ObjPrintf("failed to allocate coord part index array"));
 		return TCL_ERROR;
 	}
 	xCoords = NULL; yCoords = NULL;
@@ -304,7 +304,7 @@ int shapefile_util_coordWrite(Tcl_Interp *interp, ShapefilePtr shapefile, int fe
 			goto cwRelease;
 		}
 		if (partCoordCount % 2 != 0) {
-			Tcl_SetResult(interp, "coordinate list malformed", TCL_STATIC);
+			Tcl_SetObjResult(interp, Tcl_ObjPrintf("each vertex requires 2 coordinate values (x and y)"));
 			returnValue = TCL_ERROR;
 			goto cwRelease;
 		}
@@ -312,17 +312,17 @@ int shapefile_util_coordWrite(Tcl_Interp *interp, ShapefilePtr shapefile, int fe
 		
 		/* validate part by number of vertices according to shape type */
 		if ((shapeType == SHPT_POINT || shapeType == SHPT_MULTIPOINT) && partVertexCount != 1) {
-			Tcl_SetResult(interp, "point or multipoint features must have exactly one vertex", TCL_STATIC);
+			Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid vertex count (%d): point and multipoint features must have exactly one vertex per part", partVertexCount));
 			returnValue = TCL_ERROR;
 			goto cwRelease;
 		}
 		if (shapeType == SHPT_ARC && partVertexCount < 2) {
-			Tcl_SetResult(interp, "arc feature must have at least two vertices per part", TCL_STATIC);
+			Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid vertex count (%d): arc features must have at least 2 vertices per part", partVertexCount));
 			returnValue = TCL_ERROR;
 			goto cwRelease;
 		}
 		if (shapeType == SHPT_POLYGON && partVertexCount < 4) {
-			Tcl_SetResult(interp, "polygon features must have at least four vertices per ring", TCL_STATIC);
+			Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid vertex count (%d): polygon features must have at least 4 vertices per part", partVertexCount));
 			returnValue = TCL_ERROR;
 			goto cwRelease;
 		}
@@ -330,12 +330,12 @@ int shapefile_util_coordWrite(Tcl_Interp *interp, ShapefilePtr shapefile, int fe
 		/* add space for this part's vertices */
 		vertexCount += partVertexCount;
 		if ((xCoords = (double *)ckrealloc((char *)xCoords, sizeof(double) * vertexCount)) == NULL) {
-			Tcl_SetResult(interp, "cannot reallocate memory for x coordinate array", TCL_STATIC);
+			Tcl_SetObjResult(interp, Tcl_ObjPrintf("failed to reallocate memory for x coordinate array"));
 			returnValue = TCL_ERROR;
 			goto cwRelease;
 		}
 		if ((yCoords = (double *)ckrealloc((char *)yCoords, sizeof(double) * vertexCount)) == NULL) {
-			Tcl_SetResult(interp, "cannot reallocate memory for y coordinate array", TCL_STATIC);
+			Tcl_SetObjResult(interp, Tcl_ObjPrintf("failed to reallocate memory for y coordinate array"));
 			returnValue = TCL_ERROR;
 			goto cwRelease;
 		}
@@ -375,8 +375,8 @@ int shapefile_util_coordWrite(Tcl_Interp *interp, ShapefilePtr shapefile, int fe
 				vertexCount++;
 				xCoords = (double *)ckrealloc((char *)xCoords, sizeof(double) * vertexCount);
 				yCoords = (double *)ckrealloc((char *)yCoords, sizeof(double) * vertexCount);
-				if (xCoords == NULL || yCoords == NULL) {
-					Tcl_SetResult(interp, "cannot reallocate memory for final vertex in vertex array", TCL_STATIC);
+				if (xCoords == NULL || yCoords == NULL) {	
+					Tcl_SetObjResult(interp, Tcl_ObjPrintf("failed to reallocate coordinate arrays for closing vertex"));
 					returnValue = TCL_ERROR;
 					goto cwRelease;
 				}
@@ -384,7 +384,7 @@ int shapefile_util_coordWrite(Tcl_Interp *interp, ShapefilePtr shapefile, int fe
 				yCoords[vertex] = yCoords[partStarts[part]];
 				vertex++;
 			} else {
-				Tcl_SetResult(interp, "polygon parts must start and end with the same vertex", TCL_STATIC);
+				Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid part geometry: polygon rings must be closed (begin and end with the same vertex)"));
 				returnValue = TCL_ERROR;
 				goto cwRelease;
 			}
@@ -394,7 +394,7 @@ int shapefile_util_coordWrite(Tcl_Interp *interp, ShapefilePtr shapefile, int fe
 	/* assemble the coordinate lists into a new shape */
 	if ((shape = SHPCreateObject(shapeType, featureId, partCount,
 			partStarts, NULL, vertexCount, xCoords, yCoords, NULL, NULL)) == NULL) {
-		Tcl_SetResult(interp, "cannot create shape", TCL_STATIC);
+		Tcl_SetObjResult(interp, Tcl_ObjPrintf("failed to create shape object"));
 		returnValue = TCL_ERROR;
 		goto cwRelease;
 	}
@@ -404,7 +404,7 @@ int shapefile_util_coordWrite(Tcl_Interp *interp, ShapefilePtr shapefile, int fe
 	
 	/* write the shape to the shapefile */
 	if ((outputFeatureId = SHPWriteObject(shapefile->shp, featureId, shape)) == -1) {
-		Tcl_SetResult(interp, "cannot write shape", TCL_STATIC);
+		Tcl_SetObjResult(interp, Tcl_ObjPrintf("failed to write shape object"));
 		returnValue = TCL_ERROR;
 		goto cwDestroyRelease;
 	}
@@ -429,12 +429,12 @@ int shapefile_util_coordRead(Tcl_Interp *interp, ShapefilePtr shapefile, int fea
 	
 	SHPGetInfo(shapefile->shp, &featureCount, NULL, NULL, NULL);
 	if (featureId < 0 || featureId >= featureCount) {
-		Tcl_SetResult(interp, "invalid feature id", TCL_STATIC);
+		Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid feature index (%d): should be >=0 and <%d", featureId, featureCount));
 		return TCL_ERROR;
 	}
 	
 	if ((shape = SHPReadObject(shapefile->shp, featureId)) == NULL) {
-		Tcl_SetResult(interp, "cannot read feature", TCL_STATIC);
+		Tcl_SetObjResult(interp, Tcl_ObjPrintf("failed to read feature %d", featureId));
 		return TCL_ERROR;
 	}
 	
@@ -542,7 +542,7 @@ int shapefile_util_attrValidate(Tcl_Interp *interp, ShapefilePtr shapefile, Tcl_
 		return TCL_ERROR;
 	}
 	if (attrCount != fieldCount) {
-		Tcl_SetResult(interp, "attribute count does not match field count", TCL_STATIC);
+		Tcl_SetObjResult(interp, Tcl_ObjPrintf("attribute count (%d) does not match field count (%d)", attrCount, fieldCount));
 		return TCL_ERROR;
 	}
 	
@@ -574,7 +574,7 @@ int shapefile_util_attrValidate(Tcl_Interp *interp, ShapefilePtr shapefile, Tcl_
 				/* does this integer fit within the field width? */
 				sprintf(numericStringValue, "%d", intValue);
 				if (strlen(numericStringValue) > width) {
-					Tcl_SetResult(interp, "integer value would be truncated", TCL_STATIC);
+					Tcl_SetObjResult(interp, Tcl_ObjPrintf("integer value (%s) would be truncated to field width (%d)", numericStringValue, width));
 					return TCL_ERROR;
 				}
 				break;
@@ -588,7 +588,7 @@ int shapefile_util_attrValidate(Tcl_Interp *interp, ShapefilePtr shapefile, Tcl_
 				/* does this double fit within the field width? */
 				sprintf(numericStringValue, "%.*lf", precision, doubleValue);
 				if (strlen(numericStringValue) > width) {
-					Tcl_SetResult(interp, "double value would be truncated", TCL_STATIC);
+					Tcl_SetObjResult(interp, Tcl_ObjPrintf("double value (%s) would be truncated to field width (%d)", numericStringValue, width));
 					return TCL_ERROR;
 				}
 				break;
@@ -601,7 +601,7 @@ int shapefile_util_attrValidate(Tcl_Interp *interp, ShapefilePtr shapefile, Tcl_
 				
 				/* does this string fit within the field width? */
 				if (strlen(stringValue) > width) {
-					Tcl_SetResult(interp, "string value would be truncated", TCL_STATIC);
+					Tcl_SetObjResult(interp, Tcl_ObjPrintf("string value (%s) would be truncated to field width (%d)", stringValue, width));
 					return TCL_ERROR;
 				}
 				break;
@@ -625,13 +625,13 @@ int shapefile_util_attrWrite(Tcl_Interp *interp, ShapefilePtr shapefile, int rec
 	const char *stringValue;
 	
 	if (shapefile->readonly) {
-		Tcl_SetResult(interp, "cannot write attributes with readonly access", TCL_STATIC);
+		Tcl_SetObjResult(interp, Tcl_ObjPrintf("cannot write attributes to readonly shapefile"));
 		return TCL_ERROR;
 	}
 	
 	dbfCount = DBFGetRecordCount(shapefile->dbf);
 	if (recordId < -1 || recordId >= dbfCount) {
-		Tcl_SetResult(interp, "invalid record id", TCL_STATIC);
+		Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid record index (%d): should be >=-1 and <%d", recordId, dbfCount));
 		return TCL_ERROR;
 	}
 	if (recordId == -1) {
@@ -650,7 +650,7 @@ int shapefile_util_attrWrite(Tcl_Interp *interp, ShapefilePtr shapefile, int rec
 		return TCL_ERROR;
 	}
 	if (attrCount != fieldCount) {
-		Tcl_SetResult(interp, "attribute count does not match field count", TCL_STATIC);
+		Tcl_SetObjResult(interp, Tcl_ObjPrintf("attribute count (%d) does not match field count (%d)", attrCount, fieldCount));
 		return TCL_ERROR;
 	}
 	
@@ -674,7 +674,7 @@ int shapefile_util_attrWrite(Tcl_Interp *interp, ShapefilePtr shapefile, int rec
 		/* null value */
 		if (Tcl_GetCharLength(attr) == 0) {
 			if (!DBFWriteNULLAttribute(shapefile->dbf, recordId, fieldi)) {
-				Tcl_SetResult(interp, "cannot write NULL attribute. dbf may be invalid", TCL_STATIC);
+				Tcl_SetObjResult(interp, Tcl_ObjPrintf("failed to write null attribute"));
 				return TCL_ERROR;
 			}
 			continue;
@@ -685,28 +685,28 @@ int shapefile_util_attrWrite(Tcl_Interp *interp, ShapefilePtr shapefile, int rec
 			case FTInteger:
 				if ((Tcl_GetIntFromObj(interp, attr, &intValue) != TCL_OK) ||
 						(!DBFWriteIntegerAttribute(shapefile->dbf, recordId, fieldi, intValue))) {
-					Tcl_SetResult(interp, "cannot write integer attribute. dbf may be invalid", TCL_STATIC);
+					Tcl_SetObjResult(interp, Tcl_ObjPrintf("failed to write integer attribute \"%d\"", intValue));
 					return TCL_ERROR;
 				}
 				break;
 			case FTDouble:
 				if ((Tcl_GetDoubleFromObj(interp, attr, &doubleValue) != TCL_OK) ||
 						(!DBFWriteDoubleAttribute(shapefile->dbf, recordId, fieldi, doubleValue))) {
-					Tcl_SetResult(interp, "cannot write double attribute. dbf may be invalid", TCL_STATIC);
+					Tcl_SetObjResult(interp, Tcl_ObjPrintf("failed to write double attribute \"%lf\"", doubleValue));
 					return TCL_ERROR;
 				}
 				break;
 			case FTString:
 				if (((stringValue = Tcl_GetString(attr)) == NULL) ||
 						(!DBFWriteStringAttribute(shapefile->dbf, recordId, fieldi, stringValue))) {
-					Tcl_SetResult(interp, "cannot write string attribute. dbf may be invalid", TCL_STATIC);
+					Tcl_SetObjResult(interp, Tcl_ObjPrintf("failed to write string attribute \"%s\"", stringValue));
 					return TCL_ERROR;
 				}
 				break;
 			default:
 				/* write NULL for all unsupported field types */
 				if (!DBFWriteNULLAttribute(shapefile->dbf, recordId, fieldi)) {
-					Tcl_SetResult(interp, "cannot write NULL attribute for unsupported field. dbf may be invalid", TCL_STATIC);
+					Tcl_SetObjResult(interp, Tcl_ObjPrintf("failed to write null attribute for unsupported field %d", fieldi));
 					return TCL_ERROR;
 				}
 				break;
@@ -725,7 +725,7 @@ int shapefile_util_attrRead(Tcl_Interp *interp, ShapefilePtr shapefile, int reco
 	fieldCount  = DBFGetFieldCount(shapefile->dbf);
 	dbfCount = DBFGetRecordCount(shapefile->dbf);
 	if (recordId < 0 || recordId >= dbfCount) {
-		Tcl_SetResult(interp, "invalid record id", TCL_STATIC);
+		Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid record index (%d): should be >=0 and <%d", recordId, dbfCount));
 		return TCL_ERROR;
 	}
 
@@ -817,7 +817,7 @@ int shapefile_cmd_write(ClientData clientData, Tcl_Interp *interp, int objc, Tcl
 	}
 	
 	if (shapefile->readonly) {
-		Tcl_SetResult(interp, "cannot write new entity with readonly access", TCL_STATIC);
+		Tcl_SetObjResult(interp, Tcl_ObjPrintf("cannot write to readonly shapefile"));
 		return TCL_ERROR;
 	}
 	
@@ -846,7 +846,7 @@ int shapefile_cmd_write(ClientData clientData, Tcl_Interp *interp, int objc, Tcl
 
 	/* assert that the new feature and attribute record ids match */
 	if (outputFeatureId != outputAttributeId) {
-		Tcl_SetResult(interp, "output coord and attribute ids do not match", TCL_STATIC);
+		Tcl_SetObjResult(interp, Tcl_ObjPrintf("new coord index (%d) does not match new attribute record index (%d)", outputFeatureId, outputAttributeId));
 		return TCL_ERROR;
 	}
 	
@@ -937,7 +937,7 @@ int shapetcl_cmd(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *C
 		} else if (strcmp(shpTypeName, "multipoint") == 0) {
 			shpType = SHPT_MULTIPOINT;
 		} else {
-			Tcl_SetResult(interp, "unsupported shape type", TCL_STATIC);
+			Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid shape type \"%s\": should be point, arc, polygon, or multipoint", shpTypeName));
 			return TCL_ERROR;
 		}
 				
@@ -946,12 +946,12 @@ int shapetcl_cmd(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *C
 		}
 		
 		if (fieldSpecCount % 4 != 0) {
-			Tcl_SetResult(interp, "malformed field specification", TCL_STATIC);
+			Tcl_SetObjResult(interp, Tcl_ObjPrintf("each field requires four values (type, name, width, and precision)"));
 			return TCL_ERROR;
 		}
 		
 		if (fieldSpecCount == 0) {
-			Tcl_SetResult(interp, "at least one field required", TCL_STATIC);
+			Tcl_SetObjResult(interp, Tcl_ObjPrintf("at least one field is required"));
 			return TCL_ERROR;
 		}
 		
@@ -960,13 +960,13 @@ int shapetcl_cmd(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *C
 			
 			type = Tcl_GetString(fieldSpec[fieldi]);
 			if (strcmp(type, "string") != 0 && strcmp(type, "integer") != 0 && strcmp(type, "double") != 0) {
-				Tcl_SetResult(interp, "unsupported field type", TCL_STATIC);
+				Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid field type \"%s\": should be string, integer, or double", type));
 				return TCL_ERROR;
 			}
 			
 			name = Tcl_GetString(fieldSpec[fieldi + 1]);
 			if (strlen(name) > 10) {
-				Tcl_SetResult(interp, "field name exceeds maximum length of 10 characters", TCL_STATIC);
+				Tcl_SetObjResult(interp, Tcl_ObjPrintf("field name \"%s\" too long: 10 characters maximum"));
 				return TCL_ERROR;
 			}
 			
@@ -974,7 +974,7 @@ int shapetcl_cmd(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *C
 				return TCL_ERROR;
 			}
 			if (strcmp(type, "integer") == 0 && width > 10) {
-				Tcl_SetResult(interp, "integer field width over 10 would be changed to double", TCL_STATIC);
+				Tcl_SetObjResult(interp, Tcl_ObjPrintf("integer width >10 (%d) would become double", width));
 				return TCL_ERROR;
 			}
 			
@@ -982,13 +982,13 @@ int shapetcl_cmd(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *C
 				return TCL_ERROR;
 			}
 			if (strcmp(type, "double") == 0 && width <= 10 && precision == 0) {
-				Tcl_SetResult(interp, "double width 10 or less with 0 precision would be changed to integer", TCL_STATIC);
+				Tcl_SetObjResult(interp, Tcl_ObjPrintf("double width <=10 (%d) with 0 precision would become integer", width));
 				return TCL_ERROR;
 			}
 		}
 		
 		if ((dbf = DBFCreate(path)) == NULL) {
-			Tcl_SetResult(interp, "cannot create .dbf", TCL_STATIC);
+			Tcl_SetObjResult(interp, Tcl_ObjPrintf("failed to create attribute table for \"%s\"", path));
 			return TCL_ERROR;
 		}
 		
@@ -1000,21 +1000,21 @@ int shapetcl_cmd(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *C
 			Tcl_GetIntFromObj(interp, fieldSpec[fieldi + 3], &precision);
 			if (strcmp(type, "integer") == 0) {
 				if (DBFAddField(dbf, name, FTInteger, width, 0) == -1) {
-					Tcl_SetResult(interp, "cannot create integer field", TCL_STATIC);
+					Tcl_SetObjResult(interp, Tcl_ObjPrintf("failed to create integer attribute field \"%s\"", name));
 					DBFClose(dbf);
 					return TCL_ERROR;
 				}
 			}
 			else if (strcmp(type, "double") == 0) {
 				if (DBFAddField(dbf, name, FTDouble, width, precision) == -1) {
-					Tcl_SetResult(interp, "cannot create double field", TCL_STATIC);
+					Tcl_SetObjResult(interp, Tcl_ObjPrintf("failed to create double attribute field \"%s\"", name));
 					DBFClose(dbf);
 					return TCL_ERROR;
 				}
 			}
 			else if (strcmp(type, "string") == 0) {
 				if (DBFAddField(dbf, name, FTString, width, 0) == -1) {
-					Tcl_SetResult(interp, "cannot create string field", TCL_STATIC);
+					Tcl_SetObjResult(interp, Tcl_ObjPrintf("failed to create string attribute field \"%s\"", name));
 					DBFClose(dbf);
 					return TCL_ERROR;
 				}
@@ -1022,7 +1022,7 @@ int shapetcl_cmd(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *C
 		}
 		
 		if ((shp = SHPCreate(path, shpType)) == NULL) {
-			Tcl_SetResult(interp, "cannot create .shp", TCL_STATIC);
+			Tcl_SetObjResult(interp, Tcl_ObjPrintf("failed to create shapefile for \"%s\"", path));
 			DBFClose(dbf);
 			return TCL_ERROR;
 		}
@@ -1032,18 +1032,18 @@ int shapetcl_cmd(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *C
 		/* open an existing shapefile */
 		
 		if ((dbf = DBFOpen(path, readonly ? "rb" : "rb+")) == NULL) {
-			Tcl_SetResult(interp, "cannot open .dbf", TCL_STATIC);
+			Tcl_SetObjResult(interp, Tcl_ObjPrintf("failed to open attribute table for \"%s\"", path));
 			return TCL_ERROR;
 		}
 		
 		if (DBFGetFieldCount(dbf) == 0) {
-			Tcl_SetResult(interp, "attribute table contains no fields", TCL_STATIC);
+			Tcl_SetObjResult(interp, Tcl_ObjPrintf("attribute table for \"%s\" contains no fields", path));
 			DBFClose(dbf);
 			return TCL_ERROR;
 		}
 		
 		if ((shp = SHPOpen(path, readonly ? "rb" : "rb+")) == NULL) {
-			Tcl_SetResult(interp, "cannot open .shp", TCL_STATIC);
+			Tcl_SetObjResult(interp, Tcl_ObjPrintf("failed to open shapefile for \"%s\"", path));
 			DBFClose(dbf);
 			return TCL_ERROR;
 		}
@@ -1051,7 +1051,7 @@ int shapetcl_cmd(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *C
 		SHPGetInfo(shp, NULL, &shpType, NULL, NULL);
 		if (shpType != SHPT_POINT && shpType != SHPT_ARC &&
 				shpType != SHPT_POLYGON && shpType != SHPT_MULTIPOINT) {
-			Tcl_SetResult(interp, "unsupported shapefile geometry type", TCL_STATIC);
+			Tcl_SetObjResult(interp, Tcl_ObjPrintf("unsupported shape type (%d)", shpType));
 			DBFClose(dbf);
 			SHPClose(shp);
 			return TCL_ERROR;
@@ -1059,7 +1059,7 @@ int shapetcl_cmd(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *C
 	}
 	
 	if ((shapefile = (ShapefilePtr)ckalloc(sizeof(shapetcl_shapefile))) == NULL) {
-		Tcl_SetResult(interp, "failed to allocate memory for shapefile cmd data", TCL_STATIC);
+		Tcl_SetObjResult(interp, Tcl_ObjPrintf("failed to allocate shapefile command data"));;
 		DBFClose(dbf);
 		SHPClose(shp);
 		return TCL_ERROR;
@@ -1070,7 +1070,7 @@ int shapetcl_cmd(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *C
 	
 	sprintf(cmdName, "shapefile.%04X", COMMAND_COUNT++);
 	if (Tcl_CreateObjCommand(interp, cmdName, shapefile_commands, (ClientData)shapefile, shapefile_util_delete) == NULL) {
-		Tcl_SetResult(interp, "cannot create command for shapefile", TCL_STATIC);
+		Tcl_SetObjResult(interp, Tcl_ObjPrintf("failed to create command for %s", cmdName));
 		DBFClose(dbf);
 		SHPClose(shp);
 		ckfree((char *)shapefile);
