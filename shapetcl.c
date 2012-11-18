@@ -50,6 +50,21 @@ int shapefile_cmd_close(ClientData clientData, Tcl_Interp *interp, int objc, Tcl
 	return TCL_OK;
 }
 
+int shapefile_cmd_flush(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
+	ShapefilePtr shapefile = (ShapefilePtr)clientData;
+
+	if (objc > 2) {
+		Tcl_WrongNumArgs(interp, 2, objv, NULL);
+		return TCL_ERROR;
+	}
+
+	shapefile->shp->sHooks.FFlush(shapefile->shp->fpSHP);
+	shapefile->shp->sHooks.FFlush(shapefile->shp->fpSHX);
+	shapefile->dbf->sHooks.FFlush(shapefile->dbf->fp);
+
+	return TCL_OK;
+}
+
 /* mode - report shapefile access mode (rb readonly, rb+ readwrite) */
 int shapefile_cmd_mode(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
 	ShapefilePtr shapefile = (ShapefilePtr)clientData;
@@ -849,7 +864,9 @@ int shapefile_commands(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_
 	else if (strcmp(subcommand, "coords") == 0)
 		return shapefile_cmd_coords(clientData, interp, objc, objv);
 	else if (strcmp(subcommand, "write") == 0)
-		return shapefile_cmd_write(clientData, interp, objc, objv);	
+		return shapefile_cmd_write(clientData, interp, objc, objv);
+	else if (strcmp(subcommand, "flush") == 0)
+		return shapefile_cmd_flush(clientData, interp, objc, objv);
 	
 	Tcl_SetResult(interp, "unrecognized subcommand", TCL_STATIC);
 	return TCL_ERROR;
