@@ -426,6 +426,7 @@ int shapefile_util_coordRead(Tcl_Interp *interp, ShapefilePtr shapefile, int fea
 	SHPObject *shape;
 	Tcl_Obj *coordParts;
 	int featureCount, part, partCount, vertex, vertexStart, vertexStop;
+	int returnValue = TCL_OK;
 	
 	SHPGetInfo(shapefile->shp, &featureCount, NULL, NULL, NULL);
 	if (featureId < 0 || featureId >= featureCount) {
@@ -462,16 +463,19 @@ int shapefile_util_coordRead(Tcl_Interp *interp, ShapefilePtr shapefile, int fea
 		/* get the vertex coordinates for this part */
 		for (vertex = vertexStart; vertex < vertexStop; vertex++) {
 			if (Tcl_ListObjAppendElement(interp, coords, Tcl_NewDoubleObj(shape->padfX[vertex])) != TCL_OK) {
-				return TCL_ERROR;
+				returnValue = TCL_ERROR;
+				goto crRelease;
 			}
 			if (Tcl_ListObjAppendElement(interp, coords, Tcl_NewDoubleObj(shape->padfY[vertex])) != TCL_OK) {
-				return TCL_ERROR;
+				returnValue = TCL_ERROR;
+				goto crRelease;
 			}
 		}
 		
 		/* add this part's coordinate list to the feature's part list */
 		if (Tcl_ListObjAppendElement(interp, coordParts, coords) != TCL_OK) {
-			return TCL_ERROR;
+			returnValue = TCL_ERROR;
+			goto crRelease;
 		}
 		
 		/* advance vertex indices to the next part (disregarded if none) */
@@ -484,10 +488,11 @@ int shapefile_util_coordRead(Tcl_Interp *interp, ShapefilePtr shapefile, int fea
 		part++;
 	}
 	
-	SHPDestroyObject(shape);
-	
 	Tcl_SetObjResult(interp, coordParts);
-	return TCL_OK;
+
+   crRelease:
+	SHPDestroyObject(shape);	
+	return returnValue;
 }
 
 /* coords - get 2d coordinates of specified feature */
