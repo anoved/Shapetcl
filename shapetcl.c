@@ -821,38 +821,32 @@ int shapefile_cmd_write(ClientData clientData, Tcl_Interp *interp, int objc, Tcl
 	return TCL_OK;
 }
 
-/* dispatches subcommands - to be replaced with namespace ensemble mechanism? */
+/* dispatches subcommands */
 int shapefile_commands(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
-	const char *subcommand;
+	int subcommandIndex;
+	static const char *subcommandNames[] = {
+			"attributes", "bounds", "close", "coords", "count", "fields", "mode", "type", "write"
+	};
+	Tcl_ObjCmdProc *subcommands[] = {
+			shapefile_cmd_attributes, shapefile_cmd_bounds, shapefile_cmd_close,
+			shapefile_cmd_coords, shapefile_cmd_count, shapefile_cmd_fields,
+			shapefile_cmd_mode, shapefile_cmd_type, shapefile_cmd_write
+	};
 	
 	if (objc < 2) {
-		Tcl_SetResult(interp, "missing subcommand", TCL_STATIC);
+		Tcl_WrongNumArgs(interp, 1, objv, "subcommand ?arg ...?");
 		return TCL_ERROR;
 	}
 	
-	subcommand = Tcl_GetString(objv[1]);
+	/* identify subcommand, or set result to error message w/valid cmd list */
+	/* specify 0 instead of TCL_EXACT to match unambiguous partial cmd names */
+	if (Tcl_GetIndexFromObj(interp, objv[1], subcommandNames, "subcommand",
+			TCL_EXACT, &subcommandIndex) != TCL_OK) {
+		return TCL_ERROR;
+	}
 	
-	if (strcmp(subcommand, "close") == 0)
-		return shapefile_cmd_close(clientData, interp, objc, objv);
-	else if (strcmp(subcommand, "count") == 0)
-		return shapefile_cmd_count(clientData, interp, objc, objv);
-	else if (strcmp(subcommand, "type") == 0)
-		return shapefile_cmd_type(clientData, interp, objc, objv);
-	else if (strcmp(subcommand, "bounds") == 0)
-		return shapefile_cmd_bounds(clientData, interp, objc, objv);
-	else if (strcmp(subcommand, "mode") == 0)
-		return shapefile_cmd_mode(clientData, interp, objc, objv);
-	else if (strcmp(subcommand, "fields") == 0)
-		return shapefile_cmd_fields(clientData, interp, objc, objv);
-	else if (strcmp(subcommand, "attributes") == 0)
-		return shapefile_cmd_attributes(clientData, interp, objc, objv);
-	else if (strcmp(subcommand, "coords") == 0)
-		return shapefile_cmd_coords(clientData, interp, objc, objv);
-	else if (strcmp(subcommand, "write") == 0)
-		return shapefile_cmd_write(clientData, interp, objc, objv);	
-	
-	Tcl_SetResult(interp, "unrecognized subcommand", TCL_STATIC);
-	return TCL_ERROR;
+	/* invoke the requested subcommand directly, passing on all arguments */
+	return subcommands[subcommandIndex](clientData, interp, objc, objv);
 }
 
 /*
