@@ -495,17 +495,17 @@ int shapefile_cmd_coords(ClientData clientData, Tcl_Interp *interp, int objc, Tc
 	ShapefilePtr shapefile = (ShapefilePtr)clientData;
 	int featureId;
 	
-	if (objc != 3 && objc != 4) {
-		Tcl_WrongNumArgs(interp, 2, objv, "index ?coords?");
+	if (objc < 2 || objc > 4) {
+		Tcl_WrongNumArgs(interp, 2, objv, "?index ?coords??");
 		return TCL_ERROR;
 	}
 	
-	if (Tcl_GetIntFromObj(interp, objv[2], &featureId) != TCL_OK) {
-		return TCL_ERROR;
+	if (objc == 3 || objc == 4) {
+		if (Tcl_GetIntFromObj(interp, objv[2], &featureId) != TCL_OK) {
+			return TCL_ERROR;
+		}
 	}
-	
-	/* validation of featureId is performed by coord input/output blocks */
-	
+		
 	if (objc == 4) {
 		/* output mode */
 		/* if shape output is successful, interp result is set to output feature id */
@@ -513,12 +513,35 @@ int shapefile_cmd_coords(ClientData clientData, Tcl_Interp *interp, int objc, Tc
 			return TCL_ERROR;
 		}
 	}
-	else {
+	else if (objc == 3) {
 		/* input mode - read and return coordinates from featureId */
 		/* if shape input is successful, interp result is set to coordinate list */
 		if (shapefile_util_coordRead(interp, shapefile, featureId) != TCL_OK) {
 			return TCL_ERROR;
 		}
+	}
+	else {
+		/* slurp input */
+		Tcl_Obj *featureList;
+		int shpCount;
+		
+		featureList = Tcl_NewListObj(0, NULL);
+		SHPGetInfo(shapefile->shp, &shpCount, NULL, NULL, NULL);
+		
+		for (featureId = 0; featureId < shpCount; featureId++) {
+			
+			if (shapefile_util_coordRead(interp, shapefile, featureId) != TCL_OK) {
+				return TCL_ERROR;
+			}
+			
+			if (Tcl_ListObjAppendElement(interp, featureList, Tcl_GetObjResult(interp)) != TCL_OK) {
+				return TCL_ERROR;
+			}
+			
+			Tcl_ResetResult(interp);
+		}
+		
+		Tcl_SetObjResult(interp, featureList);
 	}
 	
 	return TCL_OK;
