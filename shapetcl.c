@@ -152,7 +152,7 @@ int shapefile_cmd_bounds(ClientData clientData, Tcl_Interp *interp, int objc, Tc
 		}
 		
 		if (featureId < 0 || featureId >= shpCount) {
-			Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid index (%d): should be >=0 and <%d", featureId, shpCount));
+			Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid feature index %d", featureId));
 			return TCL_ERROR;
 		}
 		
@@ -262,7 +262,7 @@ int shapefile_util_coordWrite(Tcl_Interp *interp, ShapefilePtr shapefile, int fe
 	
 	SHPGetInfo(shapefile->shp, &featureCount, &shapeType, NULL, NULL);
 	if (featureId < -1 || featureId >= featureCount) {
-		Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid feature index (%d): should be >=-1 and <%d", featureId, featureCount));
+		Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid feature index %d", featureId));
 		return TCL_ERROR;
 	}
 	/* a featureId of -1 indicates a new feature should be output */
@@ -431,7 +431,7 @@ int shapefile_util_coordRead(Tcl_Interp *interp, ShapefilePtr shapefile, int fea
 	
 	SHPGetInfo(shapefile->shp, &featureCount, NULL, NULL, NULL);
 	if (featureId < 0 || featureId >= featureCount) {
-		Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid feature index (%d): should be >=0 and <%d", featureId, featureCount));
+		Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid feature index %d", featureId));
 		return TCL_ERROR;
 	}
 	
@@ -660,7 +660,7 @@ int shapefile_util_attrWrite(Tcl_Interp *interp, ShapefilePtr shapefile, int rec
 	
 	dbfCount = DBFGetRecordCount(shapefile->dbf);
 	if (recordId < -1 || recordId >= dbfCount) {
-		Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid record index (%d): should be >=-1 and <%d", recordId, dbfCount));
+		Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid record index %d", recordId));
 		return TCL_ERROR;
 	}
 	if (recordId == -1) {
@@ -754,7 +754,7 @@ int shapefile_util_attrRead(Tcl_Interp *interp, ShapefilePtr shapefile, int reco
 	fieldCount  = DBFGetFieldCount(shapefile->dbf);
 	dbfCount = DBFGetRecordCount(shapefile->dbf);
 	if (recordId < 0 || recordId >= dbfCount) {
-		Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid record index (%d): should be >=0 and <%d", recordId, dbfCount));
+		Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid record index %d", recordId));
 		return TCL_ERROR;
 	}
 
