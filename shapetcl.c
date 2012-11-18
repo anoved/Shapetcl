@@ -244,7 +244,8 @@ int shapefile_util_coordWrite(Tcl_Interp *interp, ShapefilePtr shapefile, int fe
 	double *xCoords, *yCoords, x, y;
 	SHPObject *shape;
 	int returnValue = TCL_OK;
-	
+	int addClosingVertex = 0;
+
 	if (shapefile->readonly) {
 		Tcl_SetResult(interp, "cannot write coordinates with readonly access", TCL_STATIC);
 		return TCL_ERROR;
@@ -353,6 +354,31 @@ int shapefile_util_coordWrite(Tcl_Interp *interp, ShapefilePtr shapefile, int fe
 			yCoords[vertex] = y;
 			
 			vertex++;
+		}
+
+		/* validate that the first and last vertex of polygon parts match */
+		if ((shapeType == SHPT_POLYGON) &&
+				((xCoords[partStarts[part]] != xCoords[vertex-1]) ||
+				 (yCoords[partStarts[part]] != yCoords[vertex-1]))) {
+			if (addClosingVertex) {
+				/* close the part automatically by appending the first vertex */
+				partVertexCount++;
+				vertexCount++;
+				xCoords = (double *)ckrealloc((char *)xCoords, sizeof(double) * vertexCount);
+				yCoords = (double *)ckrealloc((char *)yCoords, sizeof(double) * vertexCount);
+				if (xCoords == NULL || yCoords == NULL) {
+					Tcl_SetResult(interp, "cannot reallocate memory for final vertex in vertex array", TCL_STATIC);
+					returnValue = TCL_ERROR;
+					goto cwRelease;
+				}
+				xCoords[vertex] = xCoords[partStarts[part]];
+				yCoords[vertex] = yCoords[partStarts[part]];
+				vertex++;
+			} else {
+				Tcl_SetResult(interp, "polygon parts must start and end with the same vertex", TCL_STATIC);
+				returnValue = TCL_ERROR;
+				goto cwRelease;
+			}
 		}
 	}
 	
