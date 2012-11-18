@@ -50,7 +50,7 @@ int shapefile_cmd_close(ClientData clientData, Tcl_Interp *interp, int objc, Tcl
 	return TCL_OK;
 }
 
-/* mode - report shapefile access mode (rb readonly, rb+ readwrite) */
+/* mode - report shapefile access mode */
 int shapefile_cmd_mode(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
 	ShapefilePtr shapefile = (ShapefilePtr)clientData;
 
@@ -60,9 +60,9 @@ int shapefile_cmd_mode(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_
 	}
 	
 	if (shapefile->readonly)
-		Tcl_SetResult(interp, "rb", TCL_STATIC);
+		Tcl_SetResult(interp, "readonly", TCL_STATIC);
 	else
-		Tcl_SetResult(interp, "rb+", TCL_STATIC);
+		Tcl_SetResult(interp, "readwrite", TCL_STATIC);
 	
 	return TCL_OK;
 }
@@ -860,7 +860,7 @@ int shapetcl_cmd(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *C
 	int shpType;
 	
 	if (objc < 2 || objc > 4) {
-		Tcl_SetResult(interp, "shapetcl path [rb|rb+]|type fields", TCL_STATIC);
+		Tcl_WrongNumArgs(interp, 1, objv, "path [readonly|readwrite]|(type fields)");
 		return TCL_ERROR;
 	}
 
@@ -869,14 +869,14 @@ int shapetcl_cmd(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *C
 	if (objc == 3) {
 		/* opening an existing file, and an access mode is explicitly set */
 		const char *mode = Tcl_GetString(objv[2]);
-		if (strcmp(mode, "rb") == 0) {
+		if (strcmp(mode, "readonly") == 0) {
 			readonly = 1;
 		}
-		else if (strcmp(mode, "rb+") == 0) {
+		else if (strcmp(mode, "readwrite") == 0) {
 			readonly = 0;
 		}
 		else {
-			Tcl_SetResult(interp, "mode should be rb or rb+", TCL_STATIC);
+			Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid mode \"%s\": should be readonly or readwrite", mode));
 			return TCL_ERROR;
 		}
 	}
