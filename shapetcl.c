@@ -38,7 +38,7 @@ void shapefile_util_delete(ClientData clientData) {
 int shapefile_cmd_close(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
 	ShapefilePtr shapefile = (ShapefilePtr)clientData;
 
-	if (objc > 2) {
+	if (objc != 2) {
 		Tcl_WrongNumArgs(interp, 2, objv, NULL);
 		return TCL_ERROR;
 	}
@@ -72,7 +72,7 @@ int shapefile_cmd_count(ClientData clientData, Tcl_Interp *interp, int objc, Tcl
 	ShapefilePtr shapefile = (ShapefilePtr)clientData;
 	int shpCount, dbfCount;
 	
-	if (objc > 2) {
+	if (objc != 2) {
 		Tcl_WrongNumArgs(interp, 2, objv, NULL);
 		return TCL_ERROR;
 	}
@@ -95,7 +95,7 @@ int shapefile_cmd_type(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_
 	ShapefilePtr shapefile = (ShapefilePtr)clientData;
 	int shpType;
 
-	if (objc > 2) {
+	if (objc != 2) {
 		Tcl_WrongNumArgs(interp, 2, objv, NULL);
 		return TCL_ERROR;
 	}
@@ -133,7 +133,7 @@ int shapefile_cmd_bounds(ClientData clientData, Tcl_Interp *interp, int objc, Tc
 	double min[4], max[4];
 	Tcl_Obj *bounds;
 		
-	if (objc > 3) {
+	if (objc != 2 && objc != 3) {
 		Tcl_WrongNumArgs(interp, 2, objv, NULL);
 		return TCL_ERROR;
 	}
@@ -192,7 +192,7 @@ int shapefile_cmd_fields(ClientData clientData, Tcl_Interp *interp, int objc, Tc
 	int width, precision;
 	DBFFieldType fieldType;
 
-	if (objc > 2) {
+	if (objc != 2) {
 		Tcl_WrongNumArgs(interp, 2, objv, NULL);
 		return TCL_ERROR;
 	}
