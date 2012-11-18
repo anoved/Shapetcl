@@ -482,7 +482,7 @@ int shapefile_util_coordRead(Tcl_Interp *interp, ShapefilePtr shapefile, int fea
 		/* advance vertex indices to the next part (disregarded if none) */
 		vertexStart = vertex;
 		if (part + 2 < partCount) {
-			vertexStop = shape->panPartStart[part + 1];
+			vertexStop = shape->panPartStart[part + 2];
 		} else {
 			vertexStop = shape->nVertices;
 		}
