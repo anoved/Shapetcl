@@ -933,7 +933,7 @@ int shapefile_commands(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_
 }
 
 /*
-	The shapetcl command opens a new or existing shapefile.
+	This command opens a new or existing shapefile.
 	This command creates and returns a uniquely named new ensemble command
 	associated with the opened shapefile (handled by shapefile_commands).
 */	
@@ -1142,7 +1142,7 @@ int Shapetcl_Init(Tcl_Interp *interp) {
 		return TCL_ERROR;
 	}
 	
-	Tcl_CreateObjCommand(interp, "shapetcl", shapetcl_cmd, NULL, NULL);
+	Tcl_CreateObjCommand(interp, "shapefile", shapetcl_cmd, NULL, NULL);
 	
 	return TCL_OK;
 }
