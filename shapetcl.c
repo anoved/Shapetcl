@@ -789,23 +789,20 @@ int shapefile_cmd_write(ClientData clientData, Tcl_Interp *interp, int objc, Tcl
 		return TCL_ERROR;
 	}
 	
-	/* errors in either Write function may leave the shapefile in an invalid
-	   state (mismatched number of features and attributes). one strategy to
-	   minimize the likelihood of that outcome is to put argument validation
-	   in a separate util function that can be called for both first, before
-	   proceeding to write. the coord validater may return a SHPObject, and
-	   the attributes validator may return a list of values (Tcl_Obj list?) */
+	/* pre-validate attributes before writing anything */
+	if (shapefile_util_attrValidate(interp, shapefile, objv[3]) != TCL_OK)
+		return TCL_ERROR;
+	Tcl_ResetResult(interp);
 	
-	/* write the new feature coords */
+	/* write the new feature coords (nothing written if coordWrite fails) */
 	if (shapefile_util_coordWrite(interp, shapefile, -1, objv[2]) != TCL_OK)
 		return TCL_ERROR;
 	if (Tcl_GetIntFromObj(interp, Tcl_GetObjResult(interp), &outputFeatureId) != TCL_OK)
 		return TCL_ERROR;
-
 	Tcl_ResetResult(interp);
 	
-	/* write the new attribute record */
-	if (shapefile_util_attrWrite(interp, shapefile, -1, 1 /* validate - eventually separate */, objv[3]) != TCL_OK)
+	/* write the pre-validated attribute record */
+	if (shapefile_util_attrWrite(interp, shapefile, -1, 0, objv[3]) != TCL_OK)
 		return TCL_ERROR;
 	if (Tcl_GetIntFromObj(interp, Tcl_GetObjResult(interp), &outputAttributeId) != TCL_OK)
 		return TCL_ERROR;
@@ -816,8 +813,7 @@ int shapefile_cmd_write(ClientData clientData, Tcl_Interp *interp, int objc, Tcl
 		return TCL_ERROR;
 	}
 	
-	/* return the id of the new entity */
-	Tcl_SetObjResult(interp, Tcl_NewIntObj(outputFeatureId));
+	/* result is new entity id, as set by attrWrite */
 	return TCL_OK;
 }
 
