@@ -59,10 +59,11 @@ int shapefile_cmd_mode(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_
 		return TCL_ERROR;
 	}
 	
-	if (shapefile->readonly)
+	if (shapefile->readonly) {
 		Tcl_SetResult(interp, "readonly", TCL_STATIC);
-	else
+	} else {
 		Tcl_SetResult(interp, "readwrite", TCL_STATIC);
+	}
 	
 	return TCL_OK;
 }
@@ -204,30 +205,37 @@ int shapefile_cmd_fields(ClientData clientData, Tcl_Interp *interp, int objc, Tc
 		fieldType = DBFGetFieldInfo(shapefile->dbf, fieldi, name, &width, &precision);		
 		switch (fieldType) {
 			case FTString:
-				if (Tcl_ListObjAppendElement(interp, fieldSpec, Tcl_NewStringObj("string", -1)) != TCL_OK)
+				if (Tcl_ListObjAppendElement(interp, fieldSpec, Tcl_NewStringObj("string", -1)) != TCL_OK) {
 					return TCL_ERROR;
+				}
 				break;
 			case FTInteger:
-				if (Tcl_ListObjAppendElement(interp, fieldSpec, Tcl_NewStringObj("integer", -1)) != TCL_OK)
+				if (Tcl_ListObjAppendElement(interp, fieldSpec, Tcl_NewStringObj("integer", -1)) != TCL_OK) {
 					return TCL_ERROR;
+				}
 				break;
 			case FTDouble:
-				if (Tcl_ListObjAppendElement(interp, fieldSpec, Tcl_NewStringObj("double", -1)) != TCL_OK)
+				if (Tcl_ListObjAppendElement(interp, fieldSpec, Tcl_NewStringObj("double", -1)) != TCL_OK) {
 					return TCL_ERROR;
+				}
 				break;
 			default:
 				/* represent unsupported field types by numeric type ID instead of descriptive name */
-				if (Tcl_ListObjAppendElement(interp, fieldSpec, Tcl_NewIntObj((int)fieldType)) != TCL_OK)
+				if (Tcl_ListObjAppendElement(interp, fieldSpec, Tcl_NewIntObj((int)fieldType)) != TCL_OK) {
 					return TCL_ERROR;
+				}
 				break;
 		}
 		
-		if (Tcl_ListObjAppendElement(interp, fieldSpec, Tcl_NewStringObj(name, -1)) != TCL_OK)
+		if (Tcl_ListObjAppendElement(interp, fieldSpec, Tcl_NewStringObj(name, -1)) != TCL_OK) {
 			return TCL_ERROR;
-		if (Tcl_ListObjAppendElement(interp, fieldSpec, Tcl_NewIntObj(width)) != TCL_OK)
+		}
+		if (Tcl_ListObjAppendElement(interp, fieldSpec, Tcl_NewIntObj(width)) != TCL_OK) {
 			return TCL_ERROR;
-		if (Tcl_ListObjAppendElement(interp, fieldSpec, Tcl_NewIntObj(precision)) != TCL_OK)
+		}
+		if (Tcl_ListObjAppendElement(interp, fieldSpec, Tcl_NewIntObj(precision)) != TCL_OK) {
 			return TCL_ERROR;
+		}
 	}
 	
 	Tcl_SetObjResult(interp, fieldSpec);
@@ -258,8 +266,9 @@ int shapefile_util_coordWrite(Tcl_Interp *interp, ShapefilePtr shapefile, int fe
 	}
 	/* a featureId of -1 indicates a new feature should be output */
 	
-	if (Tcl_ListObjLength(interp, coordParts, &partCount) != TCL_OK)
+	if (Tcl_ListObjLength(interp, coordParts, &partCount) != TCL_OK) {
 		return TCL_ERROR;
+	}
 	
 	/* validate feature by number of parts according to shape type */
 	if (shapeType == SHPT_POINT && partCount != 1) {
@@ -452,22 +461,26 @@ int shapefile_util_coordRead(Tcl_Interp *interp, ShapefilePtr shapefile, int fea
 		
 		/* get the vertex coordinates for this part */
 		for (vertex = vertexStart; vertex < vertexStop; vertex++) {
-			if (Tcl_ListObjAppendElement(interp, coords, Tcl_NewDoubleObj(shape->padfX[vertex])) != TCL_OK)
+			if (Tcl_ListObjAppendElement(interp, coords, Tcl_NewDoubleObj(shape->padfX[vertex])) != TCL_OK) {
 				return TCL_ERROR;
-			if (Tcl_ListObjAppendElement(interp, coords, Tcl_NewDoubleObj(shape->padfY[vertex])) != TCL_OK)
+			}
+			if (Tcl_ListObjAppendElement(interp, coords, Tcl_NewDoubleObj(shape->padfY[vertex])) != TCL_OK) {
 				return TCL_ERROR;
+			}
 		}
 		
 		/* add this part's coordinate list to the feature's part list */
-		if (Tcl_ListObjAppendElement(interp, coordParts, coords) != TCL_OK)
+		if (Tcl_ListObjAppendElement(interp, coordParts, coords) != TCL_OK) {
 			return TCL_ERROR;
+		}
 		
 		/* advance vertex indices to the next part (disregarded if none) */
 		vertexStart = vertex;
-		if (part + 2 < partCount)
+		if (part + 2 < partCount) {
 			vertexStop = shape->panPartStart[part + 1];
-		else
+		} else {
 			vertexStop = shape->nVertices;
+		}
 		part++;
 	}
 	
@@ -487,22 +500,25 @@ int shapefile_cmd_coords(ClientData clientData, Tcl_Interp *interp, int objc, Tc
 		return TCL_ERROR;
 	}
 	
-	if (Tcl_GetIntFromObj(interp, objv[2], &featureId) != TCL_OK)
+	if (Tcl_GetIntFromObj(interp, objv[2], &featureId) != TCL_OK) {
 		return TCL_ERROR;
+	}
 	
 	/* validation of featureId is performed by coord input/output blocks */
 	
 	if (objc == 4) {
 		/* output mode */
 		/* if shape output is successful, interp result is set to output feature id */
-		if (shapefile_util_coordWrite(interp, shapefile, featureId, objv[3]) != TCL_OK)
+		if (shapefile_util_coordWrite(interp, shapefile, featureId, objv[3]) != TCL_OK) {
 			return TCL_ERROR;
+		}
 	}
 	else {
 		/* input mode - read and return coordinates from featureId */
 		/* if shape input is successful, interp result is set to coordinate list */
-		if (shapefile_util_coordRead(interp, shapefile, featureId) != TCL_OK)
+		if (shapefile_util_coordRead(interp, shapefile, featureId) != TCL_OK) {
 			return TCL_ERROR;
+		}
 	}
 	
 	return TCL_OK;
@@ -522,8 +538,9 @@ int shapefile_util_attrValidate(Tcl_Interp *interp, ShapefilePtr shapefile, Tcl_
 	const char *stringValue;
 	
 	fieldCount = DBFGetFieldCount(shapefile->dbf);
-	if (Tcl_ListObjLength(interp, attrList, &attrCount) != TCL_OK)
+	if (Tcl_ListObjLength(interp, attrList, &attrCount) != TCL_OK) {
 		return TCL_ERROR;
+	}
 	if (attrCount != fieldCount) {
 		Tcl_SetResult(interp, "attribute count does not match field count", TCL_STATIC);
 		return TCL_ERROR;
@@ -534,8 +551,9 @@ int shapefile_util_attrValidate(Tcl_Interp *interp, ShapefilePtr shapefile, Tcl_
 	for (fieldi = 0; fieldi < fieldCount; fieldi++) {
 		
 		/* grab the attr provided for this field */
-		if (Tcl_ListObjIndex(interp, attrList, fieldi, &attr) != TCL_OK)
+		if (Tcl_ListObjIndex(interp, attrList, fieldi, &attr) != TCL_OK) {
 			return TCL_ERROR;
+		}
 		
 		fieldType = DBFGetFieldInfo(shapefile->dbf, fieldi, NULL, &width, &precision);
 
@@ -549,8 +567,9 @@ int shapefile_util_attrValidate(Tcl_Interp *interp, ShapefilePtr shapefile, Tcl_
 			case FTInteger:
 				
 				/* can this value be parsed as an integer? */
-				if (Tcl_GetIntFromObj(interp, attr, &intValue) != TCL_OK)
+				if (Tcl_GetIntFromObj(interp, attr, &intValue) != TCL_OK) {
 					return TCL_ERROR;
+				}
 				
 				/* does this integer fit within the field width? */
 				sprintf(numericStringValue, "%d", intValue);
@@ -562,8 +581,9 @@ int shapefile_util_attrValidate(Tcl_Interp *interp, ShapefilePtr shapefile, Tcl_
 			case FTDouble:
 				
 				/* can this value be parsed as a double? */
-				if (Tcl_GetDoubleFromObj(interp, attr, &doubleValue) != TCL_OK)
+				if (Tcl_GetDoubleFromObj(interp, attr, &doubleValue) != TCL_OK) {
 					return TCL_ERROR;
+				}
 				
 				/* does this double fit within the field width? */
 				sprintf(numericStringValue, "%.*lf", precision, doubleValue);
@@ -575,8 +595,9 @@ int shapefile_util_attrValidate(Tcl_Interp *interp, ShapefilePtr shapefile, Tcl_
 			case FTString:
 			
 				/* can this value be parsed as a string? */
-				if ((stringValue = Tcl_GetString(attr)) == NULL)
+				if ((stringValue = Tcl_GetString(attr)) == NULL) {
 					return TCL_ERROR;
+				}
 				
 				/* does this string fit within the field width? */
 				if (strlen(stringValue) > width) {
@@ -613,8 +634,9 @@ int shapefile_util_attrWrite(Tcl_Interp *interp, ShapefilePtr shapefile, int rec
 		Tcl_SetResult(interp, "invalid record id", TCL_STATIC);
 		return TCL_ERROR;
 	}
-	if (recordId == -1)
+	if (recordId == -1) {
 		recordId = dbfCount;
+	}
 	
 	/* now recordId is either the id of an existing record to overwrite,
 	   or the id-elect of a new record we will create. Unlike shape output,
@@ -624,8 +646,9 @@ int shapefile_util_attrWrite(Tcl_Interp *interp, ShapefilePtr shapefile, int rec
 	
 	/* verify the provided attribute value list matches field count */
 	fieldCount = DBFGetFieldCount(shapefile->dbf);
-	if (Tcl_ListObjLength(interp, attrList, &attrCount) != TCL_OK)
+	if (Tcl_ListObjLength(interp, attrList, &attrCount) != TCL_OK) {
 		return TCL_ERROR;
+	}
 	if (attrCount != fieldCount) {
 		Tcl_SetResult(interp, "attribute count does not match field count", TCL_STATIC);
 		return TCL_ERROR;
@@ -642,8 +665,9 @@ int shapefile_util_attrWrite(Tcl_Interp *interp, ShapefilePtr shapefile, int rec
 	for (fieldi = 0; fieldi < fieldCount; fieldi++) {
 		
 		/* grab the attr provided for this field */
-		if (Tcl_ListObjIndex(interp, attrList, fieldi, &attr) != TCL_OK)
+		if (Tcl_ListObjIndex(interp, attrList, fieldi, &attr) != TCL_OK) {
 			return TCL_ERROR;
+		}
 
 		fieldType = DBFGetFieldInfo(shapefile->dbf, fieldi, NULL, NULL, NULL);
 	
@@ -660,21 +684,21 @@ int shapefile_util_attrWrite(Tcl_Interp *interp, ShapefilePtr shapefile, int rec
 		switch (fieldType) {
 			case FTInteger:
 				if ((Tcl_GetIntFromObj(interp, attr, &intValue) != TCL_OK) ||
-					(!DBFWriteIntegerAttribute(shapefile->dbf, recordId, fieldi, intValue))) {
+						(!DBFWriteIntegerAttribute(shapefile->dbf, recordId, fieldi, intValue))) {
 					Tcl_SetResult(interp, "cannot write integer attribute. dbf may be invalid", TCL_STATIC);
 					return TCL_ERROR;
 				}
 				break;
 			case FTDouble:
 				if ((Tcl_GetDoubleFromObj(interp, attr, &doubleValue) != TCL_OK) ||
-					(!DBFWriteDoubleAttribute(shapefile->dbf, recordId, fieldi, doubleValue))) {
+						(!DBFWriteDoubleAttribute(shapefile->dbf, recordId, fieldi, doubleValue))) {
 					Tcl_SetResult(interp, "cannot write double attribute. dbf may be invalid", TCL_STATIC);
 					return TCL_ERROR;
 				}
 				break;
 			case FTString:
 				if (((stringValue = Tcl_GetString(attr)) == NULL) ||
-					(!DBFWriteStringAttribute(shapefile->dbf, recordId, fieldi, stringValue))) {
+						(!DBFWriteStringAttribute(shapefile->dbf, recordId, fieldi, stringValue))) {
 					Tcl_SetResult(interp, "cannot write string attribute. dbf may be invalid", TCL_STATIC);
 					return TCL_ERROR;
 				}
@@ -709,8 +733,9 @@ int shapefile_util_attrRead(Tcl_Interp *interp, ShapefilePtr shapefile, int reco
 		
 		/* represent NULL attribute values as {} in return list */
 		if (DBFIsAttributeNULL(shapefile->dbf, recordId, fieldi)) {
-			if (Tcl_ListObjAppendElement(interp, attributes, Tcl_NewObj()) != TCL_OK)
+			if (Tcl_ListObjAppendElement(interp, attributes, Tcl_NewObj()) != TCL_OK) {
 				return TCL_ERROR;
+			}
 			continue;
 		}
 		
@@ -719,23 +744,27 @@ int shapefile_util_attrRead(Tcl_Interp *interp, ShapefilePtr shapefile, int reco
 		switch (fieldType) {
 			case FTInteger:
 				if (Tcl_ListObjAppendElement(interp, attributes,
-						Tcl_NewIntObj(DBFReadIntegerAttribute(shapefile->dbf, recordId, fieldi))) != TCL_OK)
+						Tcl_NewIntObj(DBFReadIntegerAttribute(shapefile->dbf, recordId, fieldi))) != TCL_OK) {
 					return TCL_ERROR;				
+				}
 				break;
 			case FTDouble:
 				if (Tcl_ListObjAppendElement(interp, attributes,
-						Tcl_NewDoubleObj(DBFReadDoubleAttribute(shapefile->dbf, recordId, fieldi))) != TCL_OK)
+						Tcl_NewDoubleObj(DBFReadDoubleAttribute(shapefile->dbf, recordId, fieldi))) != TCL_OK) {
 					return TCL_ERROR;
+				}
 				break;
 			case FTString:
 				if (Tcl_ListObjAppendElement(interp, attributes,
-						Tcl_NewStringObj(DBFReadStringAttribute(shapefile->dbf, recordId, fieldi), -1)) != TCL_OK)
+						Tcl_NewStringObj(DBFReadStringAttribute(shapefile->dbf, recordId, fieldi), -1)) != TCL_OK) {
 					return TCL_ERROR;
+				}
 				break;
 			default:
 				/* represent any unsupported field type values as {} (same as NULL) */
-				if (Tcl_ListObjAppendElement(interp, attributes, Tcl_NewObj()) != TCL_OK)
+				if (Tcl_ListObjAppendElement(interp, attributes, Tcl_NewObj()) != TCL_OK) {
 					return TCL_ERROR;
+				}
 				break;
 		}
 	}
@@ -755,20 +784,23 @@ int shapefile_cmd_attributes(ClientData clientData, Tcl_Interp *interp, int objc
 		return TCL_ERROR;
 	}
 	
-	if (Tcl_GetIntFromObj(interp, objv[2], &recordId) != TCL_OK)
+	if (Tcl_GetIntFromObj(interp, objv[2], &recordId) != TCL_OK) {
 		return TCL_ERROR;
+	}
 		
 	if (objc == 4) {
 		/* output mode */
 		/* if successful, sets interp's result to the recordId of the written record */
-		if (shapefile_util_attrWrite(interp, shapefile, recordId, 1 /* validate */, objv[3]) != TCL_OK)
+		if (shapefile_util_attrWrite(interp, shapefile, recordId, 1 /* validate */, objv[3]) != TCL_OK) {
 			return TCL_ERROR;
+		}
 	}
 	else {
 		/* input mode; return list of attributes from recordId */
 		/* if successful, sets interp result to attribute record value list */
-		if (shapefile_util_attrRead(interp, shapefile, recordId) != TCL_OK)
+		if (shapefile_util_attrRead(interp, shapefile, recordId) != TCL_OK) {
 			return TCL_ERROR;
+		}
 	}
 		
 	return TCL_OK;
@@ -790,22 +822,27 @@ int shapefile_cmd_write(ClientData clientData, Tcl_Interp *interp, int objc, Tcl
 	}
 	
 	/* pre-validate attributes before writing anything */
-	if (shapefile_util_attrValidate(interp, shapefile, objv[3]) != TCL_OK)
+	if (shapefile_util_attrValidate(interp, shapefile, objv[3]) != TCL_OK) {
 		return TCL_ERROR;
+	}
 	Tcl_ResetResult(interp);
 	
 	/* write the new feature coords (nothing written if coordWrite fails) */
-	if (shapefile_util_coordWrite(interp, shapefile, -1, objv[2]) != TCL_OK)
+	if (shapefile_util_coordWrite(interp, shapefile, -1, objv[2]) != TCL_OK) {
 		return TCL_ERROR;
-	if (Tcl_GetIntFromObj(interp, Tcl_GetObjResult(interp), &outputFeatureId) != TCL_OK)
+	}
+	if (Tcl_GetIntFromObj(interp, Tcl_GetObjResult(interp), &outputFeatureId) != TCL_OK) {
 		return TCL_ERROR;
+	}
 	Tcl_ResetResult(interp);
 	
 	/* write the pre-validated attribute record */
-	if (shapefile_util_attrWrite(interp, shapefile, -1, 0, objv[3]) != TCL_OK)
+	if (shapefile_util_attrWrite(interp, shapefile, -1, 0, objv[3]) != TCL_OK) {
 		return TCL_ERROR;
-	if (Tcl_GetIntFromObj(interp, Tcl_GetObjResult(interp), &outputAttributeId) != TCL_OK)
+	}
+	if (Tcl_GetIntFromObj(interp, Tcl_GetObjResult(interp), &outputAttributeId) != TCL_OK) {
 		return TCL_ERROR;
+	}
 
 	/* assert that the new feature and attribute record ids match */
 	if (outputFeatureId != outputAttributeId) {
@@ -891,15 +928,15 @@ int shapetcl_cmd(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *C
 		const char *type, *name;
 		int width, precision;
 
-		if (strcmp(shpTypeName, "point") == 0)
+		if (strcmp(shpTypeName, "point") == 0) {
 			shpType = SHPT_POINT;
-		else if (strcmp(shpTypeName, "arc") == 0)
+		} else if (strcmp(shpTypeName, "arc") == 0) {
 			shpType = SHPT_ARC;
-		else if (strcmp(shpTypeName, "polygon") == 0)
+		} else if (strcmp(shpTypeName, "polygon") == 0) {
 			shpType = SHPT_POLYGON;
-		else if (strcmp(shpTypeName, "multipoint") == 0)
+		} else if (strcmp(shpTypeName, "multipoint") == 0) {
 			shpType = SHPT_MULTIPOINT;
-		else {
+		} else {
 			Tcl_SetResult(interp, "unsupported shape type", TCL_STATIC);
 			return TCL_ERROR;
 		}
@@ -933,15 +970,17 @@ int shapetcl_cmd(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *C
 				return TCL_ERROR;
 			}
 			
-			if (Tcl_GetIntFromObj(interp, fieldSpec[fieldi + 2], &width) != TCL_OK)
+			if (Tcl_GetIntFromObj(interp, fieldSpec[fieldi + 2], &width) != TCL_OK) {
 				return TCL_ERROR;
+			}
 			if (strcmp(type, "integer") == 0 && width > 10) {
 				Tcl_SetResult(interp, "integer field width over 10 would be changed to double", TCL_STATIC);
 				return TCL_ERROR;
 			}
 			
-			if (Tcl_GetIntFromObj(interp, fieldSpec[fieldi + 3], &precision) != TCL_OK)
+			if (Tcl_GetIntFromObj(interp, fieldSpec[fieldi + 3], &precision) != TCL_OK) {
 				return TCL_ERROR;
+			}
 			if (strcmp(type, "double") == 0 && width <= 10 && precision == 0) {
 				Tcl_SetResult(interp, "double width 10 or less with 0 precision would be changed to integer", TCL_STATIC);
 				return TCL_ERROR;
