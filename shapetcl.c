@@ -135,7 +135,7 @@ int shapefile_cmd_bounds(ClientData clientData, Tcl_Interp *interp, int objc, Tc
 	Tcl_Obj *bounds;
 		
 	if (objc != 2 && objc != 3) {
-		Tcl_WrongNumArgs(interp, 2, objv, NULL);
+		Tcl_WrongNumArgs(interp, 2, objv, "?index?");
 		return TCL_ERROR;
 	}
 	
@@ -496,7 +496,7 @@ int shapefile_cmd_coords(ClientData clientData, Tcl_Interp *interp, int objc, Tc
 	int featureId;
 	
 	if (objc != 3 && objc != 4) {
-		Tcl_WrongNumArgs(interp, 2, objv, "ID [coordinates]");
+		Tcl_WrongNumArgs(interp, 2, objv, "index ?coords?");
 		return TCL_ERROR;
 	}
 	
@@ -780,7 +780,7 @@ int shapefile_cmd_attributes(ClientData clientData, Tcl_Interp *interp, int objc
 	int recordId;
 	
 	if (objc != 3 && objc != 4) {
-		Tcl_WrongNumArgs(interp, 2, objv, "ID [attributes]");
+		Tcl_WrongNumArgs(interp, 2, objv, "index ?attributes?");
 		return TCL_ERROR;
 	}
 	
@@ -897,7 +897,7 @@ int shapetcl_cmd(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *C
 	int shpType;
 	
 	if (objc < 2 || objc > 4) {
-		Tcl_WrongNumArgs(interp, 1, objv, "path [readonly|readwrite]|(type fields)");
+		Tcl_WrongNumArgs(interp, 1, objv, "path ?mode?|?type fields?");
 		return TCL_ERROR;
 	}
 
