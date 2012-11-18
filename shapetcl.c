@@ -163,6 +163,7 @@ int shapefile_cmd_bounds(ClientData clientData, Tcl_Interp *interp, int objc, Tc
 		
 		if (obj->nSHPType == SHPT_NULL) {
 			Tcl_SetObjResult(interp, Tcl_ObjPrintf("no bounds for null feature"));
+			SHPDestroyObject(obj);
 			return TCL_ERROR;
 		}
 		
