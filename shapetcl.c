@@ -665,6 +665,11 @@ int shapefile_cmd_coords(ClientData clientData, Tcl_Interp *interp, int objc, Tc
 		
 	if (objc == 4) {
 		/* output mode */
+		if (featureId == -1) {
+			Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid feature index %d (use write command)", featureId));
+			return TCL_ERROR;
+		}
+
 		/* if shape output is successful, interp result is set to output feature id */
 		if (shapefile_util_coordWrite(interp, shapefile, featureId, objv[3]) != TCL_OK) {
 			return TCL_ERROR;
@@ -973,6 +978,11 @@ int shapefile_cmd_attributes(ClientData clientData, Tcl_Interp *interp, int objc
 	
 	if (objc == 4) {
 		/* output; write provided attributes to specified record index */
+		if (recordId == -1) {
+			Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid record index %d (use write command)", recordId));
+			return TCL_ERROR;
+		}
+
 		/* if successful, sets interp's result to the recordId of the written record */
 		if (shapefile_util_attrWrite(interp, shapefile, recordId, 1 /* validate */, objv[3]) != TCL_OK) {
 			return TCL_ERROR;
