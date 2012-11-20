@@ -230,14 +230,59 @@ int shapefile_cmd_bounds(ClientData clientData, Tcl_Interp *interp, int objc, Tc
 	return TCL_OK;
 }
 
-/* fields - report attribute table field definitions */
+/* set interp result to description ({type name width precision}) of an attribute table field */
+int shapefile_util_fieldDescription(Tcl_Interp *interp, ShapefilePtr shapefile, int fieldi) {
+	char name[12];
+	int width, precision;
+	DBFFieldType type;
+	Tcl_Obj *description;
+	
+	description = Tcl_NewListObj(0, NULL);
+	type = DBFGetFieldInfo(shapefile->dbf, fieldi, name, &width, &precision);
+	
+	switch (type) {
+		case FTString:
+			if (Tcl_ListObjAppendElement(interp, description, Tcl_NewStringObj("string", -1)) != TCL_OK) {
+				return TCL_ERROR;
+			}
+			break;
+		case FTInteger:
+			if (Tcl_ListObjAppendElement(interp, description, Tcl_NewStringObj("integer", -1)) != TCL_OK) {
+				return TCL_ERROR;
+			}
+			break;
+		case FTDouble:
+			if (Tcl_ListObjAppendElement(interp, description, Tcl_NewStringObj("double", -1)) != TCL_OK) {
+				return TCL_ERROR;
+			}
+			break;
+		default:
+			/* represent unsupported field types by numeric type ID instead of descriptive name */
+			if (Tcl_ListObjAppendElement(interp, description, Tcl_NewIntObj((int)type)) != TCL_OK) {
+				return TCL_ERROR;
+			}
+			break;
+	}
+	
+	if (Tcl_ListObjAppendElement(interp, description, Tcl_NewStringObj(name, -1)) != TCL_OK) {
+		return TCL_ERROR;
+	}
+	if (Tcl_ListObjAppendElement(interp, description, Tcl_NewIntObj(width)) != TCL_OK) {
+		return TCL_ERROR;
+	}
+	if (Tcl_ListObjAppendElement(interp, description, Tcl_NewIntObj(precision)) != TCL_OK) {
+		return TCL_ERROR;
+	}
+	
+	Tcl_SetObjResult(interp, description);
+	return TCL_OK;
+}
+
+/* fields - report attribute table field descriptions */
 int shapefile_cmd_fields(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
 	ShapefilePtr shapefile = (ShapefilePtr)clientData;
 	int fieldCount, fieldi;
-	Tcl_Obj *fieldSpec;
-	char name[12];
-	int width, precision;
-	DBFFieldType fieldType;
+	Tcl_Obj *descriptions;
 
 	if (objc != 2) {
 		Tcl_WrongNumArgs(interp, 2, objv, NULL);
@@ -245,46 +290,23 @@ int shapefile_cmd_fields(ClientData clientData, Tcl_Interp *interp, int objc, Tc
 	}
 	
 	fieldCount = DBFGetFieldCount(shapefile->dbf);
-	fieldSpec = Tcl_NewListObj(0, NULL);
+	descriptions = Tcl_NewListObj(0, NULL);
 	
 	for (fieldi = 0; fieldi < fieldCount; fieldi++) {
-		fieldType = DBFGetFieldInfo(shapefile->dbf, fieldi, name, &width, &precision);		
-		switch (fieldType) {
-			case FTString:
-				if (Tcl_ListObjAppendElement(interp, fieldSpec, Tcl_NewStringObj("string", -1)) != TCL_OK) {
-					return TCL_ERROR;
-				}
-				break;
-			case FTInteger:
-				if (Tcl_ListObjAppendElement(interp, fieldSpec, Tcl_NewStringObj("integer", -1)) != TCL_OK) {
-					return TCL_ERROR;
-				}
-				break;
-			case FTDouble:
-				if (Tcl_ListObjAppendElement(interp, fieldSpec, Tcl_NewStringObj("double", -1)) != TCL_OK) {
-					return TCL_ERROR;
-				}
-				break;
-			default:
-				/* represent unsupported field types by numeric type ID instead of descriptive name */
-				if (Tcl_ListObjAppendElement(interp, fieldSpec, Tcl_NewIntObj((int)fieldType)) != TCL_OK) {
-					return TCL_ERROR;
-				}
-				break;
+		
+		/* get information about this field */
+		if (shapefile_util_fieldDescription(interp, shapefile, fieldi) != TCL_OK) {
+			return TCL_ERROR;
 		}
 		
-		if (Tcl_ListObjAppendElement(interp, fieldSpec, Tcl_NewStringObj(name, -1)) != TCL_OK) {
+		/* append information about this field to our list of information about all fields */
+		if (Tcl_ListObjAppendList(interp, descriptions, Tcl_GetObjResult(interp)) != TCL_OK) {
 			return TCL_ERROR;
 		}
-		if (Tcl_ListObjAppendElement(interp, fieldSpec, Tcl_NewIntObj(width)) != TCL_OK) {
-			return TCL_ERROR;
-		}
-		if (Tcl_ListObjAppendElement(interp, fieldSpec, Tcl_NewIntObj(precision)) != TCL_OK) {
-			return TCL_ERROR;
-		}
+		Tcl_ResetResult(interp);
 	}
 	
-	Tcl_SetObjResult(interp, fieldSpec);
+	Tcl_SetObjResult(interp, descriptions);
 	return TCL_OK;
 }
 
