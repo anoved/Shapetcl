@@ -282,31 +282,52 @@ int shapefile_util_fieldDescription(Tcl_Interp *interp, ShapefilePtr shapefile, 
 int shapefile_cmd_fields(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
 	ShapefilePtr shapefile = (ShapefilePtr)clientData;
 	int fieldCount, fieldi;
-	Tcl_Obj *descriptions;
 
-	if (objc != 2) {
-		Tcl_WrongNumArgs(interp, 2, objv, NULL);
+	if (objc != 2 && objc != 3) {
+		Tcl_WrongNumArgs(interp, 2, objv, "?index?");
 		return TCL_ERROR;
 	}
 	
 	fieldCount = DBFGetFieldCount(shapefile->dbf);
-	descriptions = Tcl_NewListObj(0, NULL);
 	
-	for (fieldi = 0; fieldi < fieldCount; fieldi++) {
+	if (objc == 3) {
 		
-		/* get information about this field */
+		if (Tcl_GetIntFromObj(interp, objv[2], &fieldi) != TCL_OK) {
+			return TCL_ERROR;
+		}
+		
+		if (fieldi < 0 || fieldi >= fieldCount) {
+			Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid field index %d", fieldi));
+			return TCL_ERROR;
+		}
+		
+		/* all we need is the description for this field, so we just leave it in interp result */
 		if (shapefile_util_fieldDescription(interp, shapefile, fieldi) != TCL_OK) {
 			return TCL_ERROR;
 		}
 		
-		/* append information about this field to our list of information about all fields */
-		if (Tcl_ListObjAppendList(interp, descriptions, Tcl_GetObjResult(interp)) != TCL_OK) {
-			return TCL_ERROR;
+	} else {
+		Tcl_Obj *descriptions;
+	
+		descriptions = Tcl_NewListObj(0, NULL);
+		
+		for (fieldi = 0; fieldi < fieldCount; fieldi++) {
+			
+			/* get information about this field */
+			if (shapefile_util_fieldDescription(interp, shapefile, fieldi) != TCL_OK) {
+				return TCL_ERROR;
+			}
+			
+			/* append information about this field to our list of information about all fields */
+			if (Tcl_ListObjAppendList(interp, descriptions, Tcl_GetObjResult(interp)) != TCL_OK) {
+				return TCL_ERROR;
+			}
+			Tcl_ResetResult(interp);
 		}
-		Tcl_ResetResult(interp);
+		
+		Tcl_SetObjResult(interp, descriptions);
 	}
 	
-	Tcl_SetObjResult(interp, descriptions);
 	return TCL_OK;
 }
 
