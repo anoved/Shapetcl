@@ -342,7 +342,7 @@ int shapefile_cmd_fields(ClientData clientData, Tcl_Interp *interp, int objc, Tc
 			}
 			
 			/* append information about this field to our list of information about all fields */
-			if (Tcl_ListObjAppendElement(interp, descriptions, Tcl_GetObjResult(interp)) != TCL_OK) {
+			if (Tcl_ListObjAppendList(interp, descriptions, Tcl_GetObjResult(interp)) != TCL_OK) {
 				return TCL_ERROR;
 			}
 			Tcl_ResetResult(interp);
@@ -1200,14 +1200,12 @@ int shapetcl_cmd(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *C
 		/* create a new file; access is readwrite. */
 		
 		const char *shpTypeName = Tcl_GetString(objv[2]);
-		int fieldCount;
+		int fieldSpecCount;
+		Tcl_Obj **fieldSpec;
 		int fieldi;
 		const char *type, *name;
 		int width, precision;
-		Tcl_Obj *fieldDescription;
-		Tcl_Obj **fieldProperties;
-		int fieldPropertyCount;
-
+		
 		if (strcmp(shpTypeName, "point") == 0) {
 			shpType = SHPT_POINT;
 		} else if (strcmp(shpTypeName, "arc") == 0) {
@@ -1236,47 +1234,37 @@ int shapetcl_cmd(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *C
 			Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid shape type \"%s\"", shpTypeName));
 			return TCL_ERROR;
 		}
-		
-		/* count field descriptions */
-		if (Tcl_ListObjLength(interp, objv[3], &fieldCount) != TCL_OK) {
+				
+		if (Tcl_ListObjGetElements(interp, objv[3], &fieldSpecCount, &fieldSpec) != TCL_OK) {
 			return TCL_ERROR;
 		}
-		if (fieldCount == 0) {
+		
+		if (fieldSpecCount % 4 != 0) {
+			Tcl_SetObjResult(interp, Tcl_ObjPrintf("each field requires four values (type, name, width, and precision)"));
+			return TCL_ERROR;
+		}
+		
+		if (fieldSpecCount == 0) {
 			Tcl_SetObjResult(interp, Tcl_ObjPrintf("at least one field is required"));
 			return TCL_ERROR;
 		}
 		
 		/* validate field specifications before creating dbf */	
-		for (fieldi = 0; fieldi < fieldCount; fieldi++) {
+		for (fieldi = 0; fieldi < fieldSpecCount; fieldi += 4) {
 			
-			/* get the four-element field description list for this field */
-			if (Tcl_ListObjIndex(interp, objv[3], fieldi, &fieldDescription) != TCL_OK) {
-				return TCL_ERROR;
-			}
-			if (Tcl_ListObjGetElements(interp, fieldDescription, &fieldPropertyCount, &fieldProperties) != TCL_OK) {
-				return TCL_ERROR;
-			}
-			if (fieldPropertyCount != 4) {
-				Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid field description; type name width precision expected"));
-				return TCL_ERROR;
-			}
-			
-			/* type */
-			type = Tcl_GetString(fieldProperties[0]);
+			type = Tcl_GetString(fieldSpec[fieldi]);
 			if (strcmp(type, "string") != 0 && strcmp(type, "integer") != 0 && strcmp(type, "double") != 0) {
 				Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid field type \"%s\": should be string, integer, or double", type));
 				return TCL_ERROR;
 			}
 			
-			/* name */
-			name = Tcl_GetString(fieldProperties[1]);
+			name = Tcl_GetString(fieldSpec[fieldi + 1]);
 			if (strlen(name) > 10) {
-				Tcl_SetObjResult(interp, Tcl_ObjPrintf("field name \"%s\" too long: 10 characters maximum", name));
+				Tcl_SetObjResult(interp, Tcl_ObjPrintf("field name \"%s\" too long: 10 characters maximum"));
 				return TCL_ERROR;
 			}
 			
-			/* width */
-			if (Tcl_GetIntFromObj(interp, fieldProperties[2], &width) != TCL_OK) {
+			if (Tcl_GetIntFromObj(interp, fieldSpec[fieldi + 2], &width) != TCL_OK) {
 				return TCL_ERROR;
 			}
 			if (strcmp(type, "integer") == 0 && width > 10) {
@@ -1284,8 +1272,7 @@ int shapetcl_cmd(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *C
 				return TCL_ERROR;
 			}
 			
-			/* precision */
-			if (Tcl_GetIntFromObj(interp, fieldProperties[3], &precision) != TCL_OK) {
+			if (Tcl_GetIntFromObj(interp, fieldSpec[fieldi + 3], &precision) != TCL_OK) {
 				return TCL_ERROR;
 			}
 			if (strcmp(type, "double") == 0 && width <= 10 && precision == 0) {
@@ -1300,13 +1287,11 @@ int shapetcl_cmd(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *C
 		}
 		
 		/* add fields to the dbf */
-		for (fieldi = 0; fieldi < fieldCount; fieldi++) {
-			Tcl_ListObjIndex(interp, objv[3], fieldi, &fieldDescription);
-			Tcl_ListObjGetElements(interp, fieldDescription, &fieldPropertyCount, &fieldProperties);
-			type = Tcl_GetString(fieldProperties[0]);
-			name = Tcl_GetString(fieldProperties[1]);
-			Tcl_GetIntFromObj(interp, fieldProperties[2], &width);
-			Tcl_GetIntFromObj(interp, fieldProperties[3], &precision);
+		for (fieldi = 0; fieldi <  fieldSpecCount; fieldi += 4) {
+			type = Tcl_GetString(fieldSpec[fieldi]);
+			name = Tcl_GetString(fieldSpec[fieldi + 1]);
+			Tcl_GetIntFromObj(interp, fieldSpec[fieldi + 2], &width);
+			Tcl_GetIntFromObj(interp, fieldSpec[fieldi + 3], &precision);
 			if (strcmp(type, "integer") == 0) {
 				if (DBFAddField(dbf, name, FTInteger, width, 0) == -1) {
 					Tcl_SetObjResult(interp, Tcl_ObjPrintf("failed to create integer attribute field \"%s\"", name));
