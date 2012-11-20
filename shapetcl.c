@@ -947,8 +947,7 @@ int shapefile_util_attrWrite(Tcl_Interp *interp, ShapefilePtr shapefile, int rec
 
 int shapefile_util_attrRead(Tcl_Interp *interp, ShapefilePtr shapefile, int recordId) {
 	Tcl_Obj *attributes = Tcl_NewListObj(0, NULL);
-	int fieldi, fieldCount, dbfCount;
-	DBFFieldType fieldType;
+	int fieldi, fieldCount, dbfCount, fieldType;
 	
 	fieldCount  = DBFGetFieldCount(shapefile->dbf);
 	dbfCount = DBFGetRecordCount(shapefile->dbf);
@@ -958,7 +957,7 @@ int shapefile_util_attrRead(Tcl_Interp *interp, ShapefilePtr shapefile, int reco
 	}
 
 	for (fieldi = 0; fieldi < fieldCount; fieldi++) {
-		
+				
 		/* represent NULL attribute values as {} in return list */
 		if (DBFIsAttributeNULL(shapefile->dbf, recordId, fieldi)) {
 			if (Tcl_ListObjAppendElement(interp, attributes, Tcl_NewObj()) != TCL_OK) {
@@ -968,7 +967,7 @@ int shapefile_util_attrRead(Tcl_Interp *interp, ShapefilePtr shapefile, int reco
 		}
 		
 		/* interpret attribute value according to field type and append to result list */
-		fieldType = DBFGetFieldInfo(shapefile->dbf, fieldi, NULL, NULL, NULL);
+		fieldType = (int)DBFGetFieldInfo(shapefile->dbf, fieldi, NULL, NULL, NULL);
 		switch (fieldType) {
 			case FTInteger:
 				if (Tcl_ListObjAppendElement(interp, attributes,
@@ -983,14 +982,10 @@ int shapefile_util_attrRead(Tcl_Interp *interp, ShapefilePtr shapefile, int reco
 				}
 				break;
 			case FTString:
+			default:
+				/* (read unsupported field types as string values) */
 				if (Tcl_ListObjAppendElement(interp, attributes,
 						Tcl_NewStringObj(DBFReadStringAttribute(shapefile->dbf, recordId, fieldi), -1)) != TCL_OK) {
-					return TCL_ERROR;
-				}
-				break;
-			default:
-				/* represent any unsupported field type values as {} (same as NULL) */
-				if (Tcl_ListObjAppendElement(interp, attributes, Tcl_NewObj()) != TCL_OK) {
 					return TCL_ERROR;
 				}
 				break;
