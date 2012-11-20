@@ -12,6 +12,19 @@ typedef shapetcl_shapefile * ShapefilePtr;
 
 static int COMMAND_COUNT = 0;
 
+/* return true if flagName is present in objv, otherwise false.
+   for simplest parsing, expect flags at *end* of command argument list;
+   if present, simply decrement objc in caller after all flags are accounted. */
+int util_flagIsPresent(int objc, Tcl_Obj *CONST objv[], const char *flagName) {
+	int i;
+	for (i = 0; i < objc; i++) {
+		if (strcmp(Tcl_GetString(objv[i]), flagName) == 0) {
+			return 1;
+		}
+	}
+	return 0;
+}
+
 /* shapefile closer - invoked if manually closed or automatically on exit */
 void shapefile_util_close(ClientData clientData) {
 	ShapefilePtr shapefile = (ShapefilePtr)clientData;
@@ -95,13 +108,24 @@ int shapefile_cmd_count(ClientData clientData, Tcl_Interp *interp, int objc, Tcl
 int shapefile_cmd_type(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
 	ShapefilePtr shapefile = (ShapefilePtr)clientData;
 	int shpType;
+	int numeric;
+
+	if ((numeric = util_flagIsPresent(objc, objv, "-numeric"))) {
+		objc--;
+	}
 
 	if (objc != 2) {
-		Tcl_WrongNumArgs(interp, 2, objv, NULL);
+		Tcl_WrongNumArgs(interp, 2, objv, "?-numeric?");
 		return TCL_ERROR;
 	}
 	
 	SHPGetInfo(shapefile->shp, NULL, &shpType, NULL, NULL);
+	
+	/* in numeric mode, just return the raw code */
+	if (numeric) {
+		Tcl_SetObjResult(interp, Tcl_NewIntObj(shpType));
+		return TCL_OK;
+	}
 	
 	switch (shpType) {
 		case SHPT_POINT:
@@ -152,16 +176,16 @@ int shapefile_cmd_type(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_
 	return TCL_OK;
 }
 
-/* bounds - report 2d bounds of shapefile or specified feature */
+/* bounds - report bounds of shapefile or specified feature */
 int shapefile_cmd_bounds(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
 	ShapefilePtr shapefile = (ShapefilePtr)clientData;
 	int shpCount;
 	double min[4], max[4];
 	Tcl_Obj *bounds;
 	int shpType;
-		
+	
 	if (objc != 2 && objc != 3) {
-		Tcl_WrongNumArgs(interp, 2, objv, "?index?");
+		Tcl_WrongNumArgs(interp, 2, objv, "?index? ?-xy?");
 		return TCL_ERROR;
 	}
 	
@@ -211,7 +235,7 @@ int shapefile_cmd_bounds(ClientData clientData, Tcl_Interp *interp, int objc, Tc
 			shpType == SHPT_POINTM || shpType == SHPT_ARCM ||
 			shpType == SHPT_POLYGONM || shpType == SHPT_MULTIPOINTM) {
 		Tcl_ListObjAppendElement(interp, bounds, Tcl_NewDoubleObj(min[3]));
-	}	
+	}
 	Tcl_ListObjAppendElement(interp, bounds, Tcl_NewDoubleObj(max[0]));
 	Tcl_ListObjAppendElement(interp, bounds, Tcl_NewDoubleObj(max[1]));
 	if (shpType == SHPT_POINTZ || shpType == SHPT_ARCZ ||
@@ -224,9 +248,8 @@ int shapefile_cmd_bounds(ClientData clientData, Tcl_Interp *interp, int objc, Tc
 			shpType == SHPT_POLYGONM || shpType == SHPT_MULTIPOINTM) {
 		Tcl_ListObjAppendElement(interp, bounds, Tcl_NewDoubleObj(max[3]));
 	}	
-
+	
 	Tcl_SetObjResult(interp, bounds);
-
 	return TCL_OK;
 }
 
