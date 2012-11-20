@@ -305,15 +305,23 @@ int shapefile_util_fieldDescription(Tcl_Interp *interp, ShapefilePtr shapefile, 
 int shapefile_cmd_fields(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
 	ShapefilePtr shapefile = (ShapefilePtr)clientData;
 	int fieldCount, fieldi;
-
+	
 	if (objc != 2 && objc != 3) {
-		Tcl_WrongNumArgs(interp, 2, objv, "?index?");
+		Tcl_WrongNumArgs(interp, 2, objv, "?index|count?");
 		return TCL_ERROR;
 	}
 	
 	fieldCount = DBFGetFieldCount(shapefile->dbf);
 	
 	if (objc == 3) {
+		
+		/* check if the caller just wants the field count */
+		if (strcmp(Tcl_GetString(objv[2]), "count") == 0) {
+			Tcl_SetObjResult(interp, Tcl_NewIntObj(fieldCount));
+			return TCL_OK;
+		}
+		
+		/* otherwise, return description for the one specified field */
 		
 		if (Tcl_GetIntFromObj(interp, objv[2], &fieldi) != TCL_OK) {
 			return TCL_ERROR;
