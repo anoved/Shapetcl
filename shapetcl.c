@@ -183,9 +183,23 @@ int shapefile_cmd_bounds(ClientData clientData, Tcl_Interp *interp, int objc, Tc
 	double min[4], max[4];
 	Tcl_Obj *bounds;
 	int shpType;
+	int allBounds, xyOnly;
+	
+	/* -all option returns all xyzm bounds even for xy or xym types */
+	/* -xy option returns only xy bounds even for xym or xyzm types */
+	/* -all option trumps -xy (really, only one should be present) */
+	allBounds = util_flagIsPresent(objc, objv, "-all");
+	xyOnly = util_flagIsPresent(objc, objv, "-xy");
+	if (xyOnly) {
+		objc--;
+	}
+	if (allBounds) {
+		xyOnly = 0;
+		objc--;
+	}
 	
 	if (objc != 2 && objc != 3) {
-		Tcl_WrongNumArgs(interp, 2, objv, "?index? ?-xy?");
+		Tcl_WrongNumArgs(interp, 2, objv, "?index? ?-all|-xy?");
 		return TCL_ERROR;
 	}
 	
@@ -226,28 +240,36 @@ int shapefile_cmd_bounds(ClientData clientData, Tcl_Interp *interp, int objc, Tc
 	bounds = Tcl_NewListObj(0, NULL);
 	Tcl_ListObjAppendElement(interp, bounds, Tcl_NewDoubleObj(min[0]));
 	Tcl_ListObjAppendElement(interp, bounds, Tcl_NewDoubleObj(min[1]));
-	if (shpType == SHPT_POINTZ || shpType == SHPT_ARCZ ||
-			shpType == SHPT_POLYGONZ || shpType == SHPT_MULTIPOINTZ) {
-		Tcl_ListObjAppendElement(interp, bounds, Tcl_NewDoubleObj(min[2]));
-	}
-	if (shpType == SHPT_POINTZ || shpType == SHPT_ARCZ ||
-			shpType == SHPT_POLYGONZ || shpType == SHPT_MULTIPOINTZ ||
-			shpType == SHPT_POINTM || shpType == SHPT_ARCM ||
-			shpType == SHPT_POLYGONM || shpType == SHPT_MULTIPOINTM) {
-		Tcl_ListObjAppendElement(interp, bounds, Tcl_NewDoubleObj(min[3]));
+	if (!xyOnly) {
+		if (allBounds ||
+				shpType == SHPT_POINTZ || shpType == SHPT_ARCZ ||
+				shpType == SHPT_POLYGONZ || shpType == SHPT_MULTIPOINTZ) {
+			Tcl_ListObjAppendElement(interp, bounds, Tcl_NewDoubleObj(min[2]));
+		}
+		if (allBounds ||
+				shpType == SHPT_POINTZ || shpType == SHPT_ARCZ ||
+				shpType == SHPT_POLYGONZ || shpType == SHPT_MULTIPOINTZ ||
+				shpType == SHPT_POINTM || shpType == SHPT_ARCM ||
+				shpType == SHPT_POLYGONM || shpType == SHPT_MULTIPOINTM) {
+			Tcl_ListObjAppendElement(interp, bounds, Tcl_NewDoubleObj(min[3]));
+		}
 	}
 	Tcl_ListObjAppendElement(interp, bounds, Tcl_NewDoubleObj(max[0]));
 	Tcl_ListObjAppendElement(interp, bounds, Tcl_NewDoubleObj(max[1]));
-	if (shpType == SHPT_POINTZ || shpType == SHPT_ARCZ ||
-			shpType == SHPT_POLYGONZ || shpType == SHPT_MULTIPOINTZ) {
-		Tcl_ListObjAppendElement(interp, bounds, Tcl_NewDoubleObj(max[2]));
+	if (!xyOnly) {
+		if (allBounds ||
+				shpType == SHPT_POINTZ || shpType == SHPT_ARCZ ||
+				shpType == SHPT_POLYGONZ || shpType == SHPT_MULTIPOINTZ) {
+			Tcl_ListObjAppendElement(interp, bounds, Tcl_NewDoubleObj(max[2]));
+		}
+		if (allBounds ||
+				shpType == SHPT_POINTZ || shpType == SHPT_ARCZ ||
+				shpType == SHPT_POLYGONZ || shpType == SHPT_MULTIPOINTZ ||
+				shpType == SHPT_POINTM || shpType == SHPT_ARCM ||
+				shpType == SHPT_POLYGONM || shpType == SHPT_MULTIPOINTM) {
+			Tcl_ListObjAppendElement(interp, bounds, Tcl_NewDoubleObj(max[3]));
+		}	
 	}
-	if (shpType == SHPT_POINTZ || shpType == SHPT_ARCZ ||
-			shpType == SHPT_POLYGONZ || shpType == SHPT_MULTIPOINTZ ||
-			shpType == SHPT_POINTM || shpType == SHPT_ARCM ||
-			shpType == SHPT_POLYGONM || shpType == SHPT_MULTIPOINTM) {
-		Tcl_ListObjAppendElement(interp, bounds, Tcl_NewDoubleObj(max[3]));
-	}	
 	
 	Tcl_SetObjResult(interp, bounds);
 	return TCL_OK;
