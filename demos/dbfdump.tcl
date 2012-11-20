@@ -9,20 +9,24 @@ if {$argc != 1} {
 }
 
 set shp [shapefile [lindex $argv 0]]
-
 set fields [$shp fields]
-foreach {type name width precision} $fields {
-	puts -nonewline [format {%*s} $width $name]
-}
-puts {}
 
+# print header
+set header {}
+foreach {type name width precision} $fields {
+	append header [format {%*s} $width $name]
+}
+puts $header
+
+# print attribute values
 foreach record [$shp attributes] {
+	set line {}
 	foreach value $record {type name width precision} $fields {
 		if {[string equal $type "string"]} {
-			puts -nonewline [format {%*s} $width $value]
+			append line [format {%*s} $width $value]
 		} else {
-			puts -nonewline [format {%*.*f} $width $precision $value]
+			append line [format {%*.*f} $width $precision $value]
 		}
 	}
-	puts {}
+	puts $line
 }
