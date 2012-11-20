@@ -644,7 +644,7 @@ int shapefile_util_coordWrite(Tcl_Interp *interp, ShapefilePtr shapefile, int fe
 	return returnValue;
 }
 
-int shapefile_util_coordRead(Tcl_Interp *interp, ShapefilePtr shapefile, int featureId, int allCoords) {
+int shapefile_util_coordRead(Tcl_Interp *interp, ShapefilePtr shapefile, int featureId, int allCoords, int xyOnly) {
 	SHPObject *shape;
 	Tcl_Obj *coordParts;
 	int featureCount, part, partCount, vertex, vertexStart, vertexStop;
@@ -692,6 +692,11 @@ int shapefile_util_coordRead(Tcl_Interp *interp, ShapefilePtr shapefile, int fea
 			if (Tcl_ListObjAppendElement(interp, coords, Tcl_NewDoubleObj(shape->padfY[vertex])) != TCL_OK) {
 				returnValue = TCL_ERROR;
 				goto crRelease;
+			}
+			
+			/* don't even bother considering Z or M coords if only xy requested */
+			if (xyOnly) {
+				continue;
 			}
 			
 			/* for Z type features, append Z coordinate before Measure */
@@ -749,16 +754,20 @@ int shapefile_util_coordRead(Tcl_Interp *interp, ShapefilePtr shapefile, int fea
 int shapefile_cmd_coords(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
 	ShapefilePtr shapefile = (ShapefilePtr)clientData;
 	int featureId;
-	int allCoords;
+	int allCoords, xyOnly;
 	
-	/* -all option applies to reading; all xyzm coords returned, regardless of type */
 	allCoords = util_flagIsPresent(objc, objv, "-all");
+	xyOnly = util_flagIsPresent(objc, objv, "-xy");
+	if (xyOnly) {
+		objc--;
+	}
 	if (allCoords) {
+		xyOnly = 0;
 		objc--;
 	}
 	
 	if (objc < 2 || objc > 4) {
-		Tcl_WrongNumArgs(interp, 2, objv, "?index ?coords?? ?-all?");
+		Tcl_WrongNumArgs(interp, 2, objv, "?index ?coords?? ?-all|-xy?");
 		return TCL_ERROR;
 	}
 	
@@ -783,7 +792,7 @@ int shapefile_cmd_coords(ClientData clientData, Tcl_Interp *interp, int objc, Tc
 	else if (objc == 3) {
 		/* input mode - read and return coordinates from featureId */
 		/* if shape input is successful, interp result is set to coordinate list */
-		if (shapefile_util_coordRead(interp, shapefile, featureId, allCoords) != TCL_OK) {
+		if (shapefile_util_coordRead(interp, shapefile, featureId, allCoords, xyOnly) != TCL_OK) {
 			return TCL_ERROR;
 		}
 	}
@@ -797,7 +806,7 @@ int shapefile_cmd_coords(ClientData clientData, Tcl_Interp *interp, int objc, Tc
 		
 		for (featureId = 0; featureId < shpCount; featureId++) {
 			
-			if (shapefile_util_coordRead(interp, shapefile, featureId, allCoords) != TCL_OK) {
+			if (shapefile_util_coordRead(interp, shapefile, featureId, allCoords, xyOnly) != TCL_OK) {
 				return TCL_ERROR;
 			}
 			
