@@ -6,7 +6,7 @@ namespace import ::tcltest::test
 ::tcltest::workingDirectory [file dirname [info script]]
 
 # Stow any temporary test files in the tmp subdirectory.
-::tcltest::configure -testdir [::tcltest::workingDirectory] -tmpdir tmp -asidefromdir tmp
+::tcltest::configure -tmpdir tmp
 
 # Apply any additional configuration arguments.
 eval ::tcltest::configure $argv

@@ -41,5 +41,5 @@ $(SHAPETCL_LIB): shapetcl.o $(SHAPELIB_OBJS)
 clean:
 	rm -f $(SHAPETCL_LIB) shapetcl.o
 
-test:
+test: $(SHAPETCL_LIB)
 	$(TCL) tests/all.tcl
