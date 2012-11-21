@@ -8,7 +8,7 @@ package require tcltest 2
 # runAllTests should only look here, in the tests directory, for tests.
 # It should not bother looking for tests in the tmp subdirectory.
 # Files that end in .test.tcl (excepting any lock files) contain tests.
-::tcltest::configure -tmpdir tmp -testdir [::tcltest::workingDirectory] -asidefromdir tmp -file {*.test.tcl} -notfile {l.*.test.tcl}
+::tcltest::configure -tmpdir tmp -testdir [::tcltest::workingDirectory] -asidefromdir {tmp sample} -file {*.test.tcl} -notfile {l.*.test.tcl}
 
 # Apply any additional configuration arguments.
 eval ::tcltest::configure $argv
