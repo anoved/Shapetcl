@@ -165,7 +165,9 @@ int SADRemove( const char *filename )
 void SADError( const char *message )
 
 {
-    fprintf( stderr, "%s\n", message );
+	/* "Let the library be silent and report errors through return values." */
+	/* (Perhaps a buffer could be used to store the latest error message...) */
+    /* fprintf( stderr, "%s\n", message ); */
 }
 
 /************************************************************************/
