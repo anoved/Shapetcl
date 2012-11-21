@@ -42,4 +42,4 @@ clean:
 	rm -f $(SHAPETCL_LIB) shapetcl.o
 
 test:
-	@echo "No tests defined."
+	$(TCL) tests/all.tcl
