@@ -1372,6 +1372,7 @@ int shapetcl_cmd(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *C
 	else {		
 		
 		/* open an existing shapefile */
+		int shpCount, dbfCount;
 		
 		if ((dbf = DBFOpen(path, readonly ? "rb" : "rb+")) == NULL) {
 			Tcl_SetObjResult(interp, Tcl_ObjPrintf("failed to open attribute table for \"%s\"", path));
@@ -1391,12 +1392,21 @@ int shapetcl_cmd(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *C
 		}
 		
 		/* Only types we don't handle are SHPT_NULL and SHPT_MULTIPATCH */
-		SHPGetInfo(shp, NULL, &shpType, NULL, NULL);
+		SHPGetInfo(shp, &shpCount, &shpType, NULL, NULL);
 		if (shpType != SHPT_POINT && shpType != SHPT_POINTM && shpType != SHPT_POINTZ &&
 				shpType != SHPT_ARC && shpType != SHPT_ARCM && shpType != SHPT_ARCZ &&
 				shpType != SHPT_POLYGON && shpType != SHPT_POLYGONM && shpType != SHPT_POLYGONZ &&
 				shpType != SHPT_MULTIPOINT && shpType != SHPT_MULTIPOINTM && shpType != SHPT_MULTIPOINTZ) {
 			Tcl_SetObjResult(interp, Tcl_ObjPrintf("unsupported shape type (%d)", shpType));
+			DBFClose(dbf);
+			SHPClose(shp);
+			return TCL_ERROR;
+		}
+		
+		/* Valid shapefiles must have matching number of features and attribute records */
+		dbfCount = DBFGetRecordCount(dbf);
+		if (dbfCount != shpCount) {
+			Tcl_SetObjResult(interp, Tcl_ObjPrintf("shapefile feature count (%d) does not match attribute record count (%d)", shpCount, dbfCount));
 			DBFClose(dbf);
 			SHPClose(shp);
 			return TCL_ERROR;

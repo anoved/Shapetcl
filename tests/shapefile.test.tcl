@@ -80,9 +80,15 @@ test shapefile-1.3 {
 
 test shapefile-1.4 {
 # Attempt to open a shapefile with an attribute table that exists but contains no fields
-} -constraints {
-	emptyTest
-}
+} -setup {
+	file copy sample/empty.dbf tmp/empty.dbf
+} -body {
+	shapefile tmp/empty
+} -cleanup {
+	file delete tmp/empty.dbf
+} -returnCodes {
+	error
+} -match glob -result {attribute table for "*" contains no fields}
 
 test shapefile-1.5 {
 # Attempt to open a shapefile with a valid attribute table but no shp/shx files
@@ -95,24 +101,39 @@ test shapefile-1.5 {
 } -returnCodes {
 	error
 } -match glob -result {failed to open shapefile for "*"}
-# Out of the box, Shapelib fprintfs certain error messages directly to stderr.
-# This is inconvenient given its role as library - the caller might prefer to
-# handle or report errors otherwise. These C-level stderr messages cannot be
-# caught by tcltest's -errorOutput option, so they cause the test file to fail.
-# So, I have commented out the fprintf() statement in SADError() in safileio.c.
 
 test shapefile-1.6 {
 # Attempt to open a shapefile with a valid attribute table and shp/shx files that are not valid
-} -constraints {
-	emptyTest
-}
+} -setup {
+	file copy sample/ne_110m_land/ne_110m_land.dbf tmp/foo.dbf
+	makeFile {} foo.shp
+	makeFile {} foo.shx
+} -body {
+	shapefile tmp/foo
+} -cleanup {
+	file delete tmp/foo.dbf
+	removeFile foo.shp
+	removeFile foo.shx
+} -returnCodes {
+	error
+} -match glob -result {failed to open shapefile for "*"}
 
 test shapefile-1.7 {
 # Attempt to open a shapefile that has valid files but mismatched number of records
-} -constraints {
-	emptyTest
-}
-
+} -setup {
+	file copy sample/mismatch.dbf tmp
+	file copy sample/mismatch.shp tmp
+	file copy sample/mismatch.shx tmp
+} -body {
+	shapefile tmp/mismatch
+} -cleanup {
+	file delete tmp/mismatch.dbf
+	file delete tmp/mismatch.shp
+	file delete tmp/mismatch.shx
+} -returnCodes {
+	error
+} -match glob -result {shapefile feature count (*) does not match attribute record count (*)}
+	
 test shapefile-1.8 {
 # Attempt to open a valid shapefile of an unsupported type
 } -constraints {
@@ -126,5 +147,9 @@ test shapefile-1.9 {
 } -cleanup {
 	$shp close
 } -match glob -result {shapefile.*}
+
+# In addition to testing expected error conditions,
+# should also try to comprehensively test *successful* cases:
+# opening files of all type, with the various options.
 
 ::tcltest::cleanupTests
