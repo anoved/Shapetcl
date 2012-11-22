@@ -14,6 +14,7 @@ int shapefile_cmd_close(ClientData clientData, Tcl_Interp *interp, int objc, Tcl
 	
 	shapefile_util_close(shapefile);
 	
+	/* triggers the deleteProc associated with this shapefile cmd: shapefile_util_delete */
 	Tcl_DeleteCommand(interp, Tcl_GetString(objv[0]));
 	
 	return TCL_OK;
@@ -1339,7 +1340,7 @@ int shapetcl_cmd(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *C
 		ckfree((char *)shapefile);
 		return TCL_ERROR;
 	}
-	Tcl_CreateExitHandler(shapefile_util_exit, (ClientData)shapefile);
+	Tcl_CreateExitHandler(shapefile_util_close, (ClientData)shapefile);
 	Tcl_SetObjResult(interp, Tcl_NewStringObj(cmdName, -1));
 	
 	return TCL_OK;

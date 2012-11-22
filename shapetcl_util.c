@@ -22,19 +22,11 @@ void shapefile_util_close(ClientData clientData) {
 	shapefile->dbf = NULL;
 }
 
-/* exit handler - invoked if shapefile is not manually closed prior to exit */
-void shapefile_util_exit(ClientData clientData) {
-	ShapefilePtr shapefile = (ShapefilePtr)clientData;
-	shapefile_util_close(shapefile);
-}
-
 /* delete proc - invoked if shapefile is manually closed. deletes exit handler */
 void shapefile_util_delete(ClientData clientData) {
-	ShapefilePtr shapefile = (ShapefilePtr)clientData;
-	Tcl_DeleteExitHandler(shapefile_util_exit, shapefile);
-	ckfree((char *)shapefile);
+	Tcl_DeleteExitHandler(shapefile_util_close, clientData);
+	ckfree((char *)clientData);
 }
-
 
 /* set interp result to description ({type name width precision}) of an attribute table field */
 int shapefile_util_fieldDescription(Tcl_Interp *interp, ShapefilePtr shapefile, int fieldi) {
