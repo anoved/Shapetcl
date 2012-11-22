@@ -27,20 +27,25 @@ TCL = tclsh
 
 all: $(SHAPETCL_LIB)
 
-shapetcl.o: shapetcl.c shapetcl_util.c shapetcl.h
-	$(CC) $(CFLAGS) -c shapetcl.c shapetcl_util.c \
+shapetcl.o: shapetcl.c shapetcl.h
+	$(CC) $(CFLAGS) -c shapetcl.c \
 			-I$(SHAPELIB_PREFIX) \
 			-I$(TCL_INCLUDE_DIR)
 
-$(SHAPETCL_LIB): shapetcl.o $(SHAPELIB_OBJS)
+shapetcl_util.o: shapetcl_util.c shapetcl.h
+	$(CC) $(CFLAGS) -c shapetcl_util.c \
+			-I$(SHAPELIB_PREFIX) \
+			-I$(TCL_INCLUDE_DIR)
+
+$(SHAPETCL_LIB): shapetcl.o shapetcl_util.o $(SHAPELIB_OBJS)
 	$(CC) -shared -W1,-soname,Shapetcl \
 			-o $(SHAPETCL_LIB) \
-			shapetcl.o $(SHAPELIB_OBJS) \
+			shapetcl.o shapetcl_util.o $(SHAPELIB_OBJS) \
 			-L$(TCL_LIBRARY_DIR) -ltcl8.5
 	echo "pkg_mkIndex . " $(SHAPETCL_LIB) | $(TCL)
 
 clean:
-	rm -f $(SHAPETCL_LIB) shapetcl.o $(SHAPELIB_OBJS)
+	rm -f $(SHAPETCL_LIB) shapetcl.o shapetcl_util.o $(SHAPELIB_OBJS)
 
 test: $(SHAPETCL_LIB)
 	$(TCL) tests/all.tcl
