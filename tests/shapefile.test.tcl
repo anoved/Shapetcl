@@ -15,8 +15,9 @@ eval ::tcltest::configure $argv
 lappend auto_path ..
 package require Shapetcl
 
-# Tests:
-
+#
+# Testing for "Error" Conditions
+#
 
 test shapefile-1.0 {
 # Test what happens when the shapefile command is invoked with no arguments.
@@ -140,16 +141,25 @@ test shapefile-1.8 {
 	emptyTest
 }
 
-test shapefile-1.9 {
-# Attempt to open a valid shapefile
+#
+# Testing for "Success" Conditions
+#
+
+test shapefile-2.0 {
+# Attempt to open a valid (polygon) shapefile
 } -body {
 	set shp [shapefile sample/ne_110m_land/ne_110m_land]
 } -cleanup {
 	$shp close
 } -match glob -result {shapefile.*}
 
-# In addition to testing expected error conditions,
-# should also try to comprehensively test *successful* cases:
-# opening files of all type, with the various options.
+test shapefile-2.1 {
+# Verify that by default shapefiles are opened in readwrite mode
+} -body {
+	set shp [shapefile sample/ne_110m_land/ne_110m_land]
+	$shp mode
+} -cleanup {
+	$shp close
+} -match exact -result {readwrite}
 
 ::tcltest::cleanupTests
