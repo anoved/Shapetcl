@@ -34,17 +34,10 @@ void shapefile_util_close(ClientData clientData) {
 	shapefile->dbf = NULL;
 }
 
-/* exit handler - invoked if shapefile is not manually closed prior to exit */
-void shapefile_util_exit(ClientData clientData) {
-	ShapefilePtr shapefile = (ShapefilePtr)clientData;
-	shapefile_util_close(shapefile);
-}
-
 /* delete proc - invoked if shapefile is manually closed. deletes exit handler */
 void shapefile_util_delete(ClientData clientData) {
-	ShapefilePtr shapefile = (ShapefilePtr)clientData;
-	Tcl_DeleteExitHandler(shapefile_util_exit, shapefile);
-	ckfree((char *)shapefile);
+	Tcl_DeleteExitHandler(shapefile_util_close, clientData);
+	ckfree((char *)clientData);
 }
 
 /* close - flush shapefile and delete associated command */
@@ -58,6 +51,7 @@ int shapefile_cmd_close(ClientData clientData, Tcl_Interp *interp, int objc, Tcl
 	
 	shapefile_util_close(shapefile);
 	
+	/* triggers the deleteProc associated with this shapefile cmd: shapefile_util_delete */
 	Tcl_DeleteCommand(interp, Tcl_GetString(objv[0]));
 	
 	return TCL_OK;
@@ -1431,7 +1425,7 @@ int shapetcl_cmd(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *C
 		ckfree((char *)shapefile);
 		return TCL_ERROR;
 	}
-	Tcl_CreateExitHandler(shapefile_util_exit, (ClientData)shapefile);
+	Tcl_CreateExitHandler(shapefile_util_close, (ClientData)shapefile);
 	Tcl_SetObjResult(interp, Tcl_NewStringObj(cmdName, -1));
 	
 	return TCL_OK;
