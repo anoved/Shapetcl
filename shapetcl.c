@@ -1051,10 +1051,6 @@ int shapefile_util_attrWriteField(Tcl_Interp *interp, ShapefilePtr shapefile, in
 int shapefile_util_attrWrite(Tcl_Interp *interp, ShapefilePtr shapefile, int recordId, int validate, Tcl_Obj *attrList) {
 	Tcl_Obj *attr;
 	int fieldi, fieldCount, attrCount, dbfCount;
-	DBFFieldType fieldType;
-	int intValue;
-	double doubleValue;
-	const char *stringValue;
 	
 	if (shapefile->readonly) {
 		Tcl_SetObjResult(interp, Tcl_ObjPrintf("cannot write attributes to readonly shapefile"));
@@ -1113,48 +1109,10 @@ int shapefile_util_attrWrite(Tcl_Interp *interp, ShapefilePtr shapefile, int rec
 		if (Tcl_ListObjIndex(interp, attrList, fieldi, &attr) != TCL_OK) {
 			return TCL_ERROR;
 		}
-
-		fieldType = DBFGetFieldInfo(shapefile->dbf, fieldi, NULL, NULL, NULL);
 	
-		/* null value */
-		if (Tcl_GetCharLength(attr) == 0) {
-			if (!DBFWriteNULLAttribute(shapefile->dbf, recordId, fieldi)) {
-				Tcl_SetObjResult(interp, Tcl_ObjPrintf("failed to write null attribute"));
-				return TCL_ERROR;
-			}
-			continue;
-		}
-		
-		/* regular values */
-		switch (fieldType) {
-			case FTInteger:
-				if ((Tcl_GetIntFromObj(interp, attr, &intValue) != TCL_OK) ||
-						(!DBFWriteIntegerAttribute(shapefile->dbf, recordId, fieldi, intValue))) {
-					Tcl_SetObjResult(interp, Tcl_ObjPrintf("failed to write integer attribute \"%d\"", intValue));
-					return TCL_ERROR;
-				}
-				break;
-			case FTDouble:
-				if ((Tcl_GetDoubleFromObj(interp, attr, &doubleValue) != TCL_OK) ||
-						(!DBFWriteDoubleAttribute(shapefile->dbf, recordId, fieldi, doubleValue))) {
-					Tcl_SetObjResult(interp, Tcl_ObjPrintf("failed to write double attribute \"%lf\"", doubleValue));
-					return TCL_ERROR;
-				}
-				break;
-			case FTString:
-				if (((stringValue = Tcl_GetString(attr)) == NULL) ||
-						(!DBFWriteStringAttribute(shapefile->dbf, recordId, fieldi, stringValue))) {
-					Tcl_SetObjResult(interp, Tcl_ObjPrintf("failed to write string attribute \"%s\"", stringValue));
-					return TCL_ERROR;
-				}
-				break;
-			default:
-				/* write NULL for all unsupported field types */
-				if (!DBFWriteNULLAttribute(shapefile->dbf, recordId, fieldi)) {
-					Tcl_SetObjResult(interp, Tcl_ObjPrintf("failed to write null attribute for unsupported field %d", fieldi));
-					return TCL_ERROR;
-				}
-				break;
+		/* writes value attr to field fieldi of record recordId; sets interp result to recordId */
+		if (shapefile_util_attrWriteField(interp, shapefile, recordId, fieldi, attr) != TCL_OK) {
+			return TCL_ERROR;
 		}
 	}
 		
