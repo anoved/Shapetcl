@@ -1218,7 +1218,7 @@ int shapefile_cmd_write(ClientData clientData, Tcl_Interp *interp, int objc, Tcl
 int shapefile_commands(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
 	int subcommandIndex;
 	static const char *subcommandNames[] = {
-			"attributes", "bounds", "close", "coords", "count", "fields", "mode", "type", "write"
+			"attributes", "bounds", "close", "coords", "count", "fields", "mode", "type", "write", NULL
 	};
 	Tcl_ObjCmdProc *subcommands[] = {
 			shapefile_cmd_attributes, shapefile_cmd_bounds, shapefile_cmd_close,

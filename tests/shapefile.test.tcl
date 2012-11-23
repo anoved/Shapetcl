@@ -141,6 +141,17 @@ test shapefile-1.8 {
 	emptyTest
 }
 
+test shapefile-1.9 {
+# Attempt to invoke an invalid subcommand
+} -body {
+	set shp [shapefile sample/ne_110m_land/ne_110m_land]
+	$shp funk
+} -cleanup {
+	$shp close
+} -returnCodes {
+	error
+} -match glob -result {bad subcommand "*": must be *}
+
 #
 # Testing for "Success" Conditions
 #
