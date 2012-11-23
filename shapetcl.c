@@ -759,12 +759,12 @@ int shapefile_util_coordRead(Tcl_Interp *interp, ShapefilePtr shapefile, int fea
 	Tcl_SetObjResult(interp, coordParts);
 
    crRelease:
-	SHPDestroyObject(shape);	
+	SHPDestroyObject(shape);
 	return returnValue;
 }
 
-/* coords - get or set feature coordinates */
-int shapefile_cmd_coords(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
+/* coordinates - get or set feature coordinates */
+int shapefile_cmd_coordinates(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
 	ShapefilePtr shapefile = (ShapefilePtr)clientData;
 	int featureId;
 	int opt_allCoords, opt_xyOnly;
@@ -1310,7 +1310,7 @@ int shapefile_commands(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_
 	};
 	Tcl_ObjCmdProc *subcommands[] = {
 			shapefile_cmd_attributes, shapefile_cmd_bounds, shapefile_cmd_close,
-			shapefile_cmd_coords, shapefile_cmd_count, shapefile_cmd_fields,
+			shapefile_cmd_coordinates, shapefile_cmd_count, shapefile_cmd_fields,
 			shapefile_cmd_mode, shapefile_cmd_type, shapefile_cmd_write
 	};
 	
