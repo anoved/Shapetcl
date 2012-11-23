@@ -748,72 +748,109 @@ int shapefile_util_coordRead(Tcl_Interp *interp, ShapefilePtr shapefile, int fea
 int shapefile_cmd_coords(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
 	ShapefilePtr shapefile = (ShapefilePtr)clientData;
 	int featureId;
-	int allCoords, xyOnly;
+	int opt_allCoords, opt_xyOnly;
 	
-	allCoords = util_flagIsPresent(objc, objv, "-all");
-	xyOnly = util_flagIsPresent(objc, objv, "-xy");
-	if (xyOnly) {
+	static const char *subcommandNames[] = {"read", "write"};
+	int subcommandIndex;
+	
+	opt_allCoords = util_flagIsPresent(objc, objv, "-all");
+	opt_xyOnly = util_flagIsPresent(objc, objv, "-xy");
+	if (opt_xyOnly) {
 		objc--;
 	}
-	if (allCoords) {
-		xyOnly = 0;
+	if (opt_allCoords) {
+		opt_xyOnly = 0;
 		objc--;
 	}
 	
-	if (objc < 2 || objc > 4) {
-		Tcl_WrongNumArgs(interp, 2, objv, "?index ?coords?? ?-all|-xy?");
+	if (objc < 3) {
+		Tcl_WrongNumArgs(interp, 2, objv, "action ?args?");
+		return TCL_ERROR;
+	}
+	if (Tcl_GetIndexFromObj(interp, objv[2], subcommandNames, "action",
+			TCL_EXACT, &subcommandIndex) != TCL_OK) {
 		return TCL_ERROR;
 	}
 	
-	if (objc == 3 || objc == 4) {
-		if (Tcl_GetIntFromObj(interp, objv[2], &featureId) != TCL_OK) {
-			return TCL_ERROR;
-		}
-	}
+	if (subcommandIndex == 0) {
+		/* read coords */
 		
-	if (objc == 4) {
-		/* output mode */
-		if (featureId == -1) {
-			Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid feature index %d (use write command)", featureId));
-			return TCL_ERROR;
-		}
-
-		/* if shape output is successful, interp result is set to output feature id */
-		if (shapefile_util_coordWrite(interp, shapefile, featureId, objv[3]) != TCL_OK) {
-			return TCL_ERROR;
-		}
-	}
-	else if (objc == 3) {
-		/* input mode - read and return coordinates from featureId */
-		/* if shape input is successful, interp result is set to coordinate list */
-		if (shapefile_util_coordRead(interp, shapefile, featureId, allCoords, xyOnly) != TCL_OK) {
-			return TCL_ERROR;
-		}
-	}
-	else {
-		/* slurp input */
-		Tcl_Obj *featureList;
-		int shpCount;
-		
-		featureList = Tcl_NewListObj(0, NULL);
-		SHPGetInfo(shapefile->shp, &shpCount, NULL, NULL, NULL);
-		
-		for (featureId = 0; featureId < shpCount; featureId++) {
+		if (objc == 3) {
+			/* return coords of all features */
+			Tcl_Obj *featureList;
+			int shpCount;
 			
-			if (shapefile_util_coordRead(interp, shapefile, featureId, allCoords, xyOnly) != TCL_OK) {
+			featureList = Tcl_NewListObj(0, NULL);
+			SHPGetInfo(shapefile->shp, &shpCount, NULL, NULL, NULL);
+			
+			for (featureId = 0; featureId < shpCount; featureId++) {
+				
+				if (shapefile_util_coordRead(interp, shapefile, featureId, opt_allCoords, opt_xyOnly) != TCL_OK) {
+					return TCL_ERROR;
+				}
+				
+				if (Tcl_ListObjAppendElement(interp, featureList, Tcl_GetObjResult(interp)) != TCL_OK) {
+					return TCL_ERROR;
+				}
+				
+				Tcl_ResetResult(interp);
+			}
+			
+			Tcl_SetObjResult(interp, featureList);			
+		} else if (objc == 4) {
+		
+			/* get feature index to read */			
+			if (Tcl_GetIntFromObj(interp, objv[3], &featureId) != TCL_OK) {
 				return TCL_ERROR;
 			}
 			
-			if (Tcl_ListObjAppendElement(interp, featureList, Tcl_GetObjResult(interp)) != TCL_OK) {
+			/* return coords of specified feature index */
+			if (shapefile_util_coordRead(interp, shapefile, featureId, opt_allCoords, opt_xyOnly) != TCL_OK) {
 				return TCL_ERROR;
 			}
 			
-			Tcl_ResetResult(interp);
+		} else {
+			Tcl_WrongNumArgs(interp, 3, objv, "?-all|-xy?");
+			return TCL_ERROR;
 		}
+	} else if (subcommandIndex == 1) {
+		/* write coords */
 		
-		Tcl_SetObjResult(interp, featureList);
+		if (objc == 4) {
+			/* write coords to a new feature; create complementary blank attribute record */
+			/* awaiting shapefile_util_attrWrite to handle NULL attrList arg */
+			Tcl_SetObjResult(interp, Tcl_ObjPrintf("coords write {} not yet implemented!"));
+			return TCL_ERROR;
+			
+			/* write coords to a new feature */
+			if (shapefile_util_coordWrite(interp, shapefile, -1, objv[3]) != TCL_OK) {
+				return TCL_ERROR;
+			}
+			
+			/* interp result is new feature id; create a null attribute record to match */
+			/*if (shapefile_util_attrWrite(interp, shapefile, -1, 0, NULL) != TCL_OK) {
+				return TCL_ERROR;
+			}*/
+			
+			
+		} else if (objc == 5) {
+			/* write coords to a specific feature index */
+			
+			/* get feature index to overwrite */
+			if (Tcl_GetIntFromObj(interp, objv[3], &featureId) != TCL_OK) {
+				return TCL_ERROR;
+			}
+			
+			/* if shape output is successful, interp result is set to output feature id */
+			if (shapefile_util_coordWrite(interp, shapefile, featureId, objv[4]) != TCL_OK) {
+				return TCL_ERROR;
+			}
+		} else {
+			Tcl_WrongNumArgs(interp, 3, objv, "?index? coords");
+			return TCL_ERROR;
+		}
 	}
-	
+		
 	return TCL_OK;
 }
 
@@ -1067,6 +1104,9 @@ int shapefile_cmd_attributes(ClientData clientData, Tcl_Interp *interp, int objc
 	ShapefilePtr shapefile = (ShapefilePtr)clientData;
 	int recordId;
 	
+	
+	
+	
 	if (objc < 2 || objc > 4) {
 		Tcl_WrongNumArgs(interp, 2, objv, "?index ?attributes??");
 		return TCL_ERROR;
@@ -1197,7 +1237,7 @@ int shapefile_commands(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_
 			TCL_EXACT, &subcommandIndex) != TCL_OK) {
 		return TCL_ERROR;
 	}
-	
+		
 	/* invoke the requested subcommand directly, passing on all arguments */
 	return subcommands[subcommandIndex](clientData, interp, objc, objv);
 }
