@@ -884,18 +884,76 @@ int shapefile_cmd_coordinates(ClientData clientData, Tcl_Interp *interp, int obj
 	return TCL_OK;
 }
 
-/* given a list of attributes, check whether they conform to the shapefile's
-   field specification (parseable by type and not truncated). If not, return
-   TCL_ERROR with reason in result. If so, return TCL_OK with attribute list. */
-int shapefile_util_attrValidate(Tcl_Interp *interp, ShapefilePtr shapefile, Tcl_Obj *attrList) {
-	int fieldi, fieldCount, attrCount;
-	DBFFieldType fieldType;
-	int width, precision;
-	Tcl_Obj *attr;
-	char numericStringValue[64];
+
+int shapefile_util_attrValidateField(Tcl_Interp *interp, ShapefilePtr shapefile, int fieldId, Tcl_Obj *attrValue) {
+	int fieldCount, width, precision, fieldType;
 	int intValue;
 	double doubleValue;
 	const char *stringValue;
+	char numericStringValue[64];
+
+	fieldCount = DBFGetFieldCount(shapefile->dbf);
+	if (fieldId < 0 || fieldId >= fieldCount) {
+		Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid field index %d", fieldId));
+		return TCL_ERROR;
+	}
+	
+	/* null fields are ok; validation doesn't need to set any result if OK */
+	if (attrValue == NULL || (Tcl_GetCharLength(attrValue) == 0)) {
+		return TCL_OK;
+	}
+	
+	fieldType = (int)DBFGetFieldInfo(shapefile->dbf, fieldId, NULL, &width, &precision);
+	switch (fieldType) {
+		case FTInteger:
+			/* can this value be parsed as an integer? */
+			if (Tcl_GetIntFromObj(interp, attrValue, &intValue) != TCL_OK) {
+				return TCL_ERROR;
+			}
+			/* does this integer fit within the field width? */
+			sprintf(numericStringValue, "%d", intValue);
+			if (strlen(numericStringValue) > width) {
+				Tcl_SetObjResult(interp, Tcl_ObjPrintf("integer value (%s) would be truncated to field width (%d)", numericStringValue, width));
+				return TCL_ERROR;
+			}
+			break;
+		case FTDouble:
+			/* can this value be parsed as a double? */
+			if (Tcl_GetDoubleFromObj(interp, attrValue, &doubleValue) != TCL_OK) {
+				return TCL_ERROR;
+			}
+			/* does this double fit within the field width? */
+			sprintf(numericStringValue, "%.*lf", precision, doubleValue);
+			if (strlen(numericStringValue) > width) {
+				Tcl_SetObjResult(interp, Tcl_ObjPrintf("double value (%s) would be truncated to field width (%d)", numericStringValue, width));
+				return TCL_ERROR;
+			}
+			break;
+		case FTString:
+			/* can this value be parsed as a string? */
+			if ((stringValue = Tcl_GetString(attrValue)) == NULL) {
+				return TCL_ERROR;
+			}
+			
+			/* does this string fit within the field width? */
+			if (strlen(stringValue) > width) {
+				Tcl_SetObjResult(interp, Tcl_ObjPrintf("string value (%s) would be truncated to field width (%d)", stringValue, width));
+				return TCL_ERROR;
+			}
+			break;
+		default:
+			break;
+	}
+
+	return TCL_OK;	
+}
+
+/* given a list of attributes, check whether they conform to the shapefile's
+   field specification (parseable by type and not truncated). If not, return
+   TCL_ERROR with reason in result. If so, return TCL_OK with no result. */
+int shapefile_util_attrValidate(Tcl_Interp *interp, ShapefilePtr shapefile, Tcl_Obj *attrList) {
+	int fieldi, fieldCount, attrCount;
+	Tcl_Obj *attr;
 	
 	fieldCount = DBFGetFieldCount(shapefile->dbf);
 	if (Tcl_ListObjLength(interp, attrList, &attrCount) != TCL_OK) {
@@ -905,9 +963,7 @@ int shapefile_util_attrValidate(Tcl_Interp *interp, ShapefilePtr shapefile, Tcl_
 		Tcl_SetObjResult(interp, Tcl_ObjPrintf("attribute count (%d) does not match field count (%d)", attrCount, fieldCount));
 		return TCL_ERROR;
 	}
-	
-	/* validation pass - confirm field values can be parsed as field type
-	   (and perhaps check for obvious cases of truncation) before output */
+
 	for (fieldi = 0; fieldi < fieldCount; fieldi++) {
 		
 		/* grab the attr provided for this field */
@@ -915,68 +971,16 @@ int shapefile_util_attrValidate(Tcl_Interp *interp, ShapefilePtr shapefile, Tcl_
 			return TCL_ERROR;
 		}
 		
-		fieldType = DBFGetFieldInfo(shapefile->dbf, fieldi, NULL, &width, &precision);
-
-		/* if it is an empty string {}, we'll write it as a NULL value
-		   regardless of field type */
-		if (Tcl_GetCharLength(attr) == 0) {
-			continue;
-		}
-				
-		switch (fieldType) {
-			case FTInteger:
-				
-				/* can this value be parsed as an integer? */
-				if (Tcl_GetIntFromObj(interp, attr, &intValue) != TCL_OK) {
-					return TCL_ERROR;
-				}
-				
-				/* does this integer fit within the field width? */
-				sprintf(numericStringValue, "%d", intValue);
-				if (strlen(numericStringValue) > width) {
-					Tcl_SetObjResult(interp, Tcl_ObjPrintf("integer value (%s) would be truncated to field width (%d)", numericStringValue, width));
-					return TCL_ERROR;
-				}
-				break;
-			case FTDouble:
-				
-				/* can this value be parsed as a double? */
-				if (Tcl_GetDoubleFromObj(interp, attr, &doubleValue) != TCL_OK) {
-					return TCL_ERROR;
-				}
-				
-				/* does this double fit within the field width? */
-				sprintf(numericStringValue, "%.*lf", precision, doubleValue);
-				if (strlen(numericStringValue) > width) {
-					Tcl_SetObjResult(interp, Tcl_ObjPrintf("double value (%s) would be truncated to field width (%d)", numericStringValue, width));
-					return TCL_ERROR;
-				}
-				break;
-			case FTString:
-			
-				/* can this value be parsed as a string? */
-				if ((stringValue = Tcl_GetString(attr)) == NULL) {
-					return TCL_ERROR;
-				}
-				
-				/* does this string fit within the field width? */
-				if (strlen(stringValue) > width) {
-					Tcl_SetObjResult(interp, Tcl_ObjPrintf("string value (%s) would be truncated to field width (%d)", stringValue, width));
-					return TCL_ERROR;
-				}
-				break;
-			default:
-				/* NULL values will be written for unsupported field types */
-				continue;
-				break;
+		/* validate this field */
+		if (shapefile_util_attrValidateField(interp, shapefile, fieldi, attr) != TCL_OK) {
+			return TCL_ERROR;
 		}
 	}
 	
-	Tcl_SetObjResult(interp, attrList);
 	return TCL_OK;
 }
 
-int shapefile_util_attrWriteField(Tcl_Interp *interp, ShapefilePtr shapefile, int recordId, int fieldId, Tcl_Obj *attrValue) {
+int shapefile_util_attrWriteField(Tcl_Interp *interp, ShapefilePtr shapefile, int recordId, int fieldId, int validate, Tcl_Obj *attrValue) {
 	
 	int dbfCount, fieldCount;
 		
@@ -1002,6 +1006,10 @@ int shapefile_util_attrWriteField(Tcl_Interp *interp, ShapefilePtr shapefile, in
 	fieldCount = DBFGetFieldCount(shapefile->dbf);
 	if (fieldId < 0 || fieldId >= fieldCount) {
 		Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid field index %d", fieldId));
+		return TCL_ERROR;
+	}
+
+	if (validate && (shapefile_util_attrValidateField(interp, shapefile, fieldId, attrValue) != TCL_OK)) {
 		return TCL_ERROR;
 	}
 	
@@ -1066,13 +1074,6 @@ int shapefile_util_attrWrite(Tcl_Interp *interp, ShapefilePtr shapefile, int rec
 		recordId = dbfCount;
 	}
 	
-	/* now recordId is either the id of an existing record to overwrite,
-	   or the id-elect of a new record we will create. Unlike shape output,
-	   we use predicted id instead of -1 because each field value must be
-	   written by a separate DBF*Writer function call, and we don't want
-	   to write each value to a different new record! */
-	
-	/* verify the provided attribute value list matches field count */
 	fieldCount = DBFGetFieldCount(shapefile->dbf);
 	
 	/* as a special case, simply write null values for all fields if attrList is NULL */
@@ -1087,6 +1088,7 @@ int shapefile_util_attrWrite(Tcl_Interp *interp, ShapefilePtr shapefile, int rec
 		return TCL_OK;
 	}
 	
+	/* verify the provided attribute value list matches field count */
 	if (Tcl_ListObjLength(interp, attrList, &attrCount) != TCL_OK) {
 		return TCL_ERROR;
 	}
@@ -1111,7 +1113,7 @@ int shapefile_util_attrWrite(Tcl_Interp *interp, ShapefilePtr shapefile, int rec
 		}
 	
 		/* writes value attr to field fieldi of record recordId; sets interp result to recordId */
-		if (shapefile_util_attrWriteField(interp, shapefile, recordId, fieldi, attr) != TCL_OK) {
+		if (shapefile_util_attrWriteField(interp, shapefile, recordId, fieldi, 0 /* no validation */, attr) != TCL_OK) {
 			return TCL_ERROR;
 		}
 	}
@@ -1119,7 +1121,6 @@ int shapefile_util_attrWrite(Tcl_Interp *interp, ShapefilePtr shapefile, int rec
 	Tcl_SetObjResult(interp, Tcl_NewIntObj(recordId));
 	return TCL_OK;
 }
-
 
 int shapefile_util_attrReadField(Tcl_Interp *interp, ShapefilePtr shapefile, int recordId, int fieldId) {
 	int dbfCount, fieldCount;
@@ -1317,7 +1318,7 @@ int shapefile_cmd_attributes(ClientData clientData, Tcl_Interp *interp, int objc
 				return TCL_ERROR;
 			}
 			
-			if (shapefile_util_attrWriteField(interp, shapefile, recordId, fieldId, objv[5]) != TCL_OK) {
+			if (shapefile_util_attrWriteField(interp, shapefile, recordId, fieldId, 1 /* validate */, objv[5]) != TCL_OK) {
 				return TCL_ERROR;
 			}
 		} else {
