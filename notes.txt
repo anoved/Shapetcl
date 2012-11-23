@@ -1,0 +1,27 @@
+Planning to change interface for coords & attributes commands, in
+	
+read/write subcommand:
+	
+	attributes read
+	attributes read recordIndex
+   (attributes read recordIndex fieldIndex)
+	
+	attributes write {} ### would append new record
+	attributes write recordIndex {}
+   (attributes write recordIndex fieldIndex {})
+
+
+so instead of [coords ?index ?{}??]:
+
+	coords read
+	coords read featureIndex
+	
+	coords write {} ### would append new feature
+	coords write featureIndex {}
+	
+The [attributes write {}] and [coords write {}] forms could either create
+an empty complementary coords/attr, OR they could be used for the perilous
+act of adding records or features without also matching the other file.
+I think they should keep things in sync; either create a SHPT_NULL feature
+to be overwritten or create a record full of NULL values to be overwritten.
+Of course, this is if the [* write {}] form is even implemented.
