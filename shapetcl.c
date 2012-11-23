@@ -1090,54 +1090,69 @@ int shapefile_util_attrWrite(Tcl_Interp *interp, ShapefilePtr shapefile, int rec
 	return TCL_OK;
 }
 
-int shapefile_util_attrRead(Tcl_Interp *interp, ShapefilePtr shapefile, int recordId) {
-	Tcl_Obj *attributes = Tcl_NewListObj(0, NULL);
-	int fieldi, fieldCount, dbfCount, fieldType;
+
+int shapefile_util_attrReadField(Tcl_Interp *interp, ShapefilePtr shapefile, int recordId, int fieldId) {
+	int dbfCount, fieldCount;
 	
-	fieldCount  = DBFGetFieldCount(shapefile->dbf);
 	dbfCount = DBFGetRecordCount(shapefile->dbf);
 	if (recordId < 0 || recordId >= dbfCount) {
 		Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid record index %d", recordId));
 		return TCL_ERROR;
 	}
-
-	for (fieldi = 0; fieldi < fieldCount; fieldi++) {
-				
-		/* represent NULL attribute values as {} in return list */
-		if (DBFIsAttributeNULL(shapefile->dbf, recordId, fieldi)) {
-			if (Tcl_ListObjAppendElement(interp, attributes, Tcl_NewObj()) != TCL_OK) {
-				return TCL_ERROR;
-			}
-			continue;
-		}
-		
-		/* interpret attribute value according to field type and append to result list */
-		fieldType = (int)DBFGetFieldInfo(shapefile->dbf, fieldi, NULL, NULL, NULL);
-		switch (fieldType) {
-			case FTInteger:
-				if (Tcl_ListObjAppendElement(interp, attributes,
-						Tcl_NewIntObj(DBFReadIntegerAttribute(shapefile->dbf, recordId, fieldi))) != TCL_OK) {
-					return TCL_ERROR;				
-				}
-				break;
-			case FTDouble:
-				if (Tcl_ListObjAppendElement(interp, attributes,
-						Tcl_NewDoubleObj(DBFReadDoubleAttribute(shapefile->dbf, recordId, fieldi))) != TCL_OK) {
-					return TCL_ERROR;
-				}
-				break;
-			case FTString:
-			default:
-				/* (read unsupported field types as string values) */
-				if (Tcl_ListObjAppendElement(interp, attributes,
-						Tcl_NewStringObj(DBFReadStringAttribute(shapefile->dbf, recordId, fieldi), -1)) != TCL_OK) {
-					return TCL_ERROR;
-				}
-				break;
-		}
+	
+	fieldCount = DBFGetFieldCount(shapefile->dbf);
+	if (fieldId < 0 || fieldId >= fieldCount) {
+		Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid field index %d", fieldId));
+		return TCL_ERROR;
 	}
 	
-	/* return attribute list */
+	/* return an empty object for null values */
+	if (DBFIsAttributeNULL(shapefile->dbf, recordId, fieldId)) {
+		Tcl_SetObjResult(interp, Tcl_NewObj());
+		return TCL_OK;
+	}
+	
+	/* return an object of appropriate type for fieldId */
+	switch ((int)DBFGetFieldInfo(shapefile->dbf, fieldId, NULL, NULL, NULL)) {
+		case FTInteger:
+			Tcl_SetObjResult(interp, Tcl_NewIntObj(DBFReadIntegerAttribute(shapefile->dbf, recordId, fieldId)));
+			break;
+		case FTDouble:
+			Tcl_SetObjResult(interp, Tcl_NewDoubleObj(DBFReadDoubleAttribute(shapefile->dbf, recordId, fieldId)));
+			break;
+		case FTString:
+		default:
+			Tcl_SetObjResult(interp, Tcl_NewStringObj(DBFReadStringAttribute(shapefile->dbf, recordId, fieldId), -1));
+			break;
+	}
+	
+	return TCL_OK;	
+}
+
+int shapefile_util_attrRead(Tcl_Interp *interp, ShapefilePtr shapefile, int recordId) {
+	Tcl_Obj *attributes = Tcl_NewListObj(0, NULL);
+	int dbfCount, fieldi, fieldCount;
+	
+	dbfCount = DBFGetRecordCount(shapefile->dbf);
+	if (recordId < 0 || recordId >= dbfCount) {
+		Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid record index %d", recordId));
+		return TCL_ERROR;
+	}
+	
+	fieldCount = DBFGetFieldCount(shapefile->dbf);
+	for (fieldi = 0; fieldi < fieldCount; fieldi++) {
+				
+		if (shapefile_util_attrReadField(interp, shapefile, recordId, fieldi) != TCL_OK) {
+			return TCL_ERROR;
+		}
+		
+		if (Tcl_ListObjAppendElement(interp, attributes, Tcl_GetObjResult(interp)) != TCL_OK) {
+			return TCL_ERROR;
+		}
+		
+		Tcl_ResetResult(interp);
+	}
+	
 	Tcl_SetObjResult(interp, attributes);
 	return TCL_OK;
 }
@@ -1196,9 +1211,23 @@ int shapefile_cmd_attributes(ClientData clientData, Tcl_Interp *interp, int objc
 				return TCL_ERROR;
 			}		
 			
-		} /*else if (objc == 5) {*/
-			/* return value of specified field of specified index */	
-		/*}*/ else {
+		} else if (objc == 5) {
+			/* return value of specified field of specified index */
+			int fieldId;
+						
+			if (Tcl_GetIntFromObj(interp, objv[3], &recordId) != TCL_OK) {
+				return TCL_ERROR;
+			}
+			
+			if (Tcl_GetIntFromObj(interp, objv[4], &fieldId) != TCL_OK) {
+				return TCL_ERROR;
+			}
+			
+			/* sets interp result to field value; validates recordId and fieldId */
+			if (shapefile_util_attrReadField(interp, shapefile, recordId, fieldId) != TCL_OK) {
+				return TCL_ERROR;
+			}			
+		} else {
 			Tcl_WrongNumArgs(interp, 3, objv, "?recordIndex ?fieldIndex??");
 			return TCL_ERROR;
 		}	
