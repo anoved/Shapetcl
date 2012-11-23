@@ -28,14 +28,11 @@ TCL = tclsh
 all: $(SHAPETCL_LIB)
 
 shapetcl.o: shapetcl.c shapetcl.h
-	$(CC) $(CFLAGS) -c shapetcl.c \
-			-I$(SHAPELIB_PREFIX) \
-			-I$(TCL_INCLUDE_DIR)
+	$(CC) $(CFLAGS) -c shapetcl.c -I$(SHAPELIB_PREFIX) -I$(TCL_INCLUDE_DIR)
 
 shapetcl_util.o: shapetcl_util.c shapetcl.h
-	$(CC) $(CFLAGS) -c shapetcl_util.c \
-			-I$(SHAPELIB_PREFIX) \
-			-I$(TCL_INCLUDE_DIR)
+	$(CC) $(CFLAGS) -c shapetcl_util.c -I$(SHAPELIB_PREFIX) -I$(TCL_INCLUDE_DIR)
+
 
 $(SHAPETCL_LIB): shapetcl.o shapetcl_util.o $(SHAPELIB_OBJS)
 	$(CC) -shared -W1,-soname,Shapetcl \
