@@ -763,6 +763,30 @@ int shapefile_util_coordRead(Tcl_Interp *interp, ShapefilePtr shapefile, int fea
 	return returnValue;
 }
 
+int shapefile_util_coordReadAll(Tcl_Interp *interp, ShapefilePtr shapefile, int allCoords, int xyOnly) {
+	Tcl_Obj *featureList;
+	int shpCount, featureId;
+	
+	featureList = Tcl_NewListObj(0, NULL);
+	SHPGetInfo(shapefile->shp, &shpCount, NULL, NULL, NULL);
+	
+	for (featureId = 0; featureId < shpCount; featureId++) {
+		
+		if (shapefile_util_coordRead(interp, shapefile, featureId, allCoords, xyOnly) != TCL_OK) {
+			return TCL_ERROR;
+		}
+		
+		if (Tcl_ListObjAppendElement(interp, featureList, Tcl_GetObjResult(interp)) != TCL_OK) {
+			return TCL_ERROR;
+		}
+		
+		Tcl_ResetResult(interp);
+	}
+	
+	Tcl_SetObjResult(interp, featureList);
+	return TCL_OK;
+}
+
 /* coordinates - get or set feature coordinates */
 int shapefile_cmd_coordinates(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
 	ShapefilePtr shapefile = (ShapefilePtr)clientData;
@@ -796,26 +820,9 @@ int shapefile_cmd_coordinates(ClientData clientData, Tcl_Interp *interp, int obj
 		
 		if (objc == 3) {
 			/* return coords of all features */
-			Tcl_Obj *featureList;
-			int shpCount;
-			
-			featureList = Tcl_NewListObj(0, NULL);
-			SHPGetInfo(shapefile->shp, &shpCount, NULL, NULL, NULL);
-			
-			for (featureId = 0; featureId < shpCount; featureId++) {
-				
-				if (shapefile_util_coordRead(interp, shapefile, featureId, opt_allCoords, opt_xyOnly) != TCL_OK) {
-					return TCL_ERROR;
-				}
-				
-				if (Tcl_ListObjAppendElement(interp, featureList, Tcl_GetObjResult(interp)) != TCL_OK) {
-					return TCL_ERROR;
-				}
-				
-				Tcl_ResetResult(interp);
+			if (shapefile_util_coordReadAll(interp, shapefile, opt_allCoords, opt_xyOnly) != TCL_OK) {
+				return TCL_ERROR;
 			}
-			
-			Tcl_SetObjResult(interp, featureList);			
 		} else if (objc == 4) {
 		
 			/* get feature index to read */			
@@ -1188,6 +1195,31 @@ int shapefile_util_attrRead(Tcl_Interp *interp, ShapefilePtr shapefile, int reco
 	return TCL_OK;
 }
 
+int shapefile_cmd_attrReadAll(Tcl_Interp *interp, ShapefilePtr shapefile) {
+	Tcl_Obj *recordList;
+	int dbfCount, recordId;
+	
+	recordList = Tcl_NewListObj(0, NULL);
+	dbfCount = DBFGetRecordCount(shapefile->dbf);
+
+	for (recordId = 0; recordId < dbfCount; recordId++) {
+		
+		if (shapefile_util_attrRead(interp, shapefile, recordId) != TCL_OK) {
+			return TCL_ERROR;
+		}
+					
+		/* append this record's attribute list to the record list */
+		if (Tcl_ListObjAppendElement(interp, recordList, Tcl_GetObjResult(interp)) != TCL_OK) {
+			return TCL_ERROR;
+		}
+		
+		Tcl_ResetResult(interp);
+	}
+	
+	Tcl_SetObjResult(interp, recordList);
+	return TCL_OK;
+}
+
 /* attributes - get dbf attribute values of specified feature */
 int shapefile_cmd_attributes(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
 	ShapefilePtr shapefile = (ShapefilePtr)clientData;
@@ -1208,29 +1240,9 @@ int shapefile_cmd_attributes(ClientData clientData, Tcl_Interp *interp, int objc
 		
 		if (objc == 3) {
 			/* return attributes of all records */
-
-			Tcl_Obj *recordList;
-			int dbfCount;
-			
-			recordList = Tcl_NewListObj(0, NULL);
-			dbfCount = DBFGetRecordCount(shapefile->dbf);
-	
-			for (recordId = 0; recordId < dbfCount; recordId++) {
-				
-				if (shapefile_util_attrRead(interp, shapefile, recordId) != TCL_OK) {
-					return TCL_ERROR;
-				}
-							
-				/* append this record's attribute list to the record list */
-				if (Tcl_ListObjAppendElement(interp, recordList, Tcl_GetObjResult(interp)) != TCL_OK) {
-					return TCL_ERROR;
-				}
-				
-				Tcl_ResetResult(interp);
+			if (shapefile_cmd_attrReadAll(interp, shapefile) != TCL_OK) {
+				return TCL_ERROR;
 			}
-			
-			Tcl_SetObjResult(interp, recordList);
-
 		} else if (objc == 4) {
 			/* return attributes of specified index */
 	
