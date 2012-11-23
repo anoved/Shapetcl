@@ -976,6 +976,78 @@ int shapefile_util_attrValidate(Tcl_Interp *interp, ShapefilePtr shapefile, Tcl_
 	return TCL_OK;
 }
 
+int shapefile_util_attrWriteField(Tcl_Interp *interp, ShapefilePtr shapefile, int recordId, int fieldId, Tcl_Obj *attrValue) {
+	
+	int dbfCount, fieldCount;
+		
+	int intValue;
+	double doubleValue;
+	const char *stringValue;
+	
+	if (shapefile->readonly) {
+		Tcl_SetObjResult(interp, Tcl_ObjPrintf("cannot write attribute value to readonly shapefile"));
+		return TCL_ERROR;
+	}
+
+	dbfCount = DBFGetRecordCount(shapefile->dbf);
+	if (recordId < -1 || recordId >= dbfCount) {
+		Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid record index %d", recordId));
+		return TCL_ERROR;
+	}
+	if (recordId == -1) {
+		/* DBF API allows write to nonexistent index if next; used for new */
+		recordId = dbfCount;
+	}
+	
+	fieldCount = DBFGetFieldCount(shapefile->dbf);
+	if (fieldId < 0 || fieldId >= fieldCount) {
+		Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid field index %d", fieldId));
+		return TCL_ERROR;
+	}
+	
+	if (attrValue == NULL || Tcl_GetCharLength(attrValue) == 0) {
+		if (DBFWriteNULLAttribute(shapefile->dbf, recordId, fieldId) == 0) {
+			Tcl_SetObjResult(interp, Tcl_ObjPrintf("failed to write null attribute"));
+			return TCL_ERROR;
+		}
+		Tcl_SetObjResult(interp, Tcl_NewIntObj(recordId));
+		return TCL_OK;
+	}
+	
+	switch ((int)DBFGetFieldInfo(shapefile->dbf, fieldId, NULL, NULL, NULL)) {
+		case FTInteger:
+			if ((Tcl_GetIntFromObj(interp, attrValue, &intValue) != TCL_OK) ||
+					(DBFWriteIntegerAttribute(shapefile->dbf, recordId, fieldId, intValue) == 0)) {
+				Tcl_SetObjResult(interp, Tcl_ObjPrintf("failed to write integer attribute \"%d\"", intValue));
+				return TCL_ERROR;
+			}
+			break;
+		case FTDouble:
+			if ((Tcl_GetDoubleFromObj(interp, attrValue, &doubleValue) != TCL_OK) ||
+					(DBFWriteDoubleAttribute(shapefile->dbf, recordId, fieldId, doubleValue) == 0)) {
+				Tcl_SetObjResult(interp, Tcl_ObjPrintf("failed to write double attribute \"%lf\"", doubleValue));
+				return TCL_ERROR;
+			}
+			break;
+		case FTString:
+			if (((stringValue = Tcl_GetString(attrValue)) == NULL) ||
+					(DBFWriteStringAttribute(shapefile->dbf, recordId, fieldId, stringValue) == 0)) {
+				Tcl_SetObjResult(interp, Tcl_ObjPrintf("failed to write string attribute \"%s\"", stringValue));
+				return TCL_ERROR;
+			}
+			break;
+		default:
+			if (DBFWriteNULLAttribute(shapefile->dbf, recordId, fieldId) == 0) {
+				Tcl_SetObjResult(interp, Tcl_ObjPrintf("failed to write null attribute for unsupported field %d", fieldId));
+				return TCL_ERROR;
+			}
+			break;
+	}
+
+	Tcl_SetObjResult(interp, Tcl_NewIntObj(recordId));
+	return TCL_OK;
+}
+
 int shapefile_util_attrWrite(Tcl_Interp *interp, ShapefilePtr shapefile, int recordId, int validate, Tcl_Obj *attrList) {
 	Tcl_Obj *attr;
 	int fieldi, fieldCount, attrCount, dbfCount;
@@ -1261,7 +1333,6 @@ int shapefile_cmd_attributes(ClientData clientData, Tcl_Interp *interp, int objc
 			if (Tcl_GetIntFromObj(interp, objv[3], &recordId) != TCL_OK) {
 				return TCL_ERROR;
 			}
-			
 			if (recordId == -1) {
 				Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid record index %d (use write command)", recordId));
 				return TCL_ERROR;
@@ -1272,9 +1343,26 @@ int shapefile_cmd_attributes(ClientData clientData, Tcl_Interp *interp, int objc
 				return TCL_ERROR;
 			}
 			
-		} /*else if (objc == 6) {*/
+		} else if (objc == 6) {
 			/* write value to field index of record index */
-		/*}*/ else {
+			int fieldId;
+			
+			if (Tcl_GetIntFromObj(interp, objv[3], &recordId) != TCL_OK) {
+				return TCL_ERROR;
+			}
+			if (recordId == -1) {
+				Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid record index %d (use write command)", recordId));
+				return TCL_ERROR;
+			}
+			
+			if (Tcl_GetIntFromObj(interp, objv[4], &fieldId) != TCL_OK) {
+				return TCL_ERROR;
+			}
+			
+			if (shapefile_util_attrWriteField(interp, shapefile, recordId, fieldId, objv[5]) != TCL_OK) {
+				return TCL_ERROR;
+			}
+		} else {
 			Tcl_WrongNumArgs(interp, 3, objv, "?recordIndex ?fieldIndex?? attributes");
 			return TCL_ERROR;
 		}
