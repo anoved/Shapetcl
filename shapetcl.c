@@ -12,6 +12,8 @@ typedef shapetcl_shapefile * ShapefilePtr;
 
 static int COMMAND_COUNT = 0;
 
+int shapefile_util_attrWrite(Tcl_Interp *interp, ShapefilePtr shapefile, int recordId, int validate, Tcl_Obj *attrList);
+
 /* return true if flagName is present in objv, otherwise false.
    for simplest parsing, expect flags at *end* of command argument list;
    if present, simply decrement objc in caller after all flags are accounted. */
@@ -750,7 +752,7 @@ int shapefile_cmd_coords(ClientData clientData, Tcl_Interp *interp, int objc, Tc
 	int featureId;
 	int opt_allCoords, opt_xyOnly;
 	
-	static const char *subcommandNames[] = {"read", "write"};
+	static const char *subcommandNames[] = {"read", "write", NULL};
 	int subcommandIndex;
 	
 	opt_allCoords = util_flagIsPresent(objc, objv, "-all");
@@ -810,7 +812,7 @@ int shapefile_cmd_coords(ClientData clientData, Tcl_Interp *interp, int objc, Tc
 			}
 			
 		} else {
-			Tcl_WrongNumArgs(interp, 3, objv, "?-all|-xy?");
+			Tcl_WrongNumArgs(interp, 3, objv, "?index? ?-all|-xy?");
 			return TCL_ERROR;
 		}
 	} else if (subcommandIndex == 1) {
@@ -818,21 +820,27 @@ int shapefile_cmd_coords(ClientData clientData, Tcl_Interp *interp, int objc, Tc
 		
 		if (objc == 4) {
 			/* write coords to a new feature; create complementary blank attribute record */
-			/* awaiting shapefile_util_attrWrite to handle NULL attrList arg */
-			Tcl_SetObjResult(interp, Tcl_ObjPrintf("coords write {} not yet implemented!"));
-			return TCL_ERROR;
+			int recordId;
 			
 			/* write coords to a new feature */
 			if (shapefile_util_coordWrite(interp, shapefile, -1, objv[3]) != TCL_OK) {
 				return TCL_ERROR;
 			}
 			
+			Tcl_GetIntFromObj(interp, Tcl_GetObjResult(interp), &featureId);
+			Tcl_ResetResult(interp);
+			
 			/* interp result is new feature id; create a null attribute record to match */
-			/*if (shapefile_util_attrWrite(interp, shapefile, -1, 0, NULL) != TCL_OK) {
+			if (shapefile_util_attrWrite(interp, shapefile, -1, 0, NULL) != TCL_OK) {
 				return TCL_ERROR;
-			}*/
+			}
 			
-			
+			Tcl_GetIntFromObj(interp, Tcl_GetObjResult(interp), &recordId);
+			if (featureId != recordId) {
+				Tcl_SetObjResult(interp, Tcl_ObjPrintf("new feature index (%d) does not match new empty attribute record index (%d)", featureId, recordId));
+				return TCL_ERROR;
+			}
+				
 		} else if (objc == 5) {
 			/* write coords to a specific feature index */
 			
@@ -976,6 +984,19 @@ int shapefile_util_attrWrite(Tcl_Interp *interp, ShapefilePtr shapefile, int rec
 	
 	/* verify the provided attribute value list matches field count */
 	fieldCount = DBFGetFieldCount(shapefile->dbf);
+	
+	/* as a special case, simply write null values for all fields if attrList is NULL */
+	if (attrList == NULL) {
+		for (fieldi = 0; fieldi < fieldCount; fieldi++) {
+			if (DBFWriteNULLAttribute(shapefile->dbf, recordId, fieldi) == 0) {
+				Tcl_SetObjResult(interp, Tcl_ObjPrintf("failed to write null attribute"));
+				return TCL_ERROR;
+			}
+		}
+		Tcl_SetObjResult(interp, Tcl_NewIntObj(recordId));
+		return TCL_OK;
+	}
+	
 	if (Tcl_ListObjLength(interp, attrList, &attrCount) != TCL_OK) {
 		return TCL_ERROR;
 	}
