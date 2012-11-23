@@ -394,7 +394,7 @@ int shapefile_util_coordWrite(Tcl_Interp *interp, ShapefilePtr shapefile, int fe
 	int coordinatesPerVertex;
 	
 	if (shapefile->readonly) {
-		Tcl_SetObjResult(interp, Tcl_ObjPrintf("cannot write coords to readonly shapefile"));
+		Tcl_SetObjResult(interp, Tcl_ObjPrintf("cannot write coordinates to readonly shapefile"));
 		return TCL_ERROR;
 	}
 	
@@ -453,7 +453,7 @@ int shapefile_util_coordWrite(Tcl_Interp *interp, ShapefilePtr shapefile, int fe
 	}
 		
 	if ((partStarts = (int *)ckalloc(sizeof(int) * partCount)) == NULL) {
-		Tcl_SetObjResult(interp, Tcl_ObjPrintf("failed to allocate coord part index array"));
+		Tcl_SetObjResult(interp, Tcl_ObjPrintf("failed to allocate coordinate part index array"));
 		return TCL_ERROR;
 	}
 	xCoords = NULL; yCoords = NULL; zCoords = NULL; mCoords = NULL;
@@ -876,7 +876,7 @@ int shapefile_cmd_coords(ClientData clientData, Tcl_Interp *interp, int objc, Tc
 				return TCL_ERROR;
 			}
 		} else {
-			Tcl_WrongNumArgs(interp, 3, objv, "?index? coords");
+			Tcl_WrongNumArgs(interp, 3, objv, "?index? coordinates");
 			return TCL_ERROR;
 		}
 	}
@@ -1260,7 +1260,7 @@ int shapefile_cmd_write(ClientData clientData, Tcl_Interp *interp, int objc, Tcl
 	int outputFeatureId, outputAttributeId;
 	
 	if (objc != 4) {
-		Tcl_WrongNumArgs(interp, 2, objv, "coords attributes");
+		Tcl_WrongNumArgs(interp, 2, objv, "coordinates attributes");
 		return TCL_ERROR;
 	}
 	
@@ -1306,7 +1306,7 @@ int shapefile_cmd_write(ClientData clientData, Tcl_Interp *interp, int objc, Tcl
 int shapefile_commands(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
 	int subcommandIndex;
 	static const char *subcommandNames[] = {
-			"attributes", "bounds", "close", "coords", "count", "fields", "mode", "type", "write", NULL
+			"attributes", "bounds", "close", "coordinates", "count", "fields", "mode", "type", "write", NULL
 	};
 	Tcl_ObjCmdProc *subcommands[] = {
 			shapefile_cmd_attributes, shapefile_cmd_bounds, shapefile_cmd_close,
@@ -1322,7 +1322,7 @@ int shapefile_commands(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_
 	/* identify subcommand, or set result to error message w/valid cmd list */
 	/* specify 0 instead of TCL_EXACT to match unambiguous partial cmd names */
 	if (Tcl_GetIndexFromObj(interp, objv[1], subcommandNames, "subcommand",
-			TCL_EXACT, &subcommandIndex) != TCL_OK) {
+			0 /* allow unambiguous partial cmds */, &subcommandIndex) != TCL_OK) {
 		return TCL_ERROR;
 	}
 		
