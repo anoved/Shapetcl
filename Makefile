@@ -33,7 +33,7 @@ shapetcl.o: shapetcl.c
 			-I$(TCL_INCLUDE_DIR)
 
 $(SHAPETCL_LIB): shapetcl.o $(SHAPELIB_OBJS)
-	$(CC) -shared -W1,-soname,Shapetcl \
+	$(CC) -shared \
 			-o $(SHAPETCL_LIB) \
 			shapetcl.o $(SHAPELIB_OBJS) \
 			-L$(TCL_LIBRARY_DIR) -ltcl8.5
