@@ -405,6 +405,23 @@ int shapefile_util_coordWrite(Tcl_Interp *interp, ShapefilePtr shapefile, int fe
 	}
 	/* a featureId of -1 indicates a new feature should be output */
 	
+	/* a NULL coordinate list is a simple case: just write a NULL object and be done */
+	if (coordParts == NULL) {
+		if ((shape = SHPCreateSimpleObject(SHPT_NULL, 0, NULL, NULL, NULL)) == NULL) {
+			Tcl_SetObjResult(interp, Tcl_ObjPrintf("failed to create NULL shape object"));
+			return TCL_ERROR;
+		}
+	
+		/* write the shape to the shapefile */
+		if ((outputFeatureId = SHPWriteObject(shapefile->shp, featureId, shape)) == -1) {
+			Tcl_SetObjResult(interp, Tcl_ObjPrintf("failed to write shape object"));
+			return TCL_ERROR;
+		}
+	
+		Tcl_SetObjResult(interp, Tcl_NewIntObj(outputFeatureId));
+		return TCL_OK;
+	}
+	
 	if (Tcl_ListObjLength(interp, coordParts, &partCount) != TCL_OK) {
 		return TCL_ERROR;
 	}
@@ -848,6 +865,11 @@ int shapefile_cmd_coords(ClientData clientData, Tcl_Interp *interp, int objc, Tc
 			if (Tcl_GetIntFromObj(interp, objv[3], &featureId) != TCL_OK) {
 				return TCL_ERROR;
 			}
+
+			if (featureId == -1) {
+				Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid feature index %d (use write command)", featureId));
+				return TCL_ERROR;
+			}
 			
 			/* if shape output is successful, interp result is set to output feature id */
 			if (shapefile_util_coordWrite(interp, shapefile, featureId, objv[4]) != TCL_OK) {
@@ -1123,67 +1145,112 @@ int shapefile_util_attrRead(Tcl_Interp *interp, ShapefilePtr shapefile, int reco
 /* attributes - get dbf attribute values of specified feature */
 int shapefile_cmd_attributes(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
 	ShapefilePtr shapefile = (ShapefilePtr)clientData;
+	static const char *actionNames[] = {"read", "write", NULL};
+	int actionIndex;
 	int recordId;
 	
-	
-	
-	
-	if (objc < 2 || objc > 4) {
-		Tcl_WrongNumArgs(interp, 2, objv, "?index ?attributes??");
+	if (objc < 3) {
+		Tcl_WrongNumArgs(interp, 2, objv, "action ?args?");
+		return TCL_ERROR;
+	}
+	if (Tcl_GetIndexFromObj(interp, objv[2], actionNames, "action", TCL_EXACT, &actionIndex) != TCL_OK) {
 		return TCL_ERROR;
 	}
 	
-	/* if reading or writing a specific record, get the record index */
-	if (objc == 3 || objc == 4) {
-		if (Tcl_GetIntFromObj(interp, objv[2], &recordId) != TCL_OK) {
-			return TCL_ERROR;
-		}
-	}
-	
-	if (objc == 4) {
-		/* output; write provided attributes to specified record index */
-		if (recordId == -1) {
-			Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid record index %d (use write command)", recordId));
-			return TCL_ERROR;
-		}
-
-		/* if successful, sets interp's result to the recordId of the written record */
-		if (shapefile_util_attrWrite(interp, shapefile, recordId, 1 /* validate */, objv[3]) != TCL_OK) {
-			return TCL_ERROR;
-		}
-	}
-	else if (objc == 3) {
-		/* input; return attributes read from specified record index */
-		/* if successful, sets interp result to attribute record value list */
-		if (shapefile_util_attrRead(interp, shapefile, recordId) != TCL_OK) {
-			return TCL_ERROR;
-		}
-	} 
-	else {
-		/* slurp input; return list of all records (each an attribute list) */
-		Tcl_Obj *recordList;
-		int dbfCount;
+	if (actionIndex == 0) {
+		/* read attributes */
 		
-		recordList = Tcl_NewListObj(0, NULL);
-		dbfCount = DBFGetRecordCount(shapefile->dbf);
+		if (objc == 3) {
+			/* return attributes of all records */
 
-		for (recordId = 0; recordId < dbfCount; recordId++) {
+			Tcl_Obj *recordList;
+			int dbfCount;
+			
+			recordList = Tcl_NewListObj(0, NULL);
+			dbfCount = DBFGetRecordCount(shapefile->dbf);
+	
+			for (recordId = 0; recordId < dbfCount; recordId++) {
+				
+				if (shapefile_util_attrRead(interp, shapefile, recordId) != TCL_OK) {
+					return TCL_ERROR;
+				}
+							
+				/* append this record's attribute list to the record list */
+				if (Tcl_ListObjAppendElement(interp, recordList, Tcl_GetObjResult(interp)) != TCL_OK) {
+					return TCL_ERROR;
+				}
+				
+				Tcl_ResetResult(interp);
+			}
+			
+			Tcl_SetObjResult(interp, recordList);
+
+		} else if (objc == 4) {
+			/* return attributes of specified index */
+	
+			if (Tcl_GetIntFromObj(interp, objv[3], &recordId) != TCL_OK) {
+				return TCL_ERROR;
+			}
 			
 			if (shapefile_util_attrRead(interp, shapefile, recordId) != TCL_OK) {
 				return TCL_ERROR;
-			}
-						
-			/* append this record's attribute list to the record list */
-			if (Tcl_ListObjAppendElement(interp, recordList, Tcl_GetObjResult(interp)) != TCL_OK) {
+			}		
+			
+		} /*else if (objc == 5) {*/
+			/* return value of specified field of specified index */	
+		/*}*/ else {
+			Tcl_WrongNumArgs(interp, 3, objv, "?recordIndex ?fieldIndex??");
+			return TCL_ERROR;
+		}	
+	} else if (actionIndex == 1) {
+		/* write attributes */
+		
+		if (objc == 4) {
+			/* write attributes to new record; create complementary null shape */
+			int featureId;
+			
+			if (shapefile_util_attrWrite(interp, shapefile, -1 /* new record */, 1 /* validate */, objv[3]) != TCL_OK) {
 				return TCL_ERROR;
 			}
 			
+			Tcl_GetIntFromObj(interp, Tcl_GetObjResult(interp), &recordId);
 			Tcl_ResetResult(interp);
+			
+			if (shapefile_util_coordWrite(interp, shapefile, -1 /* new record */, NULL /* no coordinates */) != TCL_OK) {
+				return TCL_ERROR;
+			}
+			
+			Tcl_GetIntFromObj(interp, Tcl_GetObjResult(interp), &featureId);
+			if (recordId != featureId) {
+				Tcl_SetObjResult(interp, Tcl_ObjPrintf("new record index (%d) does not match new null feature index (%d)", recordId, featureId));
+				return TCL_ERROR;
+			}
+			
+		} else if (objc == 5) {
+			/* write attributes to record index */
+			
+			if (Tcl_GetIntFromObj(interp, objv[3], &recordId) != TCL_OK) {
+				return TCL_ERROR;
+			}
+			
+			if (recordId == -1) {
+				Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid record index %d (use write command)", recordId));
+				return TCL_ERROR;
+			}
+			
+			/* if successful, sets interp's result to the recordId of the written record */
+			if (shapefile_util_attrWrite(interp, shapefile, recordId, 1 /* validate */, objv[4]) != TCL_OK) {
+				return TCL_ERROR;
+			}
+			
+		} /*else if (objc == 6) {*/
+			/* write value to field index of record index */
+		/*}*/ else {
+			Tcl_WrongNumArgs(interp, 3, objv, "?recordIndex ?fieldIndex?? attributes");
+			return TCL_ERROR;
 		}
-		
-		Tcl_SetObjResult(interp, recordList);
 	}
-		
+			
 	return TCL_OK;
 }
 
