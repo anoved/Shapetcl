@@ -19,7 +19,7 @@ foreach {type name width precision} $fields {
 puts $header
 
 # print attribute values
-foreach record [$shp attributes] {
+foreach record [$shp attributes read] {
 	set line {}
 	foreach value $record {type name width precision} $fields {
 		if {[string equal $type "string"]} {

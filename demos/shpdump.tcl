@@ -16,7 +16,7 @@ puts "Features in file: $fcount"
 
 # iterate through all features
 for {set fid 0} {$fid < $fcount} {incr fid} {
-	set feature [$shp coords $fid -all]
+	set feature [$shp coordinates read $fid -all]
 	set pcount [llength $feature]
 	puts "\nFeature $fid (parts: $pcount):"
 	

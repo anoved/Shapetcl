@@ -23,7 +23,7 @@ proc Reproject {x y} {
 # list attribute values for a given feature
 proc Report {shp id} {
 	puts "\n--- FEATURE: $id ---"
-	foreach {type name width precision} [$shp fields] value [$shp attributes $id] {
+	foreach {type name width precision} [$shp fields] value [$shp attributes read $id] {
 		puts "$name: $value"
 	}
 }
@@ -45,7 +45,7 @@ set fcount [$shp count]
 
 # add each feature to the canvas
 for {set fid 0} {$fid < $fcount} {incr fid} {
-	set feature [$shp coords $fid -xy]	
+	set feature [$shp coordinates read $fid -xy]
 	foreach part $feature {		
 		
 		# convert part to screen coordinates
