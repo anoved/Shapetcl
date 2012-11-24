@@ -25,7 +25,7 @@ test shapefile-1.0 {
 	shapefile
 } -returnCodes {
 	error
-} -result {wrong # args: should be "shapefile path ?mode?|?type fields?"}
+} -match glob -result {wrong # args: should be "*"}
 
 test shapefile-1.0.1 {
 # Test what happens when the shapefile command is invoked with too many arguments.
@@ -33,7 +33,7 @@ test shapefile-1.0.1 {
 	shapefile foo type fields extra
 } -returnCodes {
 	error
-} -result {wrong # args: should be "shapefile path ?mode?|?type fields?"}
+} -match glob -result {wrong # args: should be "*"}
 
 test shapefile-1.1 {
 # Attempt to open a file that does not exist.

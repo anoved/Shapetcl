@@ -42,7 +42,18 @@ void shapefile_util_delete(ClientData clientData) {
 	ckfree((char *)clientData);
 }
 
-/* close - flush shapefile and delete associated command */
+/*
+ * shapefile_cmd_close
+ * 
+ * Implements the [$shp close] command used to close shapefile and save changes.
+ * 
+ * Command Syntax:
+ *   [$shp close]
+ * 
+ * Result:
+ *   No Tcl return value. Changes to readwrite shapefiles are written to disk.
+ *   $shp command is deleted and associated resources are released.
+ */
 int shapefile_cmd_close(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
 	ShapefilePtr shapefile = (ShapefilePtr)clientData;
 
@@ -59,7 +70,17 @@ int shapefile_cmd_close(ClientData clientData, Tcl_Interp *interp, int objc, Tcl
 	return TCL_OK;
 }
 
-/* mode - report shapefile access mode */
+/*
+ * shapefile_cmd_mode
+ * 
+ * Implements the [$shp mode] command used to query file access mode.
+ * 
+ * Command Syntax:
+ *   [$shp mode]
+ * 
+ * Result:
+ *   readonly or readwrite
+ */
 int shapefile_cmd_mode(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
 	ShapefilePtr shapefile = (ShapefilePtr)clientData;
 
@@ -77,7 +98,17 @@ int shapefile_cmd_mode(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_
 	return TCL_OK;
 }
 
-/* count - report number of entities in shapefile (shp & dbf should match) */
+/*
+ * shapefile_cmd_count
+ * 
+ * Implements the [$shp count] command used to query number of features in file.
+ * 
+ * Command Syntax:
+ *   [$shp count]
+ * 
+ * Result:
+ *   Number of features in shapefile.
+ */
 int shapefile_cmd_count(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
 	ShapefilePtr shapefile = (ShapefilePtr)clientData;
 	int shpCount, dbfCount;
@@ -100,7 +131,20 @@ int shapefile_cmd_count(ClientData clientData, Tcl_Interp *interp, int objc, Tcl
 	return TCL_OK;
 }
 
-/* type - report type of geometry in shapefile */
+/*
+ * shapefile_cmd_type
+ * 
+ * Implements the [$shp type] command used to query feature type.
+ * 
+ * Command Syntax:
+ *   [$shp type ?-numeric?]
+ *     Get the type of feature geometry in $shp.
+ *
+ * Result:
+ *   One of point, multipoint, arc, polygon, pointm, multipointm, arc, polygonm,
+ *   pointz, multipointz, arcz, or polygonz, or a corresponding (non-sequential)
+ *   numeric value if the -numeric option is given.
+ */
 int shapefile_cmd_type(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
 	ShapefilePtr shapefile = (ShapefilePtr)clientData;
 	int shpType;
@@ -172,7 +216,29 @@ int shapefile_cmd_type(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_
 	return TCL_OK;
 }
 
-/* bounds - report bounds of shapefile or specified feature */
+/*
+ * shapefile_cmd_bounds
+ * 
+ * Implements the [$shp bounds] command used to query file or feature extent.
+ * 
+ * Command Syntax:
+ *   [$shp bounds ?-all|-xy?]
+ *     Get the bounding box of all features in the shapefile.
+ *   [$shp bounds FEATURE ?-all|-xy?]
+ *     Get the bounding box of the specified feature.
+ * 
+ * Options:
+ *   Similar to Read Options of shapefile_cmd_coordinates. -all requests bounds
+ *   in all four dimensions (X, Y, Z, and M) regardless of feature type. -xy 
+ *   requests bounds in X and Y dimensions only, regardless of feature type.
+ *   Bounds are normally given in XY, XYM, or XYZM depending on feature type.
+ * 
+ * Result:
+ *   List containing the minimum and maximum vertex values.
+ * 
+ *   Example:
+ *     {Xmin Ymin Xmax Ymax}
+ */
 int shapefile_cmd_bounds(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
 	ShapefilePtr shapefile = (ShapefilePtr)clientData;
 	int shpCount;
@@ -431,19 +497,41 @@ int shapefile_util_fieldsAdd(Tcl_Interp *interp, DBFHandle dbf, int validate, Tc
 }
 
 /*
- * fields list|count|add
+ * shapefile_cmd_fields
  * 
- * fields list ?fieldIndex?
- * 		returns definition list for attribute table fields {type name width prec ...}
+ * Implements the [$shp fields] command used to query attribute table format.
+ * Also used to modify attribute table format, eg. by adding fields.
  * 
- * fields count
- * 		returns number of attribute table fields
+ * Command Syntax:
+ *   [$shp fields count]
+ *     Get the number of fields in the attribute table.
+ *   [$shp fields list ?FIELD?]
+ *     Get the field definitions for all or one attribute field.
+ *   [$shp fields add FIELDDEFINITIONS]
+ *     Add one or more fields to the attribute table. New fields of existing
+ *     attribute records are populated with NULL values.
  * 
- * fields add {}
- * 		adds fields from definition list {} to the attribute table 
+ * Field Definitions:
+ *   Each field is defined by four properties: type, name, width, and precision.
+ *   Supported types are string, integer, and double (floating-point numbers).
+ *   Names are strings up to 10 characters long. Width specifies field width:
+ *   the number of characters reserved for string fields, or the maximum number
+ *   of digits for numeric fields (including the decimal point). Precision gives
+ *   the number of digits to the right of the decimal point for doubles, and
+ *   should be given as 0 for all other field types. A field definition list is
+ *   a sequence of these four properties repeated for each field.
+ * 
+ *   Examples:
+ *     {integer ID 5 0}
+ *       An integer field titled "ID". 5 digit maximum (NNNNN).
+ *     {string Name 30 0 double Measure 12 4}
+ *       A 30-character max "Name" and a 7.4 digit "Measure" (NNNNNNN.NNNN).
+ * 
+ * Result:
+ *   count action returns number of fields.
+ *   list action returns a Field Definitions list (see above).
+ *   add action returns field index of last new field added.
  */
-
-/* fields - report attribute table field descriptions */
 int shapefile_cmd_fields(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
 	ShapefilePtr shapefile = (ShapefilePtr)clientData;
 	int fieldCount, fieldi;
@@ -928,7 +1016,48 @@ int shapefile_util_coordReadAll(Tcl_Interp *interp, ShapefilePtr shapefile, int 
 	return TCL_OK;
 }
 
-/* coordinates - get or set feature coordinates */
+/*
+ * shapefile_cmd_coordinates
+ * 
+ * Implements the [$shp coordinates] command used to get/set feature geometry.
+ * 
+ * Command Syntax:
+ *   [$shp coordinates read FEATURE ?-all|-xy?]
+ *     Get the coordinates of one feature.
+ *   [$shp coordinates read ?-all|-xy?]
+ *     Get the coordinates of all features.
+ *   [$shp coordinates write FEATURE COORDINATES]
+ *     Set the coordinates of one feature.
+ *   [$shp coordinates write COORDINATES]
+ *     Set the coordinates of a new feature. The feature is appended to the
+ *     shapefile. A new attribute record is also created, populated with NULLs.
+ * 
+ * Coordinate Lists:
+ *   Features are comprised of parts; a coordinate list is a list of parts,
+ *   each of which is a list of the vertices which comprise the part. Each
+ *   vertex of a feature part is represented by 2, 3, or 4 coordinate values,
+ *   depending on the feature type (XY, XYM, or XYZM) - but see Read Options.
+ *   Point feature types only have one part, but others may have multiple.
+ *   Clockwise or counterclockwise vertex order of polygon parts indicates
+ *   whether the part represents an outer or inner ring (islands or holes).
+ *   Polygon parts must be closed and have at least four vertices. 
+ *
+ *   2D Examples:
+ *     Point:      {{X Y}}
+ *     Multipoint: {{X1 Y1} {X2 Y2}}
+ *     Arc:        {{X1 Y1 X2 Y2 X3 Y3}}
+ *     Polygon:    {{X1 Y1 X2 Y2 X3 Y3 X1 Y1} {X1' Y1' X3' Y3' X2' Y2' X1' Y1'}}
+ * 
+ * Read Options:
+ *   -all: Requests all four coordinates (X, Y, Z, and M) for each vertex,
+ *     regardless of the feature type. Z and M coordinates are 0 if undefined.
+ *   -xy: Requests only the X and Y coordinates, regardless of feature type.
+ *     The -all option overrides the -xy option if both are present.
+ * 
+ * Result:
+ *   Read actions return coordinate lists or lists of coordinate lists.
+ *   Write actions return the index of the written feature.
+ */
 int shapefile_cmd_coordinates(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
 	ShapefilePtr shapefile = (ShapefilePtr)clientData;
 	int featureId;
@@ -1361,7 +1490,31 @@ int shapefile_cmd_attrReadAll(Tcl_Interp *interp, ShapefilePtr shapefile) {
 	return TCL_OK;
 }
 
-/* attributes - get dbf attribute values of specified feature */
+/*
+ * shapefile_cmd_attributes
+ * 
+ * Implements the [$shp attributes] command used to get or set attribute data.
+ * 
+ * Command Syntax:
+ *   [$shp attributes read RECORD FIELD]
+ *     Get the value of one field in one record.
+ *   [$shp attributes read RECORD]
+ *     Get the value of all fields in one record.
+ *   [$shp attributes read]
+ *     Get the value of all fields in all records.
+ *   [$shp attributes write RECORD FIELD VALUE]
+ *     Set the value of one field in one record.
+ *   [$shp attributes write RECORD VALUELIST]
+ *     Set the value of all fields in one record.
+ *   [$shp attributes write VALUELIST]
+ *     Set the value of all fields in a new record. The record is appended to
+ *     the attribute table. A new feature with NULL geometry is also created.
+ * 
+ * Result:
+ *   Read actions return attribute data in value (X), value list ({X Y Z}), or
+ *   value list list ({{X Y Z} {A B C} {1 2 3}}) format, respectively.
+ *   Write actions return the index of the written attribute record.
+ */
 int shapefile_cmd_attributes(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
 	ShapefilePtr shapefile = (ShapefilePtr)clientData;
 	static const char *actionNames[] = {"read", "write", NULL};
@@ -1483,7 +1636,21 @@ int shapefile_cmd_attributes(ClientData clientData, Tcl_Interp *interp, int objc
 	return TCL_OK;
 }
 
-/* write - create a new record */
+/*
+ * shapefile_cmd_write
+ * 
+ * Implements the [$shp write] command used to add a new feature and attribute
+ * record to the shapefile.
+ * 
+ * Command Syntax:
+ *   [$shp write COORDINATES ATTRIBUTES]
+ *     Append a new entity to $shp. COORDINATES contains feature geometry and
+ *     ATTRIBUTES contains attribute values. See [coordinates] and [attributes]
+ *     commands for details on the format of these arguments.
+ * 
+ * Result:
+ *   Index number of the new feature.
+ */
 int shapefile_cmd_write(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
 	ShapefilePtr shapefile = (ShapefilePtr)clientData;
 	int outputFeatureId, outputAttributeId;
@@ -1531,7 +1698,20 @@ int shapefile_cmd_write(ClientData clientData, Tcl_Interp *interp, int objc, Tcl
 	return TCL_OK;
 }
 
-/* dispatches subcommands */
+/*
+ * shapefile_commands
+ * 
+ * Ensemble command dispatcher handles the shapefile identifier ($shp) returned
+ * by shapetcl_cmd. The clientData is a ShapefilePtr associated with identifier.
+ * 
+ * Command Syntax:
+ *   [$shp attributes|bounds|close|coordinates|count|fields|mode|type|write ?args?]
+ *     Invokes the shapefile_cmd_ function associated with selected subcommand.
+ *     Unambiguous abbreviations such as [$shp attr] or [$shp coord] are valid.
+ * 
+ * Result:
+ *   Result of the selected subcommand.
+ */
 int shapefile_commands(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
 	int subcommandIndex;
 	static const char *subcommandNames[] = {
@@ -1560,11 +1740,22 @@ int shapefile_commands(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_
 }
 
 /*
-	This command opens a new or existing shapefile.
-	This command creates and returns a uniquely named new ensemble command
-	associated with the opened shapefile (handled by shapefile_commands).
-*/	
-int shapetcl_cmd(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
+ * shapetcl_cmd
+ * 
+ * Implements the [shapefile] command used to open a new or existing shapefile.
+ * 
+ * Command Syntax:
+ *   [shapefile PATH ?readonly|readwrite?]
+ *     Open the shapefile at PATH. Default access mode is readwrite.
+ *   [shapefile PATH TYPE FIELDSDEFINITION]
+ *     Create a shapefile at PATH. TYPE defines feature geometry type. FIELDS
+ *     defines initial attribute table format. At least one field is required.
+ *     See the [fields] command for details on FIELDSDEFINITION format. 
+ * 
+ * Result:
+ *   Name of an ensemble command for subsequent operations on the shapefile.
+ */
+ int shapetcl_cmd(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
 	ShapefilePtr shapefile;
 	const char *path;
 	char cmdName[16];
