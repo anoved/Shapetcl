@@ -162,7 +162,9 @@ test shapefile-2.0 {
 	set shp [shapefile sample/ne_110m_land/ne_110m_land]
 } -cleanup {
 	$shp close
-} -match glob -result {shapefile.*}
+} -returnCodes {
+	ok
+} -match glob -result {shapefile*}
 
 test shapefile-2.1 {
 # Verify that by default shapefiles are opened in readwrite mode
@@ -171,6 +173,8 @@ test shapefile-2.1 {
 	$shp mode
 } -cleanup {
 	$shp close
+} -returnCodes {
+	ok
 } -match exact -result {readwrite}
 
 ::tcltest::cleanupTests

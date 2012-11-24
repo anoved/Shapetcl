@@ -2066,7 +2066,7 @@ int shapefile_commands(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_
 	shapefile->dbf = dbf;	
 	shapefile->readonly = readonly;
 	
-	sprintf(cmdName, "shapefile.%04X", COMMAND_COUNT++);
+	sprintf(cmdName, "shapefile%d", COMMAND_COUNT++);
 	if (Tcl_CreateObjCommand(interp, cmdName, shapefile_commands, (ClientData)shapefile, shapefile_util_delete) == NULL) {
 		Tcl_SetObjResult(interp, Tcl_ObjPrintf("failed to create command for %s", cmdName));
 		DBFClose(dbf);
