@@ -1383,13 +1383,14 @@ int shapefile_util_attrValidate(Tcl_Interp *interp, ShapefilePtr shapefile, Tcl_
  * specified attribute record. Also used by the [$shp attributes write
  * ?RECORD? VALUELIST] action to set each value in the record.
  * 
+ * The boolean validate argument indicates whether the attribute values AND
+ * recordId need to be validated. If false, they are assumed to be pre-checked.
+ * 
  * Result:
  *   Index number of the record containing the value that was written.
  */
 int shapefile_util_attrWriteField(Tcl_Interp *interp, ShapefilePtr shapefile, int recordId, int fieldId, int validate, Tcl_Obj *attrValue) {
-	
 	int dbfCount, fieldCount;
-		
 	int intValue;
 	double doubleValue;
 	const char *stringValue;
@@ -1400,13 +1401,9 @@ int shapefile_util_attrWriteField(Tcl_Interp *interp, ShapefilePtr shapefile, in
 	}
 
 	dbfCount = DBFGetRecordCount(shapefile->dbf);
-	if (recordId < -1 || recordId >= dbfCount) {
+	if (validate && (recordId < 0 || recordId >= dbfCount)) {
 		Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid record index %d", recordId));
 		return TCL_ERROR;
-	}
-	if (recordId == -1) {
-		/* DBF API allows write to nonexistent index if next; used for new */
-		recordId = dbfCount;
 	}
 	
 	fieldCount = DBFGetFieldCount(shapefile->dbf);
@@ -1785,11 +1782,7 @@ int shapefile_cmd_attributes(ClientData clientData, Tcl_Interp *interp, int objc
 			if (Tcl_GetIntFromObj(interp, objv[3], &recordId) != TCL_OK) {
 				return TCL_ERROR;
 			}
-			if (recordId == -1) {
-				Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid record index %d (use write command)", recordId));
-				return TCL_ERROR;
-			}
-			
+				
 			if (Tcl_GetIntFromObj(interp, objv[4], &fieldId) != TCL_OK) {
 				return TCL_ERROR;
 			}
