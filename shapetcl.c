@@ -10,12 +10,12 @@
  * as other metadata. Allocated by [shapefile] command on successful open or
  * create and subsequently passed to Shapetcl command handlers as ClientData.
  */
-typedef struct {
+struct shapefile_data {
 	SHPHandle shp;
 	DBFHandle dbf;
 	int readonly;
-} shapetcl_shapefile;
-typedef shapetcl_shapefile * ShapefilePtr;
+};
+typedef struct shapefile_data * ShapefilePtr;
 
 /* 
  * Counter used to generate unique names for the ensemble command identifiers
@@ -2056,7 +2056,7 @@ int shapefile_commands(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_
 		}
 	}
 	
-	if ((shapefile = (ShapefilePtr)ckalloc(sizeof(shapetcl_shapefile))) == NULL) {
+	if ((shapefile = (ShapefilePtr)ckalloc(sizeof(struct shapefile_data))) == NULL) {
 		Tcl_SetObjResult(interp, Tcl_ObjPrintf("failed to allocate shapefile command data"));;
 		DBFClose(dbf);
 		SHPClose(shp);
