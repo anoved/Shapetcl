@@ -319,64 +319,205 @@ int shapefile_util_fieldDescription(Tcl_Interp *interp, ShapefilePtr shapefile, 
 	return TCL_OK;
 }
 
+/* is the info given for one field valid? called by [fields add] and [fieldValidate] */
+int shapefile_util_fieldsValidateField(Tcl_Interp *interp, const char *type, const char *name, int width, int precision) {
+	
+	if (strcmp(type, "string") != 0 && strcmp(type, "integer") != 0 && strcmp(type, "double") != 0) {
+		Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid field type \"%s\": should be string, integer, or double", type));
+		return TCL_ERROR;
+	}
+	
+	if (strlen(name) > 10) {
+		Tcl_SetObjResult(interp, Tcl_ObjPrintf("field name \"%s\" too long: 10 characters maximum", name));
+		return TCL_ERROR;
+	}
+	
+	if (strcmp(type, "integer") == 0 && width > 10) {
+		Tcl_SetObjResult(interp, Tcl_ObjPrintf("integer width >10 (%d) would become double", width));
+		return TCL_ERROR;
+	}
+	
+	if (strcmp(type, "double") == 0 && width <= 10 && precision == 0) {
+		Tcl_SetObjResult(interp, Tcl_ObjPrintf("double width <=10 (%d) with 0 precision would become integer", width));
+		return TCL_ERROR;
+	}
+
+	return TCL_OK;
+}
+
+/* is the info given for all fields in definition list valid? called by [shapetcl_cmd] */
+int shapefile_util_fieldsValidate(Tcl_Interp *interp, Tcl_Obj *definitions) {
+	Tcl_Obj **definitionElements;
+	int definitionElementCount, i;
+	int width, precision;
+	const char *type, *name;
+	
+	if (Tcl_ListObjGetElements(interp, definitions, &definitionElementCount, &definitionElements) != TCL_OK) {
+		return TCL_ERROR;
+	}
+	
+	if (definitionElementCount % 4 != 0) {
+		Tcl_SetObjResult(interp, Tcl_ObjPrintf("each field requires four values (type, name, width, and precision)"));
+		return TCL_ERROR;
+	}
+	
+	if (definitionElementCount == 0) {
+		Tcl_SetObjResult(interp, Tcl_ObjPrintf("at least one field is required"));
+		return TCL_ERROR;
+	}
+
+	/* validate field specifications before creating dbf */	
+	for (i = 0; i < definitionElementCount; i += 4) {
+		if (	((type = Tcl_GetString(definitionElements[i])) == NULL) ||
+				((name = Tcl_GetString(definitionElements[i + 1])) == NULL) ||
+				(Tcl_GetIntFromObj(interp, definitionElements[i + 2], &width) != TCL_OK) ||
+				(Tcl_GetIntFromObj(interp, definitionElements[i + 3], &precision) != TCL_OK)) {
+			return TCL_ERROR;
+		}		
+		if (shapefile_util_fieldsValidateField(interp, type, name, width, precision) != TCL_OK) {
+			return TCL_ERROR;
+		}
+	}
+	
+	return TCL_OK;
+}
+
+int shapefile_util_fieldsAdd(Tcl_Interp *interp, DBFHandle dbf, int validate, Tcl_Obj *definitions) {
+	int i, definitionElementCount;
+	Tcl_Obj **definitionElements;
+	const char *type, *name;
+	int width, precision, fieldId = 0;
+	
+	/* check field definition list formatting if not already validated */
+	if (validate && (shapefile_util_fieldsValidate(interp, definitions) != TCL_OK)) {
+		return TCL_ERROR;
+	}
+	
+	if (Tcl_ListObjGetElements(interp, definitions, &definitionElementCount, &definitionElements) != TCL_OK) {
+		return TCL_ERROR;
+	}
+
+	/* add fields to the dbf */
+	for (i = 0; i < definitionElementCount; i += 4) {
+		if (	((type = Tcl_GetString(definitionElements[i])) == NULL) ||
+				((name = Tcl_GetString(definitionElements[i + 1])) == NULL) ||
+				(Tcl_GetIntFromObj(interp, definitionElements[i + 2], &width) != TCL_OK) ||
+				(Tcl_GetIntFromObj(interp, definitionElements[i + 3], &precision) != TCL_OK)) {
+			return TCL_ERROR;
+		}
+		
+		if (strcmp(type, "integer") == 0) {
+			if ((fieldId = DBFAddField(dbf, name, FTInteger, width, 0)) == -1) {
+				Tcl_SetObjResult(interp, Tcl_ObjPrintf("failed to create integer attribute field \"%s\"", name));
+				return TCL_ERROR;
+			}
+		}
+		else if (strcmp(type, "double") == 0) {
+			if ((fieldId = DBFAddField(dbf, name, FTDouble, width, precision)) == -1) {
+				Tcl_SetObjResult(interp, Tcl_ObjPrintf("failed to create double attribute field \"%s\"", name));
+				return TCL_ERROR;
+			}
+		}
+		else if (strcmp(type, "string") == 0) {
+			if ((fieldId = DBFAddField(dbf, name, FTString, width, 0)) == -1) {
+				Tcl_SetObjResult(interp, Tcl_ObjPrintf("failed to create string attribute field \"%s\"", name));
+				return TCL_ERROR;
+			}
+		}
+	}
+	
+	Tcl_SetObjResult(interp, Tcl_NewIntObj(fieldId));
+	return TCL_OK;
+}
+
+/*
+ * fields list|count|add
+ * 
+ * fields list ?fieldIndex?
+ * 		returns definition list for attribute table fields {type name width prec ...}
+ * 
+ * fields count
+ * 		returns number of attribute table fields
+ * 
+ * fields add {}
+ * 		adds fields from definition list {} to the attribute table 
+ */
+
 /* fields - report attribute table field descriptions */
 int shapefile_cmd_fields(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
 	ShapefilePtr shapefile = (ShapefilePtr)clientData;
 	int fieldCount, fieldi;
 	
-	if (objc != 2 && objc != 3) {
-		Tcl_WrongNumArgs(interp, 2, objv, "?index|count?");
+	static const char *actionNames[] = {"add", "count", "list", NULL};
+	int actionIndex;
+	
+	if (objc < 3) {
+		Tcl_WrongNumArgs(interp, 2, objv, "add|count|list ?args?");
+		return TCL_ERROR;
+	}
+	if (Tcl_GetIndexFromObj(interp, objv[2], actionNames, "action", TCL_EXACT, &actionIndex) != TCL_OK) {
 		return TCL_ERROR;
 	}
 	
 	fieldCount = DBFGetFieldCount(shapefile->dbf);
-	
-	if (objc == 3) {
-		
-		/* check if the caller just wants the field count */
-		if (strcmp(Tcl_GetString(objv[2]), "count") == 0) {
-			Tcl_SetObjResult(interp, Tcl_NewIntObj(fieldCount));
-			return TCL_OK;
-		}
-		
-		/* otherwise, return description for the one specified field */
-		
-		if (Tcl_GetIntFromObj(interp, objv[2], &fieldi) != TCL_OK) {
+
+	if (actionIndex == 0) {
+		/* add field */
+		if (objc != 4) {
+			Tcl_WrongNumArgs(interp, 3, objv, "fieldDefinitions");
 			return TCL_ERROR;
 		}
-		
-		if (fieldi < 0 || fieldi >= fieldCount) {
-			Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid field index %d", fieldi));
+		/* sets interp result to index of last added field */
+		if (shapefile_util_fieldsAdd(interp, shapefile->dbf, 1 /* validate */, objv[3]) != TCL_OK) {
 			return TCL_ERROR;
 		}
-		
-		/* all we need is the description for this field, so we just leave it in interp result */
-		if (shapefile_util_fieldDescription(interp, shapefile, fieldi) != TCL_OK) {
+	} else if (actionIndex == 1) {
+		/* count fields */
+		if (objc > 3) {
+			Tcl_WrongNumArgs(interp, 3, objv, NULL);
 			return TCL_ERROR;
 		}
-		
-	} else {
-		Tcl_Obj *descriptions;
-	
-		descriptions = Tcl_NewListObj(0, NULL);
-		
-		for (fieldi = 0; fieldi < fieldCount; fieldi++) {
-			
-			/* get information about this field */
+		Tcl_SetObjResult(interp, Tcl_NewIntObj(fieldCount));
+	} else if (actionIndex == 2) {
+		/* list field definitions */
+		if (objc > 4) {
+			Tcl_WrongNumArgs(interp, 3, objv, "?fieldIndex?");
+			return TCL_ERROR;
+		}
+		if (objc == 4) {
+			/* list a specific field's definition */
+			if (Tcl_GetIntFromObj(interp, objv[3], &fieldi) != TCL_OK) {
+				return TCL_ERROR;
+			}
+			if (fieldi < 0 || fieldi >= fieldCount) {
+				Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid field index %d", fieldi));
+				return TCL_ERROR;
+			}
 			if (shapefile_util_fieldDescription(interp, shapefile, fieldi) != TCL_OK) {
 				return TCL_ERROR;
 			}
-			
-			/* append information about this field to our list of information about all fields */
-			if (Tcl_ListObjAppendList(interp, descriptions, Tcl_GetObjResult(interp)) != TCL_OK) {
-				return TCL_ERROR;
+		} else {
+			/* list all field definitions */
+			Tcl_Obj *descriptions = Tcl_NewListObj(0, NULL);
+			for (fieldi = 0; fieldi < fieldCount; fieldi++) {
+				
+				/* get information about this field */
+				if (shapefile_util_fieldDescription(interp, shapefile, fieldi) != TCL_OK) {
+					return TCL_ERROR;
+				}
+				
+				/* append information about this field to our list of information about all fields */
+				if (Tcl_ListObjAppendList(interp, descriptions, Tcl_GetObjResult(interp)) != TCL_OK) {
+					return TCL_ERROR;
+				}
+				
+				Tcl_ResetResult(interp);
 			}
-			Tcl_ResetResult(interp);
+			
+			Tcl_SetObjResult(interp, descriptions);
 		}
-		
-		Tcl_SetObjResult(interp, descriptions);
 	}
-	
+		
 	return TCL_OK;
 }
 
@@ -1433,7 +1574,7 @@ int shapetcl_cmd(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *C
 	int shpType;
 	
 	if (objc < 2 || objc > 4) {
-		Tcl_WrongNumArgs(interp, 1, objv, "path ?mode?|?type fields?");
+		Tcl_WrongNumArgs(interp, 1, objv, "path ?mode?|?type fieldDefintions?");
 		return TCL_ERROR;
 	}
 
@@ -1458,11 +1599,6 @@ int shapetcl_cmd(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *C
 		/* create a new file; access is readwrite. */
 		
 		const char *shpTypeName = Tcl_GetString(objv[2]);
-		int fieldSpecCount;
-		Tcl_Obj **fieldSpec;
-		int fieldi;
-		const char *type, *name;
-		int width, precision;
 		
 		if (strcmp(shpTypeName, "point") == 0) {
 			shpType = SHPT_POINT;
@@ -1492,51 +1628,10 @@ int shapetcl_cmd(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *C
 			Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid shape type \"%s\"", shpTypeName));
 			return TCL_ERROR;
 		}
-				
-		if (Tcl_ListObjGetElements(interp, objv[3], &fieldSpecCount, &fieldSpec) != TCL_OK) {
-			return TCL_ERROR;
-		}
 		
-		if (fieldSpecCount % 4 != 0) {
-			Tcl_SetObjResult(interp, Tcl_ObjPrintf("each field requires four values (type, name, width, and precision)"));
+		/* verify that the attribute table field definition looks sensible */
+		if (shapefile_util_fieldsValidate(interp, objv[3]) != TCL_OK) {
 			return TCL_ERROR;
-		}
-		
-		if (fieldSpecCount == 0) {
-			Tcl_SetObjResult(interp, Tcl_ObjPrintf("at least one field is required"));
-			return TCL_ERROR;
-		}
-		
-		/* validate field specifications before creating dbf */	
-		for (fieldi = 0; fieldi < fieldSpecCount; fieldi += 4) {
-			
-			type = Tcl_GetString(fieldSpec[fieldi]);
-			if (strcmp(type, "string") != 0 && strcmp(type, "integer") != 0 && strcmp(type, "double") != 0) {
-				Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid field type \"%s\": should be string, integer, or double", type));
-				return TCL_ERROR;
-			}
-			
-			name = Tcl_GetString(fieldSpec[fieldi + 1]);
-			if (strlen(name) > 10) {
-				Tcl_SetObjResult(interp, Tcl_ObjPrintf("field name \"%s\" too long: 10 characters maximum"));
-				return TCL_ERROR;
-			}
-			
-			if (Tcl_GetIntFromObj(interp, fieldSpec[fieldi + 2], &width) != TCL_OK) {
-				return TCL_ERROR;
-			}
-			if (strcmp(type, "integer") == 0 && width > 10) {
-				Tcl_SetObjResult(interp, Tcl_ObjPrintf("integer width >10 (%d) would become double", width));
-				return TCL_ERROR;
-			}
-			
-			if (Tcl_GetIntFromObj(interp, fieldSpec[fieldi + 3], &precision) != TCL_OK) {
-				return TCL_ERROR;
-			}
-			if (strcmp(type, "double") == 0 && width <= 10 && precision == 0) {
-				Tcl_SetObjResult(interp, Tcl_ObjPrintf("double width <=10 (%d) with 0 precision would become integer", width));
-				return TCL_ERROR;
-			}
 		}
 		
 		if ((dbf = DBFCreate(path)) == NULL) {
@@ -1544,35 +1639,12 @@ int shapetcl_cmd(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *C
 			return TCL_ERROR;
 		}
 		
-		/* add fields to the dbf */
-		for (fieldi = 0; fieldi <  fieldSpecCount; fieldi += 4) {
-			type = Tcl_GetString(fieldSpec[fieldi]);
-			name = Tcl_GetString(fieldSpec[fieldi + 1]);
-			Tcl_GetIntFromObj(interp, fieldSpec[fieldi + 2], &width);
-			Tcl_GetIntFromObj(interp, fieldSpec[fieldi + 3], &precision);
-			if (strcmp(type, "integer") == 0) {
-				if (DBFAddField(dbf, name, FTInteger, width, 0) == -1) {
-					Tcl_SetObjResult(interp, Tcl_ObjPrintf("failed to create integer attribute field \"%s\"", name));
-					DBFClose(dbf);
-					return TCL_ERROR;
-				}
-			}
-			else if (strcmp(type, "double") == 0) {
-				if (DBFAddField(dbf, name, FTDouble, width, precision) == -1) {
-					Tcl_SetObjResult(interp, Tcl_ObjPrintf("failed to create double attribute field \"%s\"", name));
-					DBFClose(dbf);
-					return TCL_ERROR;
-				}
-			}
-			else if (strcmp(type, "string") == 0) {
-				if (DBFAddField(dbf, name, FTString, width, 0) == -1) {
-					Tcl_SetObjResult(interp, Tcl_ObjPrintf("failed to create string attribute field \"%s\"", name));
-					DBFClose(dbf);
-					return TCL_ERROR;
-				}
-			}
+		/* add pre-validated fields to the dbf */
+		if (shapefile_util_fieldsAdd(interp, dbf, 0 /* don't validate */, objv[3]) != TCL_OK) {
+			DBFClose(dbf);
+			return TCL_ERROR;
 		}
-		
+				
 		if ((shp = SHPCreate(path, shpType)) == NULL) {
 			Tcl_SetObjResult(interp, Tcl_ObjPrintf("failed to create shapefile for \"%s\"", path));
 			DBFClose(dbf);

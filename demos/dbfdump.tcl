@@ -9,7 +9,7 @@ if {$argc != 1} {
 }
 
 set shp [shapefile [lindex $argv 0]]
-set fields [$shp fields]
+set fields [$shp fields list]
 
 # print header
 set header {}

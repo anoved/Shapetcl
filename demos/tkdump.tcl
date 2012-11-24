@@ -23,7 +23,7 @@ proc Reproject {x y} {
 # list attribute values for a given feature
 proc Report {shp id} {
 	puts "\n--- FEATURE: $id ---"
-	foreach {type name width precision} [$shp fields] value [$shp attributes read $id] {
+	foreach {type name width precision} [$shp fields list] value [$shp attributes read $id] {
 		puts "$name: $value"
 	}
 }
