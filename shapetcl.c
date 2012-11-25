@@ -165,148 +165,147 @@ int shapefile_cmd_count(ClientData clientData, Tcl_Interp *interp, int objc, Tcl
  * Implements the [$shp type] command used to query feature type.
  * 
  * Command Syntax:
- *   [$shp type ?-numeric|-base?]
- *     Get the type of feature geometry in $shp.
+ *   [$shp type]
+ *     Get the geometry type (one of point, multipoint, arc, polygon, pointm,
+ *     multipointm, arcm, polygonm, pointz, multipointz, arcz, or polygonz).
+ *   [$shp type numeric]
+ *     Get the (non-sequential id) number of the geometry type.
+ *   [$shp type base]
+ *     Get the base geometry type (one of point, multipoint, arc, or polygon).
+ *   [$shp type dimension]
+ *     Get the geometry dimension (one of xy, xym, or xyzm).
  *
  * Result:
- *   One of point, multipoint, arc, polygon, pointm, multipointm, arcm,
- *   polygonm, pointz, multipointz, arcz, or polygonz, or a corresponding
- *   numeric value if the -numeric option is given.
- *   If the -base option is given, only the base feature type (point,
- *   multipoint, arc, or polygon) is given, regardless of dimension.
+ *   Shapefile geometry type, as described under Command Syntax above.
  */
 int shapefile_cmd_type(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
 	ShapefilePtr shapefile = (ShapefilePtr)clientData;
 	int shpType;
-	int opt_numeric, opt_base, opt_dimension;
+	static const char *actionNames[] = {"base", "dimensions", "numeric", NULL};
+	int actionIndex;
 	
-	opt_numeric = util_flagIsPresent(objc, objv, "-numeric");
-	opt_base = util_flagIsPresent(objc, objv, "-base");
-	opt_dimension = util_flagIsPresent(objc, objv, "-dimension");
-	if (opt_dimension) {
-		objc--;
-	}
-	if (opt_base) {
-		opt_dimension = 0;
-		objc--;
-	}
-	if (opt_numeric) {
-		opt_dimension = 0;
-		opt_base = 0;
-		objc--;
-	}
-
-	if (objc != 2) {
-		Tcl_WrongNumArgs(interp, 2, objv, "?-numeric?");
+	if (objc > 3) {
+		Tcl_WrongNumArgs(interp, 2, objv, "?option?");
 		return TCL_ERROR;
 	}
 	
-	SHPGetInfo(shapefile->shp, NULL, &shpType, NULL, NULL);
-	
-	/* in numeric mode, just return the raw code */
-	if (opt_numeric) {
-		Tcl_SetObjResult(interp, Tcl_NewIntObj(shpType));
-		return TCL_OK;
+	if (objc == 2) {
+		/* actionIndex 3 for default case of no special type requested */
+		actionIndex = 3;
+	} else {
+		if (Tcl_GetIndexFromObj(interp, objv[2], actionNames, "option", 0, &actionIndex) != TCL_OK) {
+			return TCL_ERROR;
+		}
 	}
 	
-	if (opt_dimension) {
-		switch (shpType) {
-			case SHPT_POINT:
-			case SHPT_MULTIPOINT:
-			case SHPT_ARC:
-			case SHPT_POLYGON:
-				Tcl_SetObjResult(interp, Tcl_ObjPrintf("xy"));
-				break;
-			case SHPT_POINTM:
-			case SHPT_MULTIPOINTM:
-			case SHPT_ARCM:
-			case SHPT_POLYGONM:
-				Tcl_SetObjResult(interp, Tcl_ObjPrintf("xym"));
-				break;
-			case SHPT_POINTZ:
-			case SHPT_MULTIPOINTZ:
-			case SHPT_ARCZ:
-			case SHPT_POLYGONZ:
-				Tcl_SetObjResult(interp, Tcl_ObjPrintf("xyzm"));
-				break;
-			default:
-				Tcl_SetObjResult(interp, Tcl_ObjPrintf("unsupported shape type (%d)", shpType));
-				return TCL_ERROR;
-				break;
-		}
-	} else if (opt_base) {
-		switch (shpType) {
-			case SHPT_POINT:
-			case SHPT_POINTM:
-			case SHPT_POINTZ:
-				Tcl_SetObjResult(interp, Tcl_ObjPrintf("point"));
-				break;
-			case SHPT_ARC:
-			case SHPT_ARCM:
-			case SHPT_ARCZ:
-				Tcl_SetObjResult(interp, Tcl_ObjPrintf("arc"));
-				break;
-			case SHPT_POLYGON:
-			case SHPT_POLYGONM:
-			case SHPT_POLYGONZ:
-				Tcl_SetObjResult(interp, Tcl_ObjPrintf("polygon"));
-				break;
-			case SHPT_MULTIPOINT:
-			case SHPT_MULTIPOINTM:
-			case SHPT_MULTIPOINTZ:
-				Tcl_SetObjResult(interp, Tcl_ObjPrintf("multipoint"));
-				break;
-			default:
-				Tcl_SetObjResult(interp, Tcl_ObjPrintf("unsupported shape type (%d)", shpType));
-				return TCL_ERROR;
-				break;
-		}
-	} else {
-		switch (shpType) {
-			case SHPT_POINT:
-				Tcl_SetObjResult(interp, Tcl_ObjPrintf("point"));
-				break;
-			case SHPT_ARC:
-				Tcl_SetObjResult(interp, Tcl_ObjPrintf("arc"));
-				break;
-			case SHPT_POLYGON:
-				Tcl_SetObjResult(interp, Tcl_ObjPrintf("polygon"));
-				break;
-			case SHPT_MULTIPOINT:
-				Tcl_SetObjResult(interp, Tcl_ObjPrintf("multipoint"));
-				break;
-			
-			case SHPT_POINTM:
-				Tcl_SetObjResult(interp, Tcl_ObjPrintf("pointm"));
-				break;
-			case SHPT_ARCM:
-				Tcl_SetObjResult(interp, Tcl_ObjPrintf("arcm"));
-				break;
-			case SHPT_POLYGONM:
-				Tcl_SetObjResult(interp, Tcl_ObjPrintf("polygonm"));
-				break;
-			case SHPT_MULTIPOINTM:
-				Tcl_SetObjResult(interp, Tcl_ObjPrintf("multipointm"));
-				break;
-			
-			case SHPT_POINTZ:
-				Tcl_SetObjResult(interp, Tcl_ObjPrintf("pointz"));
-				break;
-			case SHPT_ARCZ:
-				Tcl_SetObjResult(interp, Tcl_ObjPrintf("arcz"));
-				break;
-			case SHPT_POLYGONZ:
-				Tcl_SetObjResult(interp, Tcl_ObjPrintf("polygonz"));
-				break;
-			case SHPT_MULTIPOINTZ:
-				Tcl_SetObjResult(interp, Tcl_ObjPrintf("multipointz"));
-				break;
-			
-			default:
-				Tcl_SetObjResult(interp, Tcl_ObjPrintf("unsupported shape type (%d)", shpType));
-				return TCL_ERROR;
-				break;
-		}
+	SHPGetInfo(shapefile->shp, NULL, &shpType, NULL, NULL);
+	switch (actionIndex) {
+		case 0:
+			/* base */
+			switch (shpType) {
+				case SHPT_POINT:
+				case SHPT_POINTM:
+				case SHPT_POINTZ:
+					Tcl_SetObjResult(interp, Tcl_ObjPrintf("point"));
+					break;
+				case SHPT_ARC:
+				case SHPT_ARCM:
+				case SHPT_ARCZ:
+					Tcl_SetObjResult(interp, Tcl_ObjPrintf("arc"));
+					break;
+				case SHPT_POLYGON:
+				case SHPT_POLYGONM:
+				case SHPT_POLYGONZ:
+					Tcl_SetObjResult(interp, Tcl_ObjPrintf("polygon"));
+					break;
+				case SHPT_MULTIPOINT:
+				case SHPT_MULTIPOINTM:
+				case SHPT_MULTIPOINTZ:
+					Tcl_SetObjResult(interp, Tcl_ObjPrintf("multipoint"));
+					break;
+				default:
+					Tcl_SetObjResult(interp, Tcl_ObjPrintf("unsupported shape type (%d)", shpType));
+					return TCL_ERROR;
+					break;
+			}
+			break;
+		case 1:
+			/* dimension */
+			switch (shpType) {
+				case SHPT_POINT:
+				case SHPT_MULTIPOINT:
+				case SHPT_ARC:
+				case SHPT_POLYGON:
+					Tcl_SetObjResult(interp, Tcl_ObjPrintf("xy"));
+					break;
+				case SHPT_POINTM:
+				case SHPT_MULTIPOINTM:
+				case SHPT_ARCM:
+				case SHPT_POLYGONM:
+					Tcl_SetObjResult(interp, Tcl_ObjPrintf("xym"));
+					break;
+				case SHPT_POINTZ:
+				case SHPT_MULTIPOINTZ:
+				case SHPT_ARCZ:
+				case SHPT_POLYGONZ:
+					Tcl_SetObjResult(interp, Tcl_ObjPrintf("xyzm"));
+					break;
+				default:
+					Tcl_SetObjResult(interp, Tcl_ObjPrintf("unsupported shape type (%d)", shpType));
+					return TCL_ERROR;
+					break;
+			}
+			break;
+		case 2:
+			/* numeric */
+			Tcl_SetObjResult(interp, Tcl_NewIntObj(shpType));
+			break;
+		case 3:
+		default:
+			/* normal */
+			switch (shpType) {
+				case SHPT_POINT:
+					Tcl_SetObjResult(interp, Tcl_ObjPrintf("point"));
+					break;
+				case SHPT_ARC:
+					Tcl_SetObjResult(interp, Tcl_ObjPrintf("arc"));
+					break;
+				case SHPT_POLYGON:
+					Tcl_SetObjResult(interp, Tcl_ObjPrintf("polygon"));
+					break;
+				case SHPT_MULTIPOINT:
+					Tcl_SetObjResult(interp, Tcl_ObjPrintf("multipoint"));
+					break;
+				case SHPT_POINTM:
+					Tcl_SetObjResult(interp, Tcl_ObjPrintf("pointm"));
+					break;
+				case SHPT_ARCM:
+					Tcl_SetObjResult(interp, Tcl_ObjPrintf("arcm"));
+					break;
+				case SHPT_POLYGONM:
+					Tcl_SetObjResult(interp, Tcl_ObjPrintf("polygonm"));
+					break;
+				case SHPT_MULTIPOINTM:
+					Tcl_SetObjResult(interp, Tcl_ObjPrintf("multipointm"));
+					break;
+				case SHPT_POINTZ:
+					Tcl_SetObjResult(interp, Tcl_ObjPrintf("pointz"));
+					break;
+				case SHPT_ARCZ:
+					Tcl_SetObjResult(interp, Tcl_ObjPrintf("arcz"));
+					break;
+				case SHPT_POLYGONZ:
+					Tcl_SetObjResult(interp, Tcl_ObjPrintf("polygonz"));
+					break;
+				case SHPT_MULTIPOINTZ:
+					Tcl_SetObjResult(interp, Tcl_ObjPrintf("multipointz"));
+					break;
+				default:
+					Tcl_SetObjResult(interp, Tcl_ObjPrintf("unsupported shape type (%d)", shpType));
+					return TCL_ERROR;
+					break;
+			}
+			break;
 	}
 	
 	return TCL_OK;

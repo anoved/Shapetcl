@@ -40,7 +40,7 @@ pack .f -fill both -expand true
 
 # load shapefile
 set shp [shapefile [lindex $argv 0]]
-set ftype [$shp type]
+set basetype [$shp type base]
 set fcount [$shp count]
 
 # add each feature to the canvas
@@ -55,14 +55,14 @@ for {set fid 0} {$fid < $fcount} {incr fid} {
 		}
 		
 		# plot this part on canvas (points as circles)
-		if {[string match "polygon*" $ftype]} {
+		if {$basetype eq "polygon"} {
 			.f.c create poly $coords -tags f$fid -fill black -outline {}
-		} elseif {[string match "*point*" $ftype]} {
+		} elseif {$basetype eq "point" || $basetype eq "multipoint"} {
 			.f.c create oval \
 					[expr {[lindex $coords 0] - 4}] [expr {[lindex $coords 1] - 4}] \
 					[expr {[lindex $coords 0] + 4}] [expr {[lindex $coords 1] + 4}] \
 					-tags f$fid -fill black -outline {}
-		} elseif {[string match "arc*" $ftype]} {
+		} elseif {$basetype eq "arc"} {
 			.f.c create line $coords -tags f$fid -fill black
 		}
 	}
