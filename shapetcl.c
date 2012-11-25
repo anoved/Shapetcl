@@ -801,16 +801,18 @@ int shapefile_util_coordWrite(Tcl_Interp *interp, ShapefilePtr shapefile, int fe
 	}
 	
 	/* validate feature by number of parts according to shape type */
-	if ((shapeType == SHPT_POINT || shapeType == SHPT_POINTM || shapeType == SHPT_POINTZ) &&
-			partCount != 1) {
-		Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid part count (%d): point features must have exactly 1 part", partCount));
+	if (partCount != 1 &&
+			(shapeType == SHPT_POINT || shapeType == SHPT_POINTM || shapeType == SHPT_POINTZ ||
+			shapeType == SHPT_MULTIPOINT || shapeType == SHPT_MULTIPOINTM || shapeType == SHPT_MULTIPOINTZ)) {
+		Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid part count (%d): point and multipoint features must have exactly 1 part", partCount));
 		return TCL_ERROR;
 	}
-	if ((shapeType == SHPT_MULTIPOINT || shapeType == SHPT_ARC || shapeType == SHPT_POLYGON ||
-			shapeType == SHPT_MULTIPOINTM || shapeType == SHPT_ARCM || shapeType == SHPT_POLYGONM ||
-			shapeType == SHPT_MULTIPOINTZ || shapeType == SHPT_ARCZ || shapeType == SHPT_POLYGONZ) &&
+	if (partCount < 1 &&
+		(shapeType == SHPT_ARC || shapeType == SHPT_POLYGON ||
+			shapeType == SHPT_ARCM || shapeType == SHPT_POLYGONM ||
+			shapeType == SHPT_ARCZ || shapeType == SHPT_POLYGONZ) &&
 			partCount < 1) {
-		Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid part count (%d): arc, polygon, and multipoint features must have at least 1 part", partCount));
+		Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid part count (%d): arc and polygon features must have at least 1 part", partCount));
 		return TCL_ERROR;
 	}
 	
@@ -857,12 +859,18 @@ int shapefile_util_coordWrite(Tcl_Interp *interp, ShapefilePtr shapefile, int fe
 		partVertexCount = partCoordCount / coordinatesPerVertex;
 		
 		/* validate part by number of vertices according to shape type */
-		if ((shapeType == SHPT_POINT || shapeType == SHPT_POINTM || shapeType == SHPT_POINTZ ||
-				shapeType == SHPT_MULTIPOINT || shapeType == SHPT_MULTIPOINTM || shapeType == SHPT_MULTIPOINTZ) &&
-				partVertexCount != 1) {
-			Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid vertex count (%d): point and multipoint features must have exactly one vertex per part", partVertexCount));
+		if (partVertexCount != 1 &&
+				(shapeType == SHPT_POINT || shapeType == SHPT_POINTM || shapeType == SHPT_POINTZ)) {
+			Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid vertex count (%d): point features must have exactly one vertex per part", partVertexCount));
 			returnValue = TCL_ERROR;
 			goto cwRelease;
+		}
+		if (partVertexCount < 1 &&
+				(shapeType == SHPT_MULTIPOINT || shapeType == SHPT_MULTIPOINTM || shapeType == SHPT_MULTIPOINTZ)) {
+			Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid vertex count (%d): multipoint features must have at least one vertex per part", partVertexCount));
+			returnValue = TCL_ERROR;
+			goto cwRelease;
+
 		}
 		if ((shapeType == SHPT_ARC || shapeType == SHPT_ARCM || shapeType == SHPT_ARCZ) && partVertexCount < 2) {
 			Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid vertex count (%d): arc features must have at least 2 vertices per part", partVertexCount));
