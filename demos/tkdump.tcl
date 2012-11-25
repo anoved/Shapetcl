@@ -51,16 +51,23 @@ for {set fid 0} {$fid < $fcount} {incr fid} {
 		# convert part to screen coordinates
 		set coords {}
 		foreach {x y} $part {
-			eval lappend coords [Reproject $x $y]
+			lassign [Reproject $x $y] mapx mapy
+			lappend coords $mapx $mapy
+			if {$basetype eq "multipoint"} {
+				.f.c create oval \
+						[expr {$mapx - 3}] [expr {$mapy - 3}] \
+						[expr {$mapx + 3}] [expr {$mapy + 3}] \
+						-tags f$fid -fill black -outline {}
+			}
 		}
 		
 		# plot this part on canvas (points as circles)
 		if {$basetype eq "polygon"} {
 			.f.c create poly $coords -tags f$fid -fill black -outline {}
-		} elseif {$basetype eq "point" || $basetype eq "multipoint"} {
+		} elseif {$basetype eq "point"} {
 			.f.c create oval \
-					[expr {[lindex $coords 0] - 4}] [expr {[lindex $coords 1] - 4}] \
-					[expr {[lindex $coords 0] + 4}] [expr {[lindex $coords 1] + 4}] \
+					[expr {[lindex $coords 0] - 3}] [expr {[lindex $coords 1] - 3}] \
+					[expr {[lindex $coords 0] + 3}] [expr {[lindex $coords 1] + 3}] \
 					-tags f$fid -fill black -outline {}
 		} elseif {$basetype eq "arc"} {
 			.f.c create line $coords -tags f$fid -fill black
