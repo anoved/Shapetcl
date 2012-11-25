@@ -178,14 +178,20 @@ int shapefile_cmd_count(ClientData clientData, Tcl_Interp *interp, int objc, Tcl
 int shapefile_cmd_type(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
 	ShapefilePtr shapefile = (ShapefilePtr)clientData;
 	int shpType;
-	int opt_numeric, opt_base;
+	int opt_numeric, opt_base, opt_dimension;
 	
 	opt_numeric = util_flagIsPresent(objc, objv, "-numeric");
 	opt_base = util_flagIsPresent(objc, objv, "-base");
+	opt_dimension = util_flagIsPresent(objc, objv, "-dimension");
+	if (opt_dimension) {
+		objc--;
+	}
 	if (opt_base) {
+		opt_dimension = 0;
 		objc--;
 	}
 	if (opt_numeric) {
+		opt_dimension = 0;
 		opt_base = 0;
 		objc--;
 	}
@@ -203,7 +209,32 @@ int shapefile_cmd_type(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_
 		return TCL_OK;
 	}
 	
-	if (opt_base) {
+	if (opt_dimension) {
+		switch (shpType) {
+			case SHPT_POINT:
+			case SHPT_MULTIPOINT:
+			case SHPT_ARC:
+			case SHPT_POLYGON:
+				Tcl_SetObjResult(interp, Tcl_ObjPrintf("xy"));
+				break;
+			case SHPT_POINTM:
+			case SHPT_MULTIPOINTM:
+			case SHPT_ARCM:
+			case SHPT_POLYGONM:
+				Tcl_SetObjResult(interp, Tcl_ObjPrintf("xym"));
+				break;
+			case SHPT_POINTZ:
+			case SHPT_MULTIPOINTZ:
+			case SHPT_ARCZ:
+			case SHPT_POLYGONZ:
+				Tcl_SetObjResult(interp, Tcl_ObjPrintf("xyzm"));
+				break;
+			default:
+				Tcl_SetObjResult(interp, Tcl_ObjPrintf("unsupported shape type (%d)", shpType));
+				return TCL_ERROR;
+				break;
+		}
+	} else if (opt_base) {
 		switch (shpType) {
 			case SHPT_POINT:
 			case SHPT_POINTM:
