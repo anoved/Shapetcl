@@ -94,7 +94,7 @@ test shapefile-1.4 {
 test shapefile-1.5 {
 # Attempt to open a shapefile with a valid attribute table but no shp/shx files
 } -setup {
-	file copy sample/ne_110m_land/ne_110m_land.dbf tmp/foo.dbf
+	file copy sample/110m_physical/ne_110m_land.dbf tmp/foo.dbf
 } -body {
 	shapefile tmp/foo
 } -cleanup {
@@ -106,7 +106,7 @@ test shapefile-1.5 {
 test shapefile-1.6 {
 # Attempt to open a shapefile with a valid attribute table and shp/shx files that are not valid
 } -setup {
-	file copy sample/ne_110m_land/ne_110m_land.dbf tmp/foo.dbf
+	file copy sample/110m_physical/ne_110m_land.dbf tmp/foo.dbf
 	makeFile {} foo.shp
 	makeFile {} foo.shx
 } -body {
@@ -144,7 +144,7 @@ test shapefile-1.8 {
 test shapefile-1.9 {
 # Attempt to invoke an invalid subcommand
 } -body {
-	set shp [shapefile sample/ne_110m_land/ne_110m_land]
+	set shp [shapefile sample/110m_physical/ne_110m_land]
 	$shp funk
 } -cleanup {
 	$shp close
@@ -159,7 +159,7 @@ test shapefile-1.9 {
 test shapefile-2.0 {
 # Attempt to open a valid (polygon) shapefile
 } -body {
-	set shp [shapefile sample/ne_110m_land/ne_110m_land]
+	set shp [shapefile sample/110m_physical/ne_110m_land]
 } -cleanup {
 	$shp close
 } -returnCodes {
@@ -169,7 +169,7 @@ test shapefile-2.0 {
 test shapefile-2.1 {
 # Verify that by default shapefiles are opened in readwrite mode
 } -body {
-	set shp [shapefile sample/ne_110m_land/ne_110m_land]
+	set shp [shapefile sample/110m_physical/ne_110m_land]
 	$shp mode
 } -cleanup {
 	$shp close
