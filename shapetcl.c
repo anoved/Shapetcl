@@ -31,6 +31,10 @@ struct shapefile_data {
 	   Applies to [coords read] and [bounds] commands. False by default.
 	   Only one of getAllCoords and getOnlyXyCoords may be true. */
 	int getOnlyXyCoords;
+	
+	/* Read all attribute values as strings regardless of field type. Intended
+	   as an aid to debugging attribute table issues. False by default. */
+	int readRawStrings;
 };
 typedef struct shapefile_data * ShapefilePtr;
 
@@ -107,11 +111,14 @@ int shapefile_cmd_close(ClientData clientData, Tcl_Interp *interp, int objc, Tcl
  *     Get the current value of the specified option. Option may be abbreviated.
  *   [$shp config option 0|1]
  *     Set the value of the specified option to 0 or 1 (boolean options only).
+ *     Some options are incompatible, in which case setting one to true has the
+ *     side effect of setting the other to false (see get*Coordinates options).
  *
  * Options (Defaults):
  *   allowAlternateNotation (1)
  *   getAllCoordinates (0)
  *   getOnlyXyCoordinates (0)
+ *   readRawStrings (0)
  *   (See notes in ShapefilePtr struct definition for option details.)
  *
  * Result:
@@ -119,7 +126,7 @@ int shapefile_cmd_close(ClientData clientData, Tcl_Interp *interp, int objc, Tcl
  */
 int shapefile_cmd_config(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
 	ShapefilePtr shapefile = (ShapefilePtr)clientData;
-	static const char *optionNames[] = {"allowAlternateNotation", "getAllCoordinates", "getOnlyXyCoordinates", NULL};
+	static const char *optionNames[] = {"allowAlternateNotation", "getAllCoordinates", "getOnlyXyCoordinates", "readRawStrings", NULL};
 	int optionIndex, optionValue = 0;
 	
 	if (objc < 3 || objc > 4) {
@@ -164,6 +171,12 @@ int shapefile_cmd_config(ClientData clientData, Tcl_Interp *interp, int objc, Tc
 				}
 			}
 			Tcl_SetObjResult(interp, Tcl_NewIntObj(shapefile->getOnlyXyCoords));
+			break;
+		case 3: /* readRawStrings */
+			if (objc == 4) {
+				shapefile->readRawStrings = optionValue;
+			}
+			Tcl_SetObjResult(interp, Tcl_NewIntObj(shapefile->readRawStrings));
 			break;
 	}
 	
@@ -1729,7 +1742,7 @@ int shapefile_util_attrWrite(Tcl_Interp *interp, ShapefilePtr shapefile, int rec
  *   represented as strings (as stored within the DBF file).
  */
 int shapefile_util_attrReadField(Tcl_Interp *interp, ShapefilePtr shapefile, int recordId, int fieldId) {
-	int dbfCount, fieldCount;
+	int dbfCount, fieldCount, fieldType;
 	
 	dbfCount = DBFGetRecordCount(shapefile->dbf);
 	if (recordId < 0 || recordId >= dbfCount) {
@@ -1749,8 +1762,12 @@ int shapefile_util_attrReadField(Tcl_Interp *interp, ShapefilePtr shapefile, int
 		return TCL_OK;
 	}
 	
-	/* return an object of appropriate type for fieldId */
-	switch ((int)DBFGetFieldInfo(shapefile->dbf, fieldId, NULL, NULL, NULL)) {
+	/* return an object of appropriate type for fieldId, unless raw requested */
+	fieldType = (int)DBFGetFieldInfo(shapefile->dbf, fieldId, NULL, NULL, NULL);
+	if (shapefile->readRawStrings) {
+		fieldType = FTString;
+	}
+	switch (fieldType) {
 		case FTInteger:
 			Tcl_SetObjResult(interp, Tcl_NewIntObj(DBFReadIntegerAttribute(shapefile->dbf, recordId, fieldId)));
 			break;
@@ -2243,6 +2260,7 @@ int shapefile_commands(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_
 	shapefile->allowAlternateNotation = 1;
 	shapefile->getAllCoords = 0;
 	shapefile->getOnlyXyCoords = 0;
+	shapefile->readRawStrings = 0;
 	
 	Tcl_MutexLock(&COMMAND_COUNT_MUTEX);
 	sprintf(cmdName, "shapefile%d", COMMAND_COUNT++);

@@ -87,4 +87,27 @@ test exponent-1.3 {
 	error
 } -match glob -result {failed to write double attribute "*"}
 
+test exponent-1.4 {
+# Read double values and corresponding raw strings for normal and exp notation.
+} -body {
+	set shp [shapefile sample/xy/polygon readonly]
+
+	# record 30 is China; record 31 is Côte d'Ivoire
+	# field 34 is pop_est (population)
+	puts [$shp attr read 30 34]
+	puts [$shp attr read 31 34]
+	
+	# now display the raw string values, as stored.
+	$shp config readRawStrings 1
+	puts [$shp attr read 30 34]
+	puts [$shp attr read 31 34]
+		
+	$shp close
+	
+} -output {1338612970.0
+20617068.0
+1.338612970e+09
+20617068.000000
+} -result {}
+
 ::tcltest::cleanupTests
