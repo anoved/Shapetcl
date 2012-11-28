@@ -13,8 +13,24 @@
 struct shapefile_data {
 	SHPHandle shp;
 	DBFHandle dbf;
+	
+	/* True if shapefile is readonly; set by [shapefile] on open/create. */
 	int readonly;
+	
+ 	/* Attempt to write double values that don't fit within field width using
+	   scientific notation. Allows larger values, but may lose sig. digits.
+	   True by default. */
 	int allowAlternateNotation;
+
+	/* Read all four coordinate dimensions (X, Y, Z, and M) regardless of shape
+	   type. Applies to [coords read] and [bounds] commands. False by default.
+	   Only one of getAllCoords and getOnlyXyCoords may be true. */
+	int getAllCoords;
+
+	/* Read only the X and Y coordinate dimensions regardless of shape type.
+	   Applies to [coords read] and [bounds] commands. False by default.
+	   Only one of getAllCoords and getOnlyXyCoords may be true. */
+	int getOnlyXyCoords;
 };
 typedef struct shapefile_data * ShapefilePtr;
 
@@ -26,25 +42,6 @@ static int COMMAND_COUNT = 0;
 TCL_DECLARE_MUTEX(COMMAND_COUNT_MUTEX);
 
 int shapefile_util_attrWrite(Tcl_Interp *interp, ShapefilePtr shapefile, int recordId, int validate, Tcl_Obj *attrList);
-
-/*
- * util_flagIsPresent
- * 
- * Check if an optional flag is present in a Tcl command argument list. It is
- * up to the calling function to then filter flag from objv if appropriate.
- * 
- * Return:
- *   1 if flag is present in objv, otherwise 0
- */
-int util_flagIsPresent(int objc, Tcl_Obj *CONST objv[], const char *flagName) {
-	int i;
-	for (i = 0; i < objc; i++) {
-		if (strcmp(Tcl_GetString(objv[i]), flagName) == 0) {
-			return 1;
-		}
-	}
-	return 0;
-}
 
 /*
  * shapefile_util_close
@@ -113,15 +110,16 @@ int shapefile_cmd_close(ClientData clientData, Tcl_Interp *interp, int objc, Tcl
  *
  * Options (Defaults):
  *   allowAlternateNotation (1)
- *     Attempt to write double values that don't fit within field width using
- *     scientific notation. Allows larger values, but may lose sig. digits.
+ *   getAllCoordinates (0)
+ *   getOnlyXyCoordinates (0)
+ *   (See notes in ShapefilePtr struct definition for option details.)
  *
  * Result:
  *   Returns boolean value of specified option.
  */
 int shapefile_cmd_config(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
 	ShapefilePtr shapefile = (ShapefilePtr)clientData;
-	static const char *optionNames[] = {"allowAlternateNotation", NULL};
+	static const char *optionNames[] = {"allowAlternateNotation", "getAllCoordinates", "getOnlyXyCoordinates", NULL};
 	int optionIndex, optionValue = 0;
 	
 	if (objc < 3 || objc > 4) {
@@ -148,6 +146,24 @@ int shapefile_cmd_config(ClientData clientData, Tcl_Interp *interp, int objc, Tc
 				shapefile->allowAlternateNotation = optionValue;
 			}
 			Tcl_SetObjResult(interp, Tcl_NewIntObj(shapefile->allowAlternateNotation));
+			break;
+		case 1: /* getAllCoords */
+			if (objc == 4) {
+				shapefile->getAllCoords = optionValue;
+				if (optionValue == 1) {
+					shapefile->getOnlyXyCoords = 0;
+				}
+			}
+			Tcl_SetObjResult(interp, Tcl_NewIntObj(shapefile->getAllCoords));
+			break;
+		case 2: /* getOnlyXyCoords */
+			if (objc == 4) {
+				shapefile->getOnlyXyCoords = optionValue;
+				if (optionValue == 1) {
+					shapefile->getAllCoords = 0;
+				}
+			}
+			Tcl_SetObjResult(interp, Tcl_NewIntObj(shapefile->getOnlyXyCoords));
 			break;
 	}
 	
@@ -373,16 +389,16 @@ int shapefile_cmd_type(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_
  * Implements the [$shp bounds] command used to query file or feature extent.
  * 
  * Command Syntax:
- *   [$shp bounds ?-all|-xy?]
+ *   [$shp bounds]
  *     Get the bounding box of all features in the shapefile.
- *   [$shp bounds FEATURE ?-all|-xy?]
+ *   [$shp bounds FEATURE]
  *     Get the bounding box of the specified feature.
  * 
- * Options:
- *   Similar to Read Options of shapefile_cmd_coordinates. -all requests bounds
- *   in all four dimensions (X, Y, Z, and M) regardless of feature type. -xy 
- *   requests bounds in X and Y dimensions only, regardless of feature type.
- *   Bounds are normally given in XY, XYM, or XYZM depending on feature type.
+ * Config Options:
+ *   Bounds are normally given as minimum and maximum XY, XYM, or XYZM coords
+ *   depending on feature type. However, if the getAllCoords or getOnlyXyCoords
+ *   config options are true, the requested coordinate bounds will be returned
+ *   regardless of feature type.
  * 
  * Result:
  *   List containing the minimum and maximum vertex values.
@@ -396,23 +412,9 @@ int shapefile_cmd_bounds(ClientData clientData, Tcl_Interp *interp, int objc, Tc
 	double min[4], max[4];
 	Tcl_Obj *bounds;
 	int shpType;
-	int allBounds, xyOnly;
-	
-	/* -all option returns all xyzm bounds even for xy or xym types */
-	/* -xy option returns only xy bounds even for xym or xyzm types */
-	/* -all option trumps -xy (really, only one should be present) */
-	allBounds = util_flagIsPresent(objc, objv, "-all");
-	xyOnly = util_flagIsPresent(objc, objv, "-xy");
-	if (xyOnly) {
-		objc--;
-	}
-	if (allBounds) {
-		xyOnly = 0;
-		objc--;
-	}
 	
 	if (objc != 2 && objc != 3) {
-		Tcl_WrongNumArgs(interp, 2, objv, "?index? ?-all|-xy?");
+		Tcl_WrongNumArgs(interp, 2, objv, "?index?");
 		return TCL_ERROR;
 	}
 	
@@ -453,13 +455,13 @@ int shapefile_cmd_bounds(ClientData clientData, Tcl_Interp *interp, int objc, Tc
 	bounds = Tcl_NewListObj(0, NULL);
 	Tcl_ListObjAppendElement(interp, bounds, Tcl_NewDoubleObj(min[0]));
 	Tcl_ListObjAppendElement(interp, bounds, Tcl_NewDoubleObj(min[1]));
-	if (!xyOnly) {
-		if (allBounds ||
+	if (!shapefile->getOnlyXyCoords) {
+		if (shapefile->getAllCoords ||
 				shpType == SHPT_POINTZ || shpType == SHPT_ARCZ ||
 				shpType == SHPT_POLYGONZ || shpType == SHPT_MULTIPOINTZ) {
 			Tcl_ListObjAppendElement(interp, bounds, Tcl_NewDoubleObj(min[2]));
 		}
-		if (allBounds ||
+		if (shapefile->getAllCoords ||
 				shpType == SHPT_POINTZ || shpType == SHPT_ARCZ ||
 				shpType == SHPT_POLYGONZ || shpType == SHPT_MULTIPOINTZ ||
 				shpType == SHPT_POINTM || shpType == SHPT_ARCM ||
@@ -469,13 +471,13 @@ int shapefile_cmd_bounds(ClientData clientData, Tcl_Interp *interp, int objc, Tc
 	}
 	Tcl_ListObjAppendElement(interp, bounds, Tcl_NewDoubleObj(max[0]));
 	Tcl_ListObjAppendElement(interp, bounds, Tcl_NewDoubleObj(max[1]));
-	if (!xyOnly) {
-		if (allBounds ||
+	if (!shapefile->getOnlyXyCoords) {
+		if (shapefile->getAllCoords ||
 				shpType == SHPT_POINTZ || shpType == SHPT_ARCZ ||
 				shpType == SHPT_POLYGONZ || shpType == SHPT_MULTIPOINTZ) {
 			Tcl_ListObjAppendElement(interp, bounds, Tcl_NewDoubleObj(max[2]));
 		}
-		if (allBounds ||
+		if (shapefile->getAllCoords ||
 				shpType == SHPT_POINTZ || shpType == SHPT_ARCZ ||
 				shpType == SHPT_POLYGONZ || shpType == SHPT_MULTIPOINTZ ||
 				shpType == SHPT_POINTM || shpType == SHPT_ARCM ||
@@ -1105,7 +1107,7 @@ int shapefile_util_coordWrite(Tcl_Interp *interp, ShapefilePtr shapefile, int fe
  * Result:
  *   Coordinate list for the specified feature.
  */
-int shapefile_util_coordRead(Tcl_Interp *interp, ShapefilePtr shapefile, int featureId, int allCoords, int xyOnly) {
+int shapefile_util_coordRead(Tcl_Interp *interp, ShapefilePtr shapefile, int featureId) {
 	SHPObject *shape;
 	Tcl_Obj *coordParts;
 	int featureCount, part, partCount, vertex, vertexStart, vertexStop;
@@ -1155,13 +1157,13 @@ int shapefile_util_coordRead(Tcl_Interp *interp, ShapefilePtr shapefile, int fea
 				goto crRelease;
 			}
 			
-			/* don't even bother considering Z or M coords if only xy requested */
-			if (xyOnly) {
+			/* don't bother considering Z or M coords if only xy is requested */
+			if (shapefile->getOnlyXyCoords) {
 				continue;
 			}
 			
 			/* for Z type features, append Z coordinate before Measure */
-			if (allCoords ||
+			if (shapefile->getAllCoords ||
 					shpType == SHPT_POINTZ || shpType == SHPT_ARCZ ||
 					shpType == SHPT_POLYGONZ || shpType == SHPT_MULTIPOINTZ) {
 				
@@ -1173,7 +1175,7 @@ int shapefile_util_coordRead(Tcl_Interp *interp, ShapefilePtr shapefile, int fea
 			}
 			
 			/* for M and Z type features, append Measure (if used) last */
-			if (allCoords ||
+			if (shapefile->getAllCoords ||
 					shpType == SHPT_POINTZ || shpType == SHPT_ARCZ ||
 					shpType == SHPT_POLYGONZ || shpType == SHPT_MULTIPOINTZ ||
 					shpType == SHPT_POINTM || shpType == SHPT_ARCM ||
@@ -1220,7 +1222,7 @@ int shapefile_util_coordRead(Tcl_Interp *interp, ShapefilePtr shapefile, int fea
  * Result:
  *   List containing a coordinate list for each feature in shapefile.
  */
-int shapefile_util_coordReadAll(Tcl_Interp *interp, ShapefilePtr shapefile, int allCoords, int xyOnly) {
+int shapefile_util_coordReadAll(Tcl_Interp *interp, ShapefilePtr shapefile) {
 	Tcl_Obj *featureList;
 	int shpCount, featureId;
 	
@@ -1229,7 +1231,7 @@ int shapefile_util_coordReadAll(Tcl_Interp *interp, ShapefilePtr shapefile, int 
 	
 	for (featureId = 0; featureId < shpCount; featureId++) {
 		
-		if (shapefile_util_coordRead(interp, shapefile, featureId, allCoords, xyOnly) != TCL_OK) {
+		if (shapefile_util_coordRead(interp, shapefile, featureId) != TCL_OK) {
 			return TCL_ERROR;
 		}
 		
@@ -1250,9 +1252,9 @@ int shapefile_util_coordReadAll(Tcl_Interp *interp, ShapefilePtr shapefile, int 
  * Implements the [$shp coordinates] command used to get/set feature geometry.
  * 
  * Command Syntax:
- *   [$shp coordinates read FEATURE ?-all|-xy?]
+ *   [$shp coordinates read FEATURE]
  *     Get the coordinates of one feature.
- *   [$shp coordinates read ?-all|-xy?]
+ *   [$shp coordinates read]
  *     Get the coordinates of all features.
  *   [$shp coordinates write FEATURE COORDINATES]
  *     Set the coordinates of one feature.
@@ -1264,7 +1266,7 @@ int shapefile_util_coordReadAll(Tcl_Interp *interp, ShapefilePtr shapefile, int 
  *   Features are comprised of parts; a coordinate list is a list of parts,
  *   each of which is a list of the vertices which comprise the part. Each
  *   vertex of a feature part is represented by 2, 3, or 4 coordinate values,
- *   depending on the feature type (XY, XYM, or XYZM) - but see Read Options.
+ *   depending on the feature type (XY, XYM, or XYZM) - but see Config Options.
  *   Point feature types only have one part, but others may have multiple.
  *   Clockwise or counterclockwise vertex order of polygon parts indicates
  *   whether the part represents an outer or inner ring (islands or holes).
@@ -1276,11 +1278,9 @@ int shapefile_util_coordReadAll(Tcl_Interp *interp, ShapefilePtr shapefile, int 
  *     Arc:        {{X1 Y1 X2 Y2 X3 Y3}}
  *     Polygon:    {{X1 Y1 X2 Y2 X3 Y3 X1 Y1} {X1' Y1' X3' Y3' X2' Y2' X1' Y1'}}
  * 
- * Read Options:
- *   -all: Requests all four coordinates (X, Y, Z, and M) for each vertex,
- *     regardless of the feature type. Z and M coordinates are 0 if undefined.
- *   -xy: Requests only the X and Y coordinates, regardless of feature type.
- *     The -all option overrides the -xy option if both are present.
+ * Config Options:
+ *   The format of coordinate lists returned by [$shp coordinates read] may be
+ *   overruled if the getAllCoords or getOnlyXyCoords config options are true.
  * 
  * Result:
  *   Read actions return coordinate lists or lists of coordinate lists.
@@ -1289,21 +1289,9 @@ int shapefile_util_coordReadAll(Tcl_Interp *interp, ShapefilePtr shapefile, int 
 int shapefile_cmd_coordinates(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
 	ShapefilePtr shapefile = (ShapefilePtr)clientData;
 	int featureId;
-	int opt_allCoords, opt_xyOnly;
-	
 	static const char *subcommandNames[] = {"read", "write", NULL};
 	int subcommandIndex;
-	
-	opt_allCoords = util_flagIsPresent(objc, objv, "-all");
-	opt_xyOnly = util_flagIsPresent(objc, objv, "-xy");
-	if (opt_xyOnly) {
-		objc--;
-	}
-	if (opt_allCoords) {
-		opt_xyOnly = 0;
-		objc--;
-	}
-	
+		
 	if (objc < 3) {
 		Tcl_WrongNumArgs(interp, 2, objv, "action ?args?");
 		return TCL_ERROR;
@@ -1318,7 +1306,7 @@ int shapefile_cmd_coordinates(ClientData clientData, Tcl_Interp *interp, int obj
 		
 		if (objc == 3) {
 			/* return coords of all features */
-			if (shapefile_util_coordReadAll(interp, shapefile, opt_allCoords, opt_xyOnly) != TCL_OK) {
+			if (shapefile_util_coordReadAll(interp, shapefile) != TCL_OK) {
 				return TCL_ERROR;
 			}
 		} else if (objc == 4) {
@@ -1329,12 +1317,12 @@ int shapefile_cmd_coordinates(ClientData clientData, Tcl_Interp *interp, int obj
 			}
 			
 			/* return coords of specified feature index */
-			if (shapefile_util_coordRead(interp, shapefile, featureId, opt_allCoords, opt_xyOnly) != TCL_OK) {
+			if (shapefile_util_coordRead(interp, shapefile, featureId) != TCL_OK) {
 				return TCL_ERROR;
 			}
 			
 		} else {
-			Tcl_WrongNumArgs(interp, 3, objv, "?index? ?-all|-xy?");
+			Tcl_WrongNumArgs(interp, 3, objv, "?index?");
 			return TCL_ERROR;
 		}
 	} else if (subcommandIndex == 1) {
@@ -2215,6 +2203,8 @@ int shapefile_commands(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_
 	shapefile->dbf = dbf;	
 	shapefile->readonly = readonly;
 	shapefile->allowAlternateNotation = 1;
+	shapefile->getAllCoords = 0;
+	shapefile->getOnlyXyCoords = 0;
 	
 	Tcl_MutexLock(&COMMAND_COUNT_MUTEX);
 	sprintf(cmdName, "shapefile%d", COMMAND_COUNT++);

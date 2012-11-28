@@ -44,8 +44,9 @@ set basetype [$shp type base]
 set fcount [$shp count]
 
 # add each feature to the canvas
+$shp config getOnlyXyCoordinates 1
 for {set fid 0} {$fid < $fcount} {incr fid} {
-	set feature [$shp coordinates read $fid -xy]
+	set feature [$shp coordinates read $fid]
 	foreach part $feature {		
 		
 		# convert part to screen coordinates

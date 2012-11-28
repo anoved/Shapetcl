@@ -15,8 +15,9 @@ set fcount [$shp count]
 puts "Features in file: $fcount"
 
 # iterate through all features
+$shp config getAllCoordinates 1
 for {set fid 0} {$fid < $fcount} {incr fid} {
-	set feature [$shp coordinates read $fid -all]
+	set feature [$shp coordinates read $fid]
 	set pcount [llength $feature]
 	puts "\nFeature $fid (parts: $pcount):"
 	
