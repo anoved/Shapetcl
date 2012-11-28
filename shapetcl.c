@@ -14,6 +14,7 @@ struct shapefile_data {
 	SHPHandle shp;
 	DBFHandle dbf;
 	int readonly;
+	int allowAlternateNotation;
 };
 typedef struct shapefile_data * ShapefilePtr;
 
@@ -1518,20 +1519,26 @@ int shapefile_util_attrWriteField(Tcl_Interp *interp, ShapefilePtr shapefile, in
 			}
 			
 			/* If the value formatted as Shapelib would will not fit in width,
-			   reformat it in scientific notation, keeping maximum precision. */
+			   reformat it in scientific notation, if not prohibited. */
 			sprintf(buffer, "%*.*f", width, precision, doubleValue);
-			if (strlen(buffer) > width) {
+			if ((strlen(buffer) > width) && shapefile->allowAlternateNotation) {
 				reserved = 7 + (doubleValue < 0 ? 1 : 0);
 				if (reserved > width) {
 					Tcl_SetObjResult(interp, Tcl_ObjPrintf("field too narrow (%d) for fixed or scientific notation representation of value \"%s\"", width, buffer));
 					return TCL_ERROR;
 				}
 				sprintf(buffer, "%*.*e", width, width - reserved, doubleValue);
-			}
-			
-			if (DBFWriteAttributeDirectly(shapefile->dbf, recordId, fieldId, (void *)buffer) == 0) {
-				Tcl_SetObjResult(interp, Tcl_ObjPrintf("failed to write double attribute \"%s\"", buffer));
-				return TCL_ERROR;
+				if (DBFWriteAttributeDirectly(shapefile->dbf, recordId, fieldId, (void *)buffer) == 0) {
+					Tcl_SetObjResult(interp, Tcl_ObjPrintf("failed to write double attribute \"%s\"", buffer));
+					return TCL_ERROR;
+				}
+			} else {			
+				/* Anticipate this to fail due to truncation if len(buffer) > width
+				   and allowAlternateNotation is false, meaning errors preferred. */
+				if (DBFWriteDoubleAttribute(shapefile->dbf, recordId, fieldId, doubleValue) == 0) {
+					Tcl_SetObjResult(interp, Tcl_ObjPrintf("failed to write double attribute \"%lf\"", doubleValue));
+					return TCL_ERROR;
+				}
 			}
 			break;
 		case FTString:
@@ -2152,6 +2159,7 @@ int shapefile_commands(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_
 	shapefile->shp = shp;
 	shapefile->dbf = dbf;	
 	shapefile->readonly = readonly;
+	shapefile->allowAlternateNotation = 1;
 	
 	Tcl_MutexLock(&COMMAND_COUNT_MUTEX);
 	sprintf(cmdName, "shapefile%d", COMMAND_COUNT++);
