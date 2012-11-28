@@ -1523,7 +1523,7 @@ int shapefile_util_attrWriteField(Tcl_Interp *interp, ShapefilePtr shapefile, in
 			if (strlen(buffer) > width) {
 				reserved = 7 + (doubleValue < 0 ? 1 : 0);
 				if (reserved > width) {
-					Tcl_SetObjResult(interp, Tcl_ObjPrintf("double value too big for format \"%lf\"", doubleValue));
+					Tcl_SetObjResult(interp, Tcl_ObjPrintf("field too narrow (%d) for fixed or scientific notation representation of value \"%s\"", width, buffer));
 					return TCL_ERROR;
 				}
 				sprintf(buffer, "%*.*e", width, width - reserved, doubleValue);
