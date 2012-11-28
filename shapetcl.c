@@ -1384,11 +1384,12 @@ int shapefile_util_attrValidateField(Tcl_Interp *interp, ShapefilePtr shapefile,
 				return TCL_ERROR;
 			}
 			/* does this double fit within the field width? */
-			sprintf(numericStringValue, "%.*lf", precision, doubleValue);
+			/* disabling double width check now with conditional scientific notation output */
+			/*sprintf(numericStringValue, "%.*lf", precision, doubleValue);
 			if (strlen(numericStringValue) > width) {
 				Tcl_SetObjResult(interp, Tcl_ObjPrintf("double value (%s) would be truncated to field width (%d)", numericStringValue, width));
 				return TCL_ERROR;
-			}
+			}*/
 			break;
 		case FTString:
 			/* can this value be parsed as a string? */
@@ -1470,6 +1471,8 @@ int shapefile_util_attrWriteField(Tcl_Interp *interp, ShapefilePtr shapefile, in
 	int intValue;
 	double doubleValue;
 	const char *stringValue;
+	int width, precision, reserved;
+	char buffer[64];
 	
 	if (shapefile->readonly) {
 		Tcl_SetObjResult(interp, Tcl_ObjPrintf("cannot write attribute value to readonly shapefile"));
@@ -1501,7 +1504,7 @@ int shapefile_util_attrWriteField(Tcl_Interp *interp, ShapefilePtr shapefile, in
 		return TCL_OK;
 	}
 	
-	switch ((int)DBFGetFieldInfo(shapefile->dbf, fieldId, NULL, NULL, NULL)) {
+	switch ((int)DBFGetFieldInfo(shapefile->dbf, fieldId, NULL, &width, &precision)) {
 		case FTInteger:
 			if ((Tcl_GetIntFromObj(interp, attrValue, &intValue) != TCL_OK) ||
 					(DBFWriteIntegerAttribute(shapefile->dbf, recordId, fieldId, intValue) == 0)) {
@@ -1510,9 +1513,24 @@ int shapefile_util_attrWriteField(Tcl_Interp *interp, ShapefilePtr shapefile, in
 			}
 			break;
 		case FTDouble:
-			if ((Tcl_GetDoubleFromObj(interp, attrValue, &doubleValue) != TCL_OK) ||
-					(DBFWriteDoubleAttribute(shapefile->dbf, recordId, fieldId, doubleValue) == 0)) {
-				Tcl_SetObjResult(interp, Tcl_ObjPrintf("failed to write double attribute \"%lf\"", doubleValue));
+			if (Tcl_GetDoubleFromObj(interp, attrValue, &doubleValue) != TCL_OK) {
+				return TCL_ERROR;
+			}
+			
+			/* If the value formatted as Shapelib would will not fit in width,
+			   reformat it in scientific notation, keeping maximum precision. */
+			sprintf(buffer, "%*.*f", width, precision, doubleValue);
+			if (strlen(buffer) > width) {
+				reserved = 7 + (doubleValue < 0 ? 1 : 0);
+				if (reserved > width) {
+					Tcl_SetObjResult(interp, Tcl_ObjPrintf("double value too big for format \"%lf\"", doubleValue));
+					return TCL_ERROR;
+				}
+				sprintf(buffer, "%*.*e", width, width - reserved, doubleValue);
+			}
+			
+			if (DBFWriteAttributeDirectly(shapefile->dbf, recordId, fieldId, (void *)buffer) == 0) {
+				Tcl_SetObjResult(interp, Tcl_ObjPrintf("failed to write double attribute \"%s\"", buffer));
 				return TCL_ERROR;
 			}
 			break;
