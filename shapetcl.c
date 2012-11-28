@@ -690,6 +690,27 @@ int shapefile_util_fieldsAdd(Tcl_Interp *interp, DBFHandle dbf, int validate, Tc
 }
 
 /*
+ * shapefile_util_fieldIndex
+ *
+ * Implements the [$shp field index] action used to look up a field by name.
+ * Field name search is case insensitive.
+ *
+ * Result:
+ *   Index of named field, or error if no such field is found.
+ *
+ */
+int shapefile_util_fieldIndex(Tcl_Interp *interp, ShapefilePtr shapefile, const char *fieldName) {
+	int fieldIndex;
+	fieldIndex = DBFGetFieldIndex(shapefile->dbf, fieldName);
+	if (fieldIndex == -1) {
+		Tcl_SetObjResult(interp, Tcl_ObjPrintf("field named \"%s\" not found", fieldName));
+		return TCL_ERROR;
+	}
+	Tcl_SetObjResult(interp, Tcl_NewIntObj(fieldIndex));
+	return TCL_OK;
+}
+
+/*
  * shapefile_cmd_fields
  * 
  * Implements the [$shp fields] command used to query attribute table format.
@@ -703,6 +724,8 @@ int shapefile_util_fieldsAdd(Tcl_Interp *interp, DBFHandle dbf, int validate, Tc
  *   [$shp fields add FIELDDEFINITIONS]
  *     Add one or more fields to the attribute table. New fields of existing
  *     attribute records are populated with NULL values.
+ *   [$shp field index FIELDNAME]
+ *     Get the index of a field with the given name.
  * 
  * Field Definitions:
  *   Each field is defined by four properties: type, name, width, and precision.
@@ -724,12 +747,13 @@ int shapefile_util_fieldsAdd(Tcl_Interp *interp, DBFHandle dbf, int validate, Tc
  *   count action returns number of fields.
  *   list action returns a Field Definitions list (see above).
  *   add action returns field index of last new field added.
+ *   name action returns named field index or error if none
  */
 int shapefile_cmd_fields(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
 	ShapefilePtr shapefile = (ShapefilePtr)clientData;
 	int fieldCount, fieldi;
 	
-	static const char *actionNames[] = {"add", "count", "list", NULL};
+	static const char *actionNames[] = {"add", "count", "list", "index", NULL};
 	int actionIndex;
 	
 	if (objc < 3) {
@@ -796,6 +820,20 @@ int shapefile_cmd_fields(ClientData clientData, Tcl_Interp *interp, int objc, Tc
 			}
 			
 			Tcl_SetObjResult(interp, descriptions);
+		}
+	} else if (actionIndex == 3) {
+		/* get field index from name */
+		const char *fieldName;
+		if (objc != 4) {
+			Tcl_WrongNumArgs(interp, 3, objv, "fieldName");
+			return TCL_ERROR;
+		}
+		if ((fieldName = Tcl_GetString(objv[3])) == NULL) {
+			return TCL_ERROR;
+		}
+		/* sets interp result to field index, or not-found error message */
+		if (shapefile_util_fieldIndex(interp, shapefile, fieldName) != TCL_OK) {
+			return TCL_ERROR;
 		}
 	}
 		
