@@ -68,4 +68,23 @@ test exponent-1.2 {
 	error
 } -match glob -result {field too narrow (*) for fixed or scientific notation representation of value "*"}
 
+test exponent-1.3 {
+# Illustrate use of allowAlternateNotation option to opt for errors instead of
+# silent loss of significant digits when writing large double attributes.
+} -setup {
+	set out [shapefile tmp/exp3 point {double Value 16 6}]
+} -body {
+	# succeeds, since allowAlternateNotation is on by default
+	$out attributes write 1234567890.123456
+	
+	# throws error if allowAlternateNotation is set to false
+	$out config allowAlternateNotation 0
+	$out attributes write 1234567890.123456
+} -cleanup {
+	$out close
+	file delete {*}[glob -nocomplain tmp/exp3.*]
+} -returnCodes {
+	error
+} -match glob -result {failed to write double attribute "*"}
+
 ::tcltest::cleanupTests

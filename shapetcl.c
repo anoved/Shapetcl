@@ -101,6 +101,60 @@ int shapefile_cmd_close(ClientData clientData, Tcl_Interp *interp, int objc, Tcl
 }
 
 /*
+ * shapefile_cmd_config
+ *
+ * Implements the [$shp config] command use to get and set shapefile IO options.
+ *
+ * Command Syntax:
+ *   [$shp config option]
+ *     Get the current value of the specified option. Option may be abbreviated.
+ *   [$shp config option 0|1]
+ *     Set the value of the specified option to 0 or 1 (boolean options only).
+ *
+ * Options (Defaults):
+ *   allowAlternateNotation (1)
+ *     Attempt to write double values that don't fit within field width using
+ *     scientific notation. Allows larger values, but may lose sig. digits.
+ *
+ * Result:
+ *   Returns boolean value of specified option.
+ */
+int shapefile_cmd_config(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
+	ShapefilePtr shapefile = (ShapefilePtr)clientData;
+	static const char *optionNames[] = {"allowAlternateNotation", NULL};
+	int optionIndex, optionValue = 0;
+	
+	if (objc < 3 || objc > 4) {
+		Tcl_WrongNumArgs(interp, 2, objv, "option ?booleanValue?");
+		return TCL_ERROR;
+	}
+	
+	if (Tcl_GetIndexFromObj(interp, objv[2], optionNames, "option", 0 /* not TCL_EXACT */, &optionIndex) != TCL_OK) {
+		return TCL_ERROR;
+	}
+	
+	/* currently designed w/expectation that all options are boolean */
+	if (objc == 4) {
+		if ((Tcl_GetIntFromObj(interp, objv[3], &optionValue) != TCL_OK)
+				|| (optionValue != 0 && optionValue != 1)) {
+			Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid option value \"%s\" (should be 0 or 1)", Tcl_GetString(objv[3])));
+			return TCL_ERROR;
+		}
+	}
+	
+	switch (optionIndex) {
+		case 0: /* allowAlternateNotation */
+			if (objc == 4) {
+				shapefile->allowAlternateNotation = optionValue;
+			}
+			Tcl_SetObjResult(interp, Tcl_NewIntObj(shapefile->allowAlternateNotation));
+			break;
+	}
+	
+	return TCL_OK;
+}
+
+/*
  * shapefile_cmd_mode
  * 
  * Implements the [$shp mode] command used to query file access mode.
@@ -1979,12 +2033,13 @@ int shapefile_cmd_write(ClientData clientData, Tcl_Interp *interp, int objc, Tcl
 int shapefile_commands(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
 	int subcommandIndex;
 	static const char *subcommandNames[] = {
-			"attributes", "bounds", "close", "coordinates", "count", "fields", "mode", "type", "write", NULL
+			"attributes", "bounds", "close", "config", "coordinates", "count", "fields", "mode", "type", "write", NULL
 	};
 	Tcl_ObjCmdProc *subcommands[] = {
 			shapefile_cmd_attributes, shapefile_cmd_bounds, shapefile_cmd_close,
-			shapefile_cmd_coordinates, shapefile_cmd_count, shapefile_cmd_fields,
-			shapefile_cmd_mode, shapefile_cmd_type, shapefile_cmd_write
+			shapefile_cmd_config, shapefile_cmd_coordinates,
+			shapefile_cmd_count, shapefile_cmd_fields, shapefile_cmd_mode,
+			shapefile_cmd_type, shapefile_cmd_write
 	};
 	
 	if (objc < 2) {
