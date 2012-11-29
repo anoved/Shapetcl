@@ -91,7 +91,12 @@ void shapefile_util_delete(ClientData clientData) {
  *   No Tcl return value. Changes to readwrite shapefiles are written to disk.
  *   $shp command is deleted and associated resources are released.
  */
-int shapefile_cmd_close(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
+int shapefile_cmd_close(
+		ClientData clientData,
+		Tcl_Interp *interp,
+		int objc,
+		Tcl_Obj *CONST objv[]) {
+	
 	ShapefilePtr shapefile = (ShapefilePtr)clientData;
 
 	if (objc != 2) {
@@ -100,8 +105,6 @@ int shapefile_cmd_close(ClientData clientData, Tcl_Interp *interp, int objc, Tcl
 	}
 	
 	shapefile_util_close(shapefile);
-	
-	/* triggers the deleteProc associated with this shapefile cmd: shapefile_util_delete */
 	Tcl_DeleteCommand(interp, Tcl_GetString(objv[0]));
 	
 	return TCL_OK;
@@ -130,22 +133,34 @@ int shapefile_cmd_close(ClientData clientData, Tcl_Interp *interp, int objc, Tcl
  * Result:
  *   Returns boolean value of specified option.
  */
-int shapefile_cmd_config(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
+int shapefile_cmd_config(
+		ClientData clientData,
+		Tcl_Interp *interp,
+		int objc,
+		Tcl_Obj *CONST objv[]) {
+	
 	ShapefilePtr shapefile = (ShapefilePtr)clientData;
-	static const char *optionNames[] = {"allowAlternateNotation", "getAllCoordinates", "getOnlyXyCoordinates", "readRawStrings", NULL};
-	int optionIndex, optionValue = 0;
+	int optionValue = 0;
+	int optionIndex;
+	static const char *optionNames[] = {
+			"allowAlternateNotation",
+			"getAllCoordinates",
+			"getOnlyXyCoordinates",
+			"readRawStrings",
+			NULL
+	};
 	
 	if (objc < 3 || objc > 4) {
 		Tcl_WrongNumArgs(interp, 2, objv, "option ?booleanValue?");
 		return TCL_ERROR;
 	}
 	
-	if (Tcl_GetIndexFromObj(interp, objv[2], optionNames, "option", 0 /* not TCL_EXACT */, &optionIndex) != TCL_OK) {
+	if (Tcl_GetIndexFromObj(interp, objv[2], optionNames, "option", 0, &optionIndex) != TCL_OK) {
 		return TCL_ERROR;
 	}
 	
-	/* currently designed w/expectation that all options are boolean */
 	if (objc == 4) {
+		/* all options expected to be boolean */
 		if ((Tcl_GetIntFromObj(interp, objv[3], &optionValue) != TCL_OK)
 				|| (optionValue != 0 && optionValue != 1)) {
 			Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid option value \"%s\" (should be 0 or 1)", Tcl_GetString(objv[3])));
@@ -200,7 +215,12 @@ int shapefile_cmd_config(ClientData clientData, Tcl_Interp *interp, int objc, Tc
  * Result:
  *   readonly or readwrite
  */
-int shapefile_cmd_mode(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
+int shapefile_cmd_mode(
+		ClientData clientData,
+		Tcl_Interp *interp,
+		int objc,
+		Tcl_Obj *CONST objv[]) {
+	
 	ShapefilePtr shapefile = (ShapefilePtr)clientData;
 
 	if (objc != 2) {
@@ -228,7 +248,12 @@ int shapefile_cmd_mode(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_
  * Result:
  *   Number of features in shapefile.
  */
-int shapefile_cmd_count(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
+int shapefile_cmd_count(
+		ClientData clientData,
+		Tcl_Interp *interp,
+		int objc,
+		Tcl_Obj *CONST objv[]) {
+	
 	ShapefilePtr shapefile = (ShapefilePtr)clientData;
 	int shpCount, dbfCount;
 	
@@ -269,11 +294,21 @@ int shapefile_cmd_count(ClientData clientData, Tcl_Interp *interp, int objc, Tcl
  * Result:
  *   Shapefile geometry type, as described under Command Syntax above.
  */
-int shapefile_cmd_type(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
+int shapefile_cmd_type(
+		ClientData clientData,
+		Tcl_Interp *interp,
+		int objc,
+		Tcl_Obj *CONST objv[]) {
+	
 	ShapefilePtr shapefile = (ShapefilePtr)clientData;
 	int shpType;
-	static const char *actionNames[] = {"base", "dimensions", "numeric", NULL};
 	int actionIndex;
+	static const char *actionNames[] = {
+			"base",
+			"dimensions",
+			"numeric",
+			NULL
+	};
 	
 	if (objc > 3) {
 		Tcl_WrongNumArgs(interp, 2, objv, "?option?");
@@ -425,11 +460,16 @@ int shapefile_cmd_type(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_
  *   Example:
  *     {Xmin Ymin Xmax Ymax}
  */
-int shapefile_cmd_bounds(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
+int shapefile_cmd_bounds(
+		ClientData clientData,
+		Tcl_Interp *interp,
+		int objc,
+		Tcl_Obj *CONST objv[]) {
+	
 	ShapefilePtr shapefile = (ShapefilePtr)clientData;
-	int shpCount;
 	double min[4], max[4];
 	Tcl_Obj *bounds;
+	int shpCount;
 	int shpType;
 	
 	if (objc != 2 && objc != 3) {
@@ -475,32 +515,44 @@ int shapefile_cmd_bounds(ClientData clientData, Tcl_Interp *interp, int objc, Tc
 	Tcl_ListObjAppendElement(interp, bounds, Tcl_NewDoubleObj(min[0]));
 	Tcl_ListObjAppendElement(interp, bounds, Tcl_NewDoubleObj(min[1]));
 	if (!shapefile->getOnlyXyCoords) {
-		if (shapefile->getAllCoords ||
-				shpType == SHPT_POINTZ || shpType == SHPT_ARCZ ||
-				shpType == SHPT_POLYGONZ || shpType == SHPT_MULTIPOINTZ) {
+		if (shapefile->getAllCoords
+				|| shpType == SHPT_POINTZ
+				|| shpType == SHPT_ARCZ
+				|| shpType == SHPT_POLYGONZ
+				|| shpType == SHPT_MULTIPOINTZ) {
 			Tcl_ListObjAppendElement(interp, bounds, Tcl_NewDoubleObj(min[2]));
 		}
-		if (shapefile->getAllCoords ||
-				shpType == SHPT_POINTZ || shpType == SHPT_ARCZ ||
-				shpType == SHPT_POLYGONZ || shpType == SHPT_MULTIPOINTZ ||
-				shpType == SHPT_POINTM || shpType == SHPT_ARCM ||
-				shpType == SHPT_POLYGONM || shpType == SHPT_MULTIPOINTM) {
+		if (shapefile->getAllCoords
+				|| shpType == SHPT_POINTZ
+				|| shpType == SHPT_ARCZ
+				|| shpType == SHPT_POLYGONZ
+				|| shpType == SHPT_MULTIPOINTZ
+				|| shpType == SHPT_POINTM
+				|| shpType == SHPT_ARCM
+				|| shpType == SHPT_POLYGONM
+				|| shpType == SHPT_MULTIPOINTM) {
 			Tcl_ListObjAppendElement(interp, bounds, Tcl_NewDoubleObj(min[3]));
 		}
 	}
 	Tcl_ListObjAppendElement(interp, bounds, Tcl_NewDoubleObj(max[0]));
 	Tcl_ListObjAppendElement(interp, bounds, Tcl_NewDoubleObj(max[1]));
 	if (!shapefile->getOnlyXyCoords) {
-		if (shapefile->getAllCoords ||
-				shpType == SHPT_POINTZ || shpType == SHPT_ARCZ ||
-				shpType == SHPT_POLYGONZ || shpType == SHPT_MULTIPOINTZ) {
+		if (shapefile->getAllCoords
+				|| shpType == SHPT_POINTZ
+				|| shpType == SHPT_ARCZ
+				|| shpType == SHPT_POLYGONZ
+				|| shpType == SHPT_MULTIPOINTZ) {
 			Tcl_ListObjAppendElement(interp, bounds, Tcl_NewDoubleObj(max[2]));
 		}
-		if (shapefile->getAllCoords ||
-				shpType == SHPT_POINTZ || shpType == SHPT_ARCZ ||
-				shpType == SHPT_POLYGONZ || shpType == SHPT_MULTIPOINTZ ||
-				shpType == SHPT_POINTM || shpType == SHPT_ARCM ||
-				shpType == SHPT_POLYGONM || shpType == SHPT_MULTIPOINTM) {
+		if (shapefile->getAllCoords
+				|| shpType == SHPT_POINTZ
+				|| shpType == SHPT_ARCZ
+				|| shpType == SHPT_POLYGONZ
+				|| shpType == SHPT_MULTIPOINTZ
+				|| shpType == SHPT_POINTM
+				|| shpType == SHPT_ARCM
+				|| shpType == SHPT_POLYGONM
+				|| shpType == SHPT_MULTIPOINTM) {
 			Tcl_ListObjAppendElement(interp, bounds, Tcl_NewDoubleObj(max[3]));
 		}	
 	}
@@ -518,7 +570,11 @@ int shapefile_cmd_bounds(ClientData clientData, Tcl_Interp *interp, int objc, Tc
  * Result:
  *   Field definition list for the specified field.
  */
-int shapefile_util_fieldDescription(Tcl_Interp *interp, ShapefilePtr shapefile, int fieldi) {
+int shapefile_util_fieldDescription(
+		Tcl_Interp *interp,
+		ShapefilePtr shapefile,
+		int fieldi) {
+	
 	char name[12];
 	int width, precision;
 	DBFFieldType type;
@@ -574,7 +630,12 @@ int shapefile_util_fieldDescription(Tcl_Interp *interp, ShapefilePtr shapefile, 
  * Result:
  *   No Tcl result if the field definition is valid. Otherwise, throws error.
  */
-int shapefile_util_fieldsValidateField(Tcl_Interp *interp, const char *type, const char *name, int width, int precision) {
+int shapefile_util_fieldsValidateField(
+		Tcl_Interp *interp,
+		const char *type,
+		const char *name,
+		int width,
+		int precision) {
 	
 	if (strcmp(type, "string") != 0 && strcmp(type, "integer") != 0 && strcmp(type, "double") != 0) {
 		Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid field type \"%s\": should be string, integer, or double", type));
@@ -610,11 +671,14 @@ int shapefile_util_fieldsValidateField(Tcl_Interp *interp, const char *type, con
  * Result:
  *   No Tcl result if the field definitions are valid. Otherwise, throws error.
  */
-int shapefile_util_fieldsValidate(Tcl_Interp *interp, Tcl_Obj *definitions) {
+int shapefile_util_fieldsValidate(
+		Tcl_Interp *interp,
+		Tcl_Obj *definitions) {
+			
 	Tcl_Obj **definitionElements;
 	int definitionElementCount, i;
-	int width, precision;
 	const char *type, *name;
+	int width, precision;
 	
 	if (Tcl_ListObjGetElements(interp, definitions, &definitionElementCount, &definitionElements) != TCL_OK) {
 		return TCL_ERROR;
@@ -632,10 +696,10 @@ int shapefile_util_fieldsValidate(Tcl_Interp *interp, Tcl_Obj *definitions) {
 
 	/* validate field specifications before creating dbf */	
 	for (i = 0; i < definitionElementCount; i += 4) {
-		if (	((type = Tcl_GetString(definitionElements[i])) == NULL) ||
-				((name = Tcl_GetString(definitionElements[i + 1])) == NULL) ||
-				(Tcl_GetIntFromObj(interp, definitionElements[i + 2], &width) != TCL_OK) ||
-				(Tcl_GetIntFromObj(interp, definitionElements[i + 3], &precision) != TCL_OK)) {
+		if (((type = Tcl_GetString(definitionElements[i])) == NULL)
+				|| ((name = Tcl_GetString(definitionElements[i + 1])) == NULL)
+				|| (Tcl_GetIntFromObj(interp, definitionElements[i + 2], &width) != TCL_OK)
+				|| (Tcl_GetIntFromObj(interp, definitionElements[i + 3], &precision) != TCL_OK)) {
 			return TCL_ERROR;
 		}		
 		if (shapefile_util_fieldsValidateField(interp, type, name, width, precision) != TCL_OK) {
@@ -660,11 +724,17 @@ int shapefile_util_fieldsValidate(Tcl_Interp *interp, Tcl_Obj *definitions) {
  * Result:
  *   Index number of the last field added to the attribute table.
  */
-int shapefile_util_fieldsAdd(Tcl_Interp *interp, DBFHandle dbf, int validate, Tcl_Obj *definitions) {
-	int i, definitionElementCount;
+int shapefile_util_fieldsAdd(
+		Tcl_Interp *interp,
+		DBFHandle dbf,
+		int validate,
+		Tcl_Obj *definitions) {
+			
 	Tcl_Obj **definitionElements;
+	int definitionElementCount, i;
 	const char *type, *name;
-	int width, precision, fieldId = 0;
+	int width, precision;
+	int fieldId = 0;
 	
 	/* check field definition list formatting if not already validated */
 	if (validate && (shapefile_util_fieldsValidate(interp, definitions) != TCL_OK)) {
@@ -677,10 +747,10 @@ int shapefile_util_fieldsAdd(Tcl_Interp *interp, DBFHandle dbf, int validate, Tc
 
 	/* add fields to the dbf */
 	for (i = 0; i < definitionElementCount; i += 4) {
-		if (	((type = Tcl_GetString(definitionElements[i])) == NULL) ||
-				((name = Tcl_GetString(definitionElements[i + 1])) == NULL) ||
-				(Tcl_GetIntFromObj(interp, definitionElements[i + 2], &width) != TCL_OK) ||
-				(Tcl_GetIntFromObj(interp, definitionElements[i + 3], &precision) != TCL_OK)) {
+		if (((type = Tcl_GetString(definitionElements[i])) == NULL)
+				|| ((name = Tcl_GetString(definitionElements[i + 1])) == NULL)
+				|| (Tcl_GetIntFromObj(interp, definitionElements[i + 2], &width) != TCL_OK)
+				|| (Tcl_GetIntFromObj(interp, definitionElements[i + 3], &precision) != TCL_OK)) {
 			return TCL_ERROR;
 		}
 		
@@ -718,13 +788,18 @@ int shapefile_util_fieldsAdd(Tcl_Interp *interp, DBFHandle dbf, int validate, Tc
  *   Index of named field, or error if no such field is found.
  *
  */
-int shapefile_util_fieldIndex(Tcl_Interp *interp, ShapefilePtr shapefile, const char *fieldName) {
-	int fieldIndex;
-	fieldIndex = DBFGetFieldIndex(shapefile->dbf, fieldName);
+int shapefile_util_fieldIndex(
+		Tcl_Interp *interp,
+		ShapefilePtr shapefile,
+		const char *fieldName) {
+	
+	int fieldIndex = DBFGetFieldIndex(shapefile->dbf, fieldName);
+	
 	if (fieldIndex == -1) {
 		Tcl_SetObjResult(interp, Tcl_ObjPrintf("field named \"%s\" not found", fieldName));
 		return TCL_ERROR;
 	}
+	
 	Tcl_SetObjResult(interp, Tcl_NewIntObj(fieldIndex));
 	return TCL_OK;
 }
@@ -768,12 +843,22 @@ int shapefile_util_fieldIndex(Tcl_Interp *interp, ShapefilePtr shapefile, const 
  *   add action returns field index of last new field added.
  *   name action returns named field index or error if none
  */
-int shapefile_cmd_fields(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
-	ShapefilePtr shapefile = (ShapefilePtr)clientData;
-	int fieldCount, fieldi;
+int shapefile_cmd_fields(
+		ClientData clientData,
+		Tcl_Interp *interp,
+		int objc,
+		Tcl_Obj *CONST objv[]) {
 	
-	static const char *actionNames[] = {"add", "count", "list", "index", NULL};
+	ShapefilePtr shapefile = (ShapefilePtr)clientData;
+	int fieldCount, fieldId;
 	int actionIndex;
+	static const char *actionNames[] = {
+			"add",
+			"count",
+			"list",
+			"index",
+			NULL
+	};
 	
 	if (objc < 3) {
 		Tcl_WrongNumArgs(interp, 2, objv, "add|count|list ?args?");
@@ -810,23 +895,23 @@ int shapefile_cmd_fields(ClientData clientData, Tcl_Interp *interp, int objc, Tc
 		}
 		if (objc == 4) {
 			/* list a specific field's definition */
-			if (Tcl_GetIntFromObj(interp, objv[3], &fieldi) != TCL_OK) {
+			if (Tcl_GetIntFromObj(interp, objv[3], &fieldId) != TCL_OK) {
 				return TCL_ERROR;
 			}
-			if (fieldi < 0 || fieldi >= fieldCount) {
-				Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid field index %d", fieldi));
+			if (fieldId < 0 || fieldId >= fieldCount) {
+				Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid field index %d", fieldId));
 				return TCL_ERROR;
 			}
-			if (shapefile_util_fieldDescription(interp, shapefile, fieldi) != TCL_OK) {
+			if (shapefile_util_fieldDescription(interp, shapefile, fieldId) != TCL_OK) {
 				return TCL_ERROR;
 			}
 		} else {
 			/* list all field definitions */
 			Tcl_Obj *descriptions = Tcl_NewListObj(0, NULL);
-			for (fieldi = 0; fieldi < fieldCount; fieldi++) {
+			for (fieldId = 0; fieldId < fieldCount; fieldId++) {
 				
 				/* get information about this field */
-				if (shapefile_util_fieldDescription(interp, shapefile, fieldi) != TCL_OK) {
+				if (shapefile_util_fieldDescription(interp, shapefile, fieldId) != TCL_OK) {
 					return TCL_ERROR;
 				}
 				
@@ -869,14 +954,20 @@ int shapefile_cmd_fields(ClientData clientData, Tcl_Interp *interp, int objc, Tc
  * Result:
  *   Index number of the feature that was written.
  */
-int shapefile_util_coordWrite(Tcl_Interp *interp, ShapefilePtr shapefile, int featureId, Tcl_Obj *coordParts) {
+int shapefile_util_coordWrite(
+		Tcl_Interp *interp,
+		ShapefilePtr shapefile,
+		int featureId,
+		Tcl_Obj *coordParts) {
+	
 	int shapeType, featureCount;
 	int outputFeatureId;
 	int *partStarts;
 	Tcl_Obj *coords, *coord;
 	int part, partCount, partCoord, partCoordCount;
 	int vertex, vertexCount, partVertexCount;
-	double *xCoords, *yCoords, *zCoords, *mCoords, x, y, z, m;
+	double *xCoords, *yCoords, *zCoords, *mCoords;
+	double x, y, z, m;
 	SHPObject *shape;
 	int returnValue = TCL_OK;
 	int addClosingVertex = 0;
@@ -916,26 +1007,38 @@ int shapefile_util_coordWrite(Tcl_Interp *interp, ShapefilePtr shapefile, int fe
 	}
 	
 	/* validate feature by number of parts according to shape type */
-	if (partCount != 1 &&
-			(shapeType == SHPT_POINT || shapeType == SHPT_POINTM || shapeType == SHPT_POINTZ ||
-			shapeType == SHPT_MULTIPOINT || shapeType == SHPT_MULTIPOINTM || shapeType == SHPT_MULTIPOINTZ)) {
+	if (partCount != 1
+			&& (shapeType == SHPT_POINT
+			|| shapeType == SHPT_POINTM
+			|| shapeType == SHPT_POINTZ
+			|| shapeType == SHPT_MULTIPOINT
+			|| shapeType == SHPT_MULTIPOINTM
+			|| shapeType == SHPT_MULTIPOINTZ)) {
 		Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid part count (%d): point and multipoint features must have exactly 1 part", partCount));
 		return TCL_ERROR;
 	}
-	if (partCount < 1 &&
-		(shapeType == SHPT_ARC || shapeType == SHPT_POLYGON ||
-			shapeType == SHPT_ARCM || shapeType == SHPT_POLYGONM ||
-			shapeType == SHPT_ARCZ || shapeType == SHPT_POLYGONZ) &&
-			partCount < 1) {
+	if (partCount < 1
+			&& (shapeType == SHPT_ARC
+			|| shapeType == SHPT_POLYGON
+			|| shapeType == SHPT_ARCM
+			|| shapeType == SHPT_POLYGONM
+			|| shapeType == SHPT_ARCZ
+			|| shapeType == SHPT_POLYGONZ)) {
 		Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid part count (%d): arc and polygon features must have at least 1 part", partCount));
 		return TCL_ERROR;
 	}
 	
 	/* determine how many coordinates to expect for each vertex */
-	if (shapeType == SHPT_POINTZ || shapeType == SHPT_ARCZ || shapeType == SHPT_POLYGONZ || shapeType == SHPT_MULTIPOINTZ) {
+	if (shapeType == SHPT_POINTZ
+			|| shapeType == SHPT_ARCZ
+			|| shapeType == SHPT_POLYGONZ
+			|| shapeType == SHPT_MULTIPOINTZ) {
 		/* indicates xyzm type */
 		coordinatesPerVertex = 4;
-	} else if (shapeType == SHPT_POINTM || shapeType == SHPT_ARCM || shapeType == SHPT_POLYGONM || shapeType == SHPT_MULTIPOINTM) {
+	} else if (shapeType == SHPT_POINTM
+			|| shapeType == SHPT_ARCM
+			|| shapeType == SHPT_POLYGONM
+			|| shapeType == SHPT_MULTIPOINTM) {
 		/* indicates xym type */
 		coordinatesPerVertex = 3;
 	} else {
@@ -974,25 +1077,35 @@ int shapefile_util_coordWrite(Tcl_Interp *interp, ShapefilePtr shapefile, int fe
 		partVertexCount = partCoordCount / coordinatesPerVertex;
 		
 		/* validate part by number of vertices according to shape type */
-		if (partVertexCount != 1 &&
-				(shapeType == SHPT_POINT || shapeType == SHPT_POINTM || shapeType == SHPT_POINTZ)) {
+		if (partVertexCount != 1
+				&& (shapeType == SHPT_POINT
+				|| shapeType == SHPT_POINTM
+				|| shapeType == SHPT_POINTZ)) {
 			Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid vertex count (%d): point features must have exactly one vertex per part", partVertexCount));
 			returnValue = TCL_ERROR;
 			goto cwRelease;
 		}
-		if (partVertexCount < 1 &&
-				(shapeType == SHPT_MULTIPOINT || shapeType == SHPT_MULTIPOINTM || shapeType == SHPT_MULTIPOINTZ)) {
+		if (partVertexCount < 1
+				&& (shapeType == SHPT_MULTIPOINT
+				|| shapeType == SHPT_MULTIPOINTM
+				|| shapeType == SHPT_MULTIPOINTZ)) {
 			Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid vertex count (%d): multipoint features must have at least one vertex per part", partVertexCount));
 			returnValue = TCL_ERROR;
 			goto cwRelease;
 
 		}
-		if ((shapeType == SHPT_ARC || shapeType == SHPT_ARCM || shapeType == SHPT_ARCZ) && partVertexCount < 2) {
+		if (partVertexCount < 2
+				&& (shapeType == SHPT_ARC
+				|| shapeType == SHPT_ARCM
+				|| shapeType == SHPT_ARCZ)) {
 			Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid vertex count (%d): arc features must have at least 2 vertices per part", partVertexCount));
 			returnValue = TCL_ERROR;
 			goto cwRelease;
 		}
-		if ((shapeType == SHPT_POLYGON || shapeType == SHPT_POLYGONM || shapeType == SHPT_POLYGONZ) && partVertexCount < 4) {
+		if (partVertexCount < 4
+				&& (shapeType == SHPT_POLYGON
+				|| shapeType == SHPT_POLYGONM
+				|| shapeType == SHPT_POLYGONZ)) {
 			Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid vertex count (%d): polygon features must have at least 4 vertices per part", partVertexCount));
 			returnValue = TCL_ERROR;
 			goto cwRelease;
@@ -1081,10 +1194,13 @@ int shapefile_util_coordWrite(Tcl_Interp *interp, ShapefilePtr shapefile, int fe
 
 		/* validate that the first and last vertex of polygon parts match */
 		/* M coordinates do not have to match, but Z coord of POLYGONZ must */
-		if ((shapeType == SHPT_POLYGON || shapeType == SHPT_POLYGONM || shapeType == SHPT_POLYGONZ) &&
-				((xCoords[partStarts[part]] != xCoords[vertex-1]) ||
-				 (yCoords[partStarts[part]] != yCoords[vertex-1]) ||
-				 (coordinatesPerVertex == 4 && (zCoords[partStarts[part]] != zCoords[vertex-1])))) {
+		if ((shapeType == SHPT_POLYGON
+				|| shapeType == SHPT_POLYGONM
+				|| shapeType == SHPT_POLYGONZ)
+				&& ((xCoords[partStarts[part]] != xCoords[vertex-1])
+				|| (yCoords[partStarts[part]] != yCoords[vertex-1])
+				|| (coordinatesPerVertex == 4
+				&& (zCoords[partStarts[part]] != zCoords[vertex-1])))) {
 			if (addClosingVertex) {
 				/* close the part automatically by appending the first vertex */
 				partVertexCount++;
@@ -1164,12 +1280,16 @@ int shapefile_util_coordWrite(Tcl_Interp *interp, ShapefilePtr shapefile, int fe
  * Result:
  *   Coordinate list for the specified feature.
  */
-int shapefile_util_coordRead(Tcl_Interp *interp, ShapefilePtr shapefile, int featureId) {
+int shapefile_util_coordRead(
+		Tcl_Interp *interp,
+		ShapefilePtr shapefile,
+		int featureId) {
+	
+	int shpType;
 	SHPObject *shape;
 	Tcl_Obj *coordParts;
 	int featureCount, part, partCount, vertex, vertexStart, vertexStop;
 	int returnValue = TCL_OK;
-	int shpType;
 	
 	SHPGetInfo(shapefile->shp, &featureCount, &shpType, NULL, NULL);
 	if (featureId < 0 || featureId >= featureCount) {
@@ -1220,9 +1340,11 @@ int shapefile_util_coordRead(Tcl_Interp *interp, ShapefilePtr shapefile, int fea
 			}
 			
 			/* for Z type features, append Z coordinate before Measure */
-			if (shapefile->getAllCoords ||
-					shpType == SHPT_POINTZ || shpType == SHPT_ARCZ ||
-					shpType == SHPT_POLYGONZ || shpType == SHPT_MULTIPOINTZ) {
+			if (shapefile->getAllCoords
+					|| shpType == SHPT_POINTZ
+					|| shpType == SHPT_ARCZ
+					|| shpType == SHPT_POLYGONZ
+					|| shpType == SHPT_MULTIPOINTZ) {
 				
 				/* append Z coordinate */
 				if (Tcl_ListObjAppendElement(interp, coords, Tcl_NewDoubleObj(shape->padfZ[vertex])) != TCL_OK) {
@@ -1232,11 +1354,15 @@ int shapefile_util_coordRead(Tcl_Interp *interp, ShapefilePtr shapefile, int fea
 			}
 			
 			/* for M and Z type features, append Measure (if used) last */
-			if (shapefile->getAllCoords ||
-					shpType == SHPT_POINTZ || shpType == SHPT_ARCZ ||
-					shpType == SHPT_POLYGONZ || shpType == SHPT_MULTIPOINTZ ||
-					shpType == SHPT_POINTM || shpType == SHPT_ARCM ||
-					shpType == SHPT_POLYGONM || shpType == SHPT_MULTIPOINTM) {
+			if (shapefile->getAllCoords
+					|| shpType == SHPT_POINTZ
+					|| shpType == SHPT_ARCZ
+					|| shpType == SHPT_POLYGONZ
+					|| shpType == SHPT_MULTIPOINTZ
+					|| shpType == SHPT_POINTM
+					|| shpType == SHPT_ARCM
+					|| shpType == SHPT_POLYGONM
+					|| shpType == SHPT_MULTIPOINTM) {
 				
 				/* append M coordinate, or 0.0 if unused despite type */
 				if (Tcl_ListObjAppendElement(interp, coords,
@@ -1279,7 +1405,10 @@ int shapefile_util_coordRead(Tcl_Interp *interp, ShapefilePtr shapefile, int fea
  * Result:
  *   List containing a coordinate list for each feature in shapefile.
  */
-int shapefile_util_coordReadAll(Tcl_Interp *interp, ShapefilePtr shapefile) {
+int shapefile_util_coordReadAll(
+		Tcl_Interp *interp,
+		ShapefilePtr shapefile) {
+	
 	Tcl_Obj *featureList;
 	int shpCount, featureId;
 	
@@ -1343,11 +1472,20 @@ int shapefile_util_coordReadAll(Tcl_Interp *interp, ShapefilePtr shapefile) {
  *   Read actions return coordinate lists or lists of coordinate lists.
  *   Write actions return the index of the written feature.
  */
-int shapefile_cmd_coordinates(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
+int shapefile_cmd_coordinates(
+		ClientData clientData,
+		Tcl_Interp *interp,
+		int objc,
+		Tcl_Obj *CONST objv[]) {
+	
 	ShapefilePtr shapefile = (ShapefilePtr)clientData;
 	int featureId;
-	static const char *subcommandNames[] = {"read", "write", NULL};
 	int subcommandIndex;
+	static const char *subcommandNames[] = {
+			"read",
+			"write",
+			NULL
+	};
 		
 	if (objc < 3) {
 		Tcl_WrongNumArgs(interp, 2, objv, "action ?args?");
@@ -1446,12 +1584,17 @@ int shapefile_cmd_coordinates(ClientData clientData, Tcl_Interp *interp, int obj
  *   No Tcl result if the attribute value passes validation. Otherwise, errors
  *   may be thrown.
  */
-int shapefile_util_attrValidateField(Tcl_Interp *interp, ShapefilePtr shapefile, int fieldId, Tcl_Obj *attrValue) {
+int shapefile_util_attrValidateField(
+		Tcl_Interp *interp,
+		ShapefilePtr shapefile,
+		int fieldId,
+		Tcl_Obj *attrValue) {
+	
 	int fieldCount, width, precision, fieldType;
 	int intValue;
 	double doubleValue;
 	const char *stringValue;
-	char numericStringValue[NUMERIC_BUFFER_SIZE];
+	char buffer[NUMERIC_BUFFER_SIZE];
 
 	fieldCount = DBFGetFieldCount(shapefile->dbf);
 	if (fieldId < 0 || fieldId >= fieldCount) {
@@ -1472,12 +1615,12 @@ int shapefile_util_attrValidateField(Tcl_Interp *interp, ShapefilePtr shapefile,
 				return TCL_ERROR;
 			}
 			/* does this integer fit within the field width? */
-			if (snprintf(numericStringValue, NUMERIC_BUFFER_SIZE, "%d", intValue) >= NUMERIC_BUFFER_SIZE) {
+			if (snprintf(buffer, NUMERIC_BUFFER_SIZE, "%d", intValue) >= NUMERIC_BUFFER_SIZE) {
 				Tcl_SetObjResult(interp, Tcl_ObjPrintf("integer value too big for buffer"));
 				return TCL_ERROR;
 			}
-			if (strlen(numericStringValue) > width) {
-				Tcl_SetObjResult(interp, Tcl_ObjPrintf("integer value (%s) would be truncated to field width (%d)", numericStringValue, width));
+			if (strlen(buffer) > width) {
+				Tcl_SetObjResult(interp, Tcl_ObjPrintf("integer value (%s) would be truncated to field width (%d)", buffer, width));
 				return TCL_ERROR;
 			}
 			break;
@@ -1526,8 +1669,12 @@ int shapefile_util_attrValidateField(Tcl_Interp *interp, ShapefilePtr shapefile,
  *   No Tcl result if the attribute value list passes validation. Otherwise,
  *   errors may be thrown.
  */
-int shapefile_util_attrValidate(Tcl_Interp *interp, ShapefilePtr shapefile, Tcl_Obj *attrList) {
-	int fieldi, fieldCount, attrCount;
+int shapefile_util_attrValidate(
+		Tcl_Interp *interp,
+		ShapefilePtr shapefile,
+		Tcl_Obj *attrList) {
+	
+	int fieldId, fieldCount, attrCount;
 	Tcl_Obj *attr;
 	
 	fieldCount = DBFGetFieldCount(shapefile->dbf);
@@ -1539,15 +1686,15 @@ int shapefile_util_attrValidate(Tcl_Interp *interp, ShapefilePtr shapefile, Tcl_
 		return TCL_ERROR;
 	}
 
-	for (fieldi = 0; fieldi < fieldCount; fieldi++) {
+	for (fieldId = 0; fieldId < fieldCount; fieldId++) {
 		
 		/* grab the attr provided for this field */
-		if (Tcl_ListObjIndex(interp, attrList, fieldi, &attr) != TCL_OK) {
+		if (Tcl_ListObjIndex(interp, attrList, fieldId, &attr) != TCL_OK) {
 			return TCL_ERROR;
 		}
 		
 		/* validate this field */
-		if (shapefile_util_attrValidateField(interp, shapefile, fieldi, attr) != TCL_OK) {
+		if (shapefile_util_attrValidateField(interp, shapefile, fieldId, attr) != TCL_OK) {
 			return TCL_ERROR;
 		}
 	}
@@ -1569,7 +1716,14 @@ int shapefile_util_attrValidate(Tcl_Interp *interp, ShapefilePtr shapefile, Tcl_
  * Result:
  *   Index number of the record containing the value that was written.
  */
-int shapefile_util_attrWriteField(Tcl_Interp *interp, ShapefilePtr shapefile, int recordId, int fieldId, int validate, Tcl_Obj *attrValue) {
+int shapefile_util_attrWriteField(
+		Tcl_Interp *interp,
+		ShapefilePtr shapefile,
+		int recordId,
+		int fieldId,
+		int validate,
+		Tcl_Obj *attrValue) {
+	
 	int dbfCount, fieldCount;
 	int intValue;
 	double doubleValue;
@@ -1678,9 +1832,15 @@ int shapefile_util_attrWriteField(Tcl_Interp *interp, ShapefilePtr shapefile, in
  * Result:
  *   Index number of the attribute record that was written.
  */
-int shapefile_util_attrWrite(Tcl_Interp *interp, ShapefilePtr shapefile, int recordId, int validate, Tcl_Obj *attrList) {
+int shapefile_util_attrWrite(
+		Tcl_Interp *interp,
+		ShapefilePtr shapefile,
+		int recordId,
+		int validate,
+		Tcl_Obj *attrList) {
+	
 	Tcl_Obj *attr;
-	int fieldi, fieldCount, attrCount, dbfCount;
+	int fieldId, fieldCount, attrCount, dbfCount;
 	
 	if (shapefile->readonly) {
 		Tcl_SetObjResult(interp, Tcl_ObjPrintf("cannot write attributes to readonly shapefile"));
@@ -1700,8 +1860,8 @@ int shapefile_util_attrWrite(Tcl_Interp *interp, ShapefilePtr shapefile, int rec
 	
 	/* as a special case, simply write null values for all fields if attrList is NULL */
 	if (attrList == NULL) {
-		for (fieldi = 0; fieldi < fieldCount; fieldi++) {
-			if (DBFWriteNULLAttribute(shapefile->dbf, recordId, fieldi) == 0) {
+		for (fieldId = 0; fieldId < fieldCount; fieldId++) {
+			if (DBFWriteNULLAttribute(shapefile->dbf, recordId, fieldId) == 0) {
 				Tcl_SetObjResult(interp, Tcl_ObjPrintf("failed to write null attribute"));
 				return TCL_ERROR;
 			}
@@ -1727,15 +1887,15 @@ int shapefile_util_attrWrite(Tcl_Interp *interp, ShapefilePtr shapefile, int rec
 		
 	/* output pass - once the fields are validated, write 'em out. Output is
 	   performed separately from validation to avoid mangled/partial output. */
-	for (fieldi = 0; fieldi < fieldCount; fieldi++) {
+	for (fieldId = 0; fieldId < fieldCount; fieldId++) {
 		
 		/* grab the attr provided for this field */
-		if (Tcl_ListObjIndex(interp, attrList, fieldi, &attr) != TCL_OK) {
+		if (Tcl_ListObjIndex(interp, attrList, fieldId, &attr) != TCL_OK) {
 			return TCL_ERROR;
 		}
 	
 		/* writes value attr to field fieldi of record recordId; sets interp result to recordId */
-		if (shapefile_util_attrWriteField(interp, shapefile, recordId, fieldi, 0 /* no validation */, attr) != TCL_OK) {
+		if (shapefile_util_attrWriteField(interp, shapefile, recordId, fieldId, 0 /* no validation */, attr) != TCL_OK) {
 			return TCL_ERROR;
 		}
 	}
@@ -1757,7 +1917,12 @@ int shapefile_util_attrWrite(Tcl_Interp *interp, ShapefilePtr shapefile, int rec
  *   represented as empty strings ({}). Unsupported field type values are
  *   represented as strings (as stored within the DBF file).
  */
-int shapefile_util_attrReadField(Tcl_Interp *interp, ShapefilePtr shapefile, int recordId, int fieldId) {
+int shapefile_util_attrReadField(
+		Tcl_Interp *interp,
+		ShapefilePtr shapefile,
+		int recordId,
+		int fieldId) {
+	
 	int dbfCount, fieldCount, fieldType;
 	
 	dbfCount = DBFGetRecordCount(shapefile->dbf);
@@ -1809,9 +1974,13 @@ int shapefile_util_attrReadField(Tcl_Interp *interp, ShapefilePtr shapefile, int
  * Result:
  *   List containing each attribute value from the specified record.
  */
-int shapefile_util_attrRead(Tcl_Interp *interp, ShapefilePtr shapefile, int recordId) {
+int shapefile_util_attrRead(
+		Tcl_Interp *interp,
+		ShapefilePtr shapefile,
+		int recordId) {
+	
 	Tcl_Obj *attributes = Tcl_NewListObj(0, NULL);
-	int dbfCount, fieldi, fieldCount;
+	int dbfCount, fieldId, fieldCount;
 	
 	dbfCount = DBFGetRecordCount(shapefile->dbf);
 	if (recordId < 0 || recordId >= dbfCount) {
@@ -1820,9 +1989,9 @@ int shapefile_util_attrRead(Tcl_Interp *interp, ShapefilePtr shapefile, int reco
 	}
 	
 	fieldCount = DBFGetFieldCount(shapefile->dbf);
-	for (fieldi = 0; fieldi < fieldCount; fieldi++) {
+	for (fieldId = 0; fieldId < fieldCount; fieldId++) {
 				
-		if (shapefile_util_attrReadField(interp, shapefile, recordId, fieldi) != TCL_OK) {
+		if (shapefile_util_attrReadField(interp, shapefile, recordId, fieldId) != TCL_OK) {
 			return TCL_ERROR;
 		}
 		
@@ -1846,7 +2015,10 @@ int shapefile_util_attrRead(Tcl_Interp *interp, ShapefilePtr shapefile, int reco
  * Result:
  *   List containing an attribute value list for each record in shapefile.
  */
-int shapefile_cmd_attrReadAll(Tcl_Interp *interp, ShapefilePtr shapefile) {
+int shapefile_cmd_attrReadAll(
+		Tcl_Interp *interp,
+		ShapefilePtr shapefile) {
+
 	Tcl_Obj *recordList;
 	int dbfCount, recordId;
 	
@@ -1859,7 +2031,6 @@ int shapefile_cmd_attrReadAll(Tcl_Interp *interp, ShapefilePtr shapefile) {
 			return TCL_ERROR;
 		}
 					
-		/* append this record's attribute list to the record list */
 		if (Tcl_ListObjAppendElement(interp, recordList, Tcl_GetObjResult(interp)) != TCL_OK) {
 			return TCL_ERROR;
 		}
@@ -1896,11 +2067,20 @@ int shapefile_cmd_attrReadAll(Tcl_Interp *interp, ShapefilePtr shapefile) {
  *   value list list ({{X Y Z} {A B C} {1 2 3}}) format, respectively.
  *   Write actions return the index of the written attribute record.
  */
-int shapefile_cmd_attributes(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
+int shapefile_cmd_attributes(
+		ClientData clientData,
+		Tcl_Interp *interp,
+		int objc,
+		Tcl_Obj *CONST objv[]) {
+
 	ShapefilePtr shapefile = (ShapefilePtr)clientData;
-	static const char *actionNames[] = {"read", "write", NULL};
-	int actionIndex;
 	int recordId;
+	int actionIndex;
+	static const char *actionNames[] = {
+			"read",
+			"write",
+			NULL
+	};
 	
 	if (objc < 3) {
 		Tcl_WrongNumArgs(interp, 2, objv, "action ?args?");
@@ -2028,7 +2208,12 @@ int shapefile_cmd_attributes(ClientData clientData, Tcl_Interp *interp, int objc
  * Result:
  *   Index number of the new feature.
  */
-int shapefile_cmd_write(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
+int shapefile_cmd_write(
+		ClientData clientData,
+		Tcl_Interp *interp,
+		int objc,
+		Tcl_Obj *CONST objv[]) {
+
 	ShapefilePtr shapefile = (ShapefilePtr)clientData;
 	int outputFeatureId, outputAttributeId;
 	
@@ -2089,16 +2274,37 @@ int shapefile_cmd_write(ClientData clientData, Tcl_Interp *interp, int objc, Tcl
  * Result:
  *   Result of the selected subcommand.
  */
-int shapefile_commands(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
+int shapefile_commands(
+		ClientData clientData,
+		Tcl_Interp *interp,
+		int objc,
+		Tcl_Obj *CONST objv[]) {
+
 	int subcommandIndex;
 	static const char *subcommandNames[] = {
-			"attributes", "bounds", "close", "config", "coordinates", "count", "fields", "mode", "type", "write", NULL
+			"attributes",
+			"bounds",
+			"close",
+			"config",
+			"coordinates",
+			"count",
+			"fields",
+			"mode",
+			"type",
+			"write",
+			NULL
 	};
 	Tcl_ObjCmdProc *subcommands[] = {
-			shapefile_cmd_attributes, shapefile_cmd_bounds, shapefile_cmd_close,
-			shapefile_cmd_config, shapefile_cmd_coordinates,
-			shapefile_cmd_count, shapefile_cmd_fields, shapefile_cmd_mode,
-			shapefile_cmd_type, shapefile_cmd_write
+			shapefile_cmd_attributes,
+			shapefile_cmd_bounds,
+			shapefile_cmd_close,
+			shapefile_cmd_config,
+			shapefile_cmd_coordinates,
+			shapefile_cmd_count,
+			shapefile_cmd_fields,
+			shapefile_cmd_mode,
+			shapefile_cmd_type,
+			shapefile_cmd_write
 	};
 	
 	if (objc < 2) {
@@ -2133,11 +2339,16 @@ int shapefile_commands(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_
  * Result:
  *   Name of an ensemble command for subsequent operations on the shapefile.
  */
- int shapetcl_cmd(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
+ int shapetcl_cmd(
+		ClientData clientData,
+		Tcl_Interp *interp,
+		int objc,
+		Tcl_Obj *CONST objv[]) {
+
 	ShapefilePtr shapefile;
 	const char *path;
 	char cmdName[16];
-	int readonly = 0; /* readwrite access by default */
+	int readonly = 0;
 	SHPHandle shp;
 	DBFHandle dbf;
 	int shpType;
