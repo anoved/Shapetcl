@@ -3,6 +3,19 @@
 #include "shapefil.h"
 #include <tcl.h>
 
+enum {
+	BASE_POINT,
+	BASE_ARC,
+	BASE_POLYGON,
+	BASE_MULTIPOINT
+};
+
+enum {
+	DIM_XY,
+	DIM_XYM,
+	DIM_XYZM
+};
+
 /*
  * ShapefilePtr
  * 
@@ -14,8 +27,21 @@ struct shapefile_data {
 	SHPHandle shp;
 	DBFHandle dbf;
 	
+	/* Metadata: */
+	
 	/* True if shapefile is readonly; set by [shapefile] on open/create. */
 	int readonly;
+	
+	/* One of the SHPT_ types defined by Shapelib */
+	int shapeType;
+	
+	/* Base shape type (point, arc, polygon, or multipoint) */
+	int baseType;
+	
+	/* Dimension (XY, XYM, or XYZM) */
+	int dimType;
+	
+	/* Config Options: */
 	
  	/* Attempt to write double values that don't fit within field width using
 	   scientific notation. Allows larger values, but may lose sig. digits.
@@ -52,6 +78,70 @@ TCL_DECLARE_MUTEX(COMMAND_COUNT_MUTEX);
 #define NUMERIC_BUFFER_SIZE 64
 
 int shapefile_util_attrWrite(Tcl_Interp *interp, ShapefilePtr shapefile, int recordId, int validate, Tcl_Obj *attrList);
+
+/*
+ * shapefile_util_shpTypeBase
+ * 
+ * Return the base type (BASE_POINT, BASE_ARC, BASE_POLYGON, or BASE_MULTIPOINT)
+ * of the specified shape type, regardless of dimension. 
+ */
+int shapefile_util_shpTypeBase(int shpType) {
+	int base = -1;
+	switch (shpType) {
+		case SHPT_POINT:
+		case SHPT_POINTM:
+		case SHPT_POINTZ:
+			base = BASE_POINT;
+			break;
+		case SHPT_ARC:
+		case SHPT_ARCM:
+		case SHPT_ARCZ:
+			base = BASE_ARC;
+			break;
+		case SHPT_POLYGON:
+		case SHPT_POLYGONM:
+		case SHPT_POLYGONZ:
+			base = BASE_POLYGON;
+			break;
+		case SHPT_MULTIPOINT:
+		case SHPT_MULTIPOINTM:
+		case SHPT_MULTIPOINTZ:
+			base = BASE_MULTIPOINT;
+			break;
+	}
+	return base;
+}
+
+/*
+ * shapefile_util_shpTypeDimension
+ * 
+ * Return the dimension (DIM_XY, DIM_XYM, or DIM_XYZM) of the specified shape
+ * type, regardless of base type. 
+ */
+int shapefile_util_shpTypeDimension(int shpType) {
+	int dimension = -1;
+	switch (shpType) {
+		case SHPT_POINT:
+		case SHPT_ARC:
+		case SHPT_POLYGON:
+		case SHPT_MULTIPOINT:
+			dimension = DIM_XY;
+			break;
+		case SHPT_POINTM:
+		case SHPT_ARCM:
+		case SHPT_POLYGONM:
+		case SHPT_MULTIPOINTM:
+			dimension = DIM_XYM;
+			break;
+		case SHPT_POINTZ:
+		case SHPT_ARCZ:
+		case SHPT_POLYGONZ:
+		case SHPT_MULTIPOINTZ:
+			dimension = DIM_XYZM;
+			break;
+	}
+	return dimension;
+}
 
 /*
  * shapefile_util_close
@@ -301,7 +391,6 @@ int shapefile_cmd_type(
 		Tcl_Obj *CONST objv[]) {
 	
 	ShapefilePtr shapefile = (ShapefilePtr)clientData;
-	int shpType;
 	int actionIndex;
 	static const char *actionNames[] = {
 			"base",
@@ -324,72 +413,46 @@ int shapefile_cmd_type(
 		}
 	}
 	
-	SHPGetInfo(shapefile->shp, NULL, &shpType, NULL, NULL);
 	switch (actionIndex) {
 		case 0:
 			/* base */
-			switch (shpType) {
-				case SHPT_POINT:
-				case SHPT_POINTM:
-				case SHPT_POINTZ:
+			switch (shapefile->baseType) {
+				case BASE_POINT:
 					Tcl_SetObjResult(interp, Tcl_ObjPrintf("point"));
 					break;
-				case SHPT_ARC:
-				case SHPT_ARCM:
-				case SHPT_ARCZ:
+				case BASE_ARC:
 					Tcl_SetObjResult(interp, Tcl_ObjPrintf("arc"));
 					break;
-				case SHPT_POLYGON:
-				case SHPT_POLYGONM:
-				case SHPT_POLYGONZ:
+				case BASE_POLYGON:
 					Tcl_SetObjResult(interp, Tcl_ObjPrintf("polygon"));
 					break;
-				case SHPT_MULTIPOINT:
-				case SHPT_MULTIPOINTM:
-				case SHPT_MULTIPOINTZ:
+				case BASE_MULTIPOINT:
 					Tcl_SetObjResult(interp, Tcl_ObjPrintf("multipoint"));
-					break;
-				default:
-					Tcl_SetObjResult(interp, Tcl_ObjPrintf("unsupported shape type (%d)", shpType));
-					return TCL_ERROR;
 					break;
 			}
 			break;
 		case 1:
 			/* dimension */
-			switch (shpType) {
-				case SHPT_POINT:
-				case SHPT_MULTIPOINT:
-				case SHPT_ARC:
-				case SHPT_POLYGON:
+			switch (shapefile->dimType) {
+				case DIM_XY:
 					Tcl_SetObjResult(interp, Tcl_ObjPrintf("xy"));
 					break;
-				case SHPT_POINTM:
-				case SHPT_MULTIPOINTM:
-				case SHPT_ARCM:
-				case SHPT_POLYGONM:
+				case DIM_XYM:
 					Tcl_SetObjResult(interp, Tcl_ObjPrintf("xym"));
 					break;
-				case SHPT_POINTZ:
-				case SHPT_MULTIPOINTZ:
-				case SHPT_ARCZ:
-				case SHPT_POLYGONZ:
+				case DIM_XYZM:
 					Tcl_SetObjResult(interp, Tcl_ObjPrintf("xyzm"));
-					break;
-				default:
-					Tcl_SetObjResult(interp, Tcl_ObjPrintf("unsupported shape type (%d)", shpType));
-					return TCL_ERROR;
 					break;
 			}
 			break;
 		case 2:
 			/* numeric */
-			Tcl_SetObjResult(interp, Tcl_NewIntObj(shpType));
+			Tcl_SetObjResult(interp, Tcl_NewIntObj(shapefile->shapeType));
 			break;
 		case 3:
 		default:
 			/* normal */
-			switch (shpType) {
+			switch (shapefile->shapeType) {
 				case SHPT_POINT:
 					Tcl_SetObjResult(interp, Tcl_ObjPrintf("point"));
 					break;
@@ -425,10 +488,6 @@ int shapefile_cmd_type(
 					break;
 				case SHPT_MULTIPOINTZ:
 					Tcl_SetObjResult(interp, Tcl_ObjPrintf("multipointz"));
-					break;
-				default:
-					Tcl_SetObjResult(interp, Tcl_ObjPrintf("unsupported shape type (%d)", shpType));
-					return TCL_ERROR;
 					break;
 			}
 			break;
@@ -470,7 +529,6 @@ int shapefile_cmd_bounds(
 	double min[4], max[4];
 	Tcl_Obj *bounds;
 	int shpCount;
-	int shpType;
 	
 	if (objc != 2 && objc != 3) {
 		Tcl_WrongNumArgs(interp, 2, objv, "?index?");
@@ -479,7 +537,7 @@ int shapefile_cmd_bounds(
 	
 	/* get the file count & bounds now; we'll need the count to validate the
 	   feature index, if given, in which case we'll replace min & max result. */
-	SHPGetInfo(shapefile->shp, &shpCount, &shpType, min, max);
+	SHPGetInfo(shapefile->shp, &shpCount, NULL, min, max);
 	
 	if (objc == 3) {
 		int featureId;
@@ -516,21 +574,12 @@ int shapefile_cmd_bounds(
 	Tcl_ListObjAppendElement(interp, bounds, Tcl_NewDoubleObj(min[1]));
 	if (!shapefile->getOnlyXyCoords) {
 		if (shapefile->getAllCoords
-				|| shpType == SHPT_POINTZ
-				|| shpType == SHPT_ARCZ
-				|| shpType == SHPT_POLYGONZ
-				|| shpType == SHPT_MULTIPOINTZ) {
+				|| shapefile->dimType == DIM_XYZM) {
 			Tcl_ListObjAppendElement(interp, bounds, Tcl_NewDoubleObj(min[2]));
 		}
 		if (shapefile->getAllCoords
-				|| shpType == SHPT_POINTZ
-				|| shpType == SHPT_ARCZ
-				|| shpType == SHPT_POLYGONZ
-				|| shpType == SHPT_MULTIPOINTZ
-				|| shpType == SHPT_POINTM
-				|| shpType == SHPT_ARCM
-				|| shpType == SHPT_POLYGONM
-				|| shpType == SHPT_MULTIPOINTM) {
+				|| shapefile->dimType == DIM_XYZM
+				|| shapefile->dimType == DIM_XYM) {
 			Tcl_ListObjAppendElement(interp, bounds, Tcl_NewDoubleObj(min[3]));
 		}
 	}
@@ -538,21 +587,12 @@ int shapefile_cmd_bounds(
 	Tcl_ListObjAppendElement(interp, bounds, Tcl_NewDoubleObj(max[1]));
 	if (!shapefile->getOnlyXyCoords) {
 		if (shapefile->getAllCoords
-				|| shpType == SHPT_POINTZ
-				|| shpType == SHPT_ARCZ
-				|| shpType == SHPT_POLYGONZ
-				|| shpType == SHPT_MULTIPOINTZ) {
+				|| shapefile->dimType == DIM_XYZM) {
 			Tcl_ListObjAppendElement(interp, bounds, Tcl_NewDoubleObj(max[2]));
 		}
 		if (shapefile->getAllCoords
-				|| shpType == SHPT_POINTZ
-				|| shpType == SHPT_ARCZ
-				|| shpType == SHPT_POLYGONZ
-				|| shpType == SHPT_MULTIPOINTZ
-				|| shpType == SHPT_POINTM
-				|| shpType == SHPT_ARCM
-				|| shpType == SHPT_POLYGONM
-				|| shpType == SHPT_MULTIPOINTM) {
+				|| shapefile->shapeType == DIM_XYZM
+				|| shapefile->shapeType == DIM_XYM) {
 			Tcl_ListObjAppendElement(interp, bounds, Tcl_NewDoubleObj(max[3]));
 		}	
 	}
@@ -960,7 +1000,7 @@ int shapefile_util_coordWrite(
 		int featureId,
 		Tcl_Obj *coordParts) {
 	
-	int shapeType, featureCount;
+	int featureCount;
 	int outputFeatureId;
 	int *partStarts;
 	Tcl_Obj *coords, *coord;
@@ -978,7 +1018,7 @@ int shapefile_util_coordWrite(
 		return TCL_ERROR;
 	}
 	
-	SHPGetInfo(shapefile->shp, &featureCount, &shapeType, NULL, NULL);
+	SHPGetInfo(shapefile->shp, &featureCount, NULL, NULL, NULL);
 	if (featureId < -1 || featureId >= featureCount) {
 		Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid feature index %d", featureId));
 		return TCL_ERROR;
@@ -1008,41 +1048,24 @@ int shapefile_util_coordWrite(
 	
 	/* validate feature by number of parts according to shape type */
 	if (partCount != 1
-			&& (shapeType == SHPT_POINT
-			|| shapeType == SHPT_POINTM
-			|| shapeType == SHPT_POINTZ
-			|| shapeType == SHPT_MULTIPOINT
-			|| shapeType == SHPT_MULTIPOINTM
-			|| shapeType == SHPT_MULTIPOINTZ)) {
+			&& (shapefile->baseType == BASE_POINT
+			|| shapefile->baseType == BASE_MULTIPOINT)) {
 		Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid part count (%d): point and multipoint features must have exactly 1 part", partCount));
 		return TCL_ERROR;
 	}
 	if (partCount < 1
-			&& (shapeType == SHPT_ARC
-			|| shapeType == SHPT_POLYGON
-			|| shapeType == SHPT_ARCM
-			|| shapeType == SHPT_POLYGONM
-			|| shapeType == SHPT_ARCZ
-			|| shapeType == SHPT_POLYGONZ)) {
+			&& (shapefile->baseType == BASE_ARC
+			|| shapefile->baseType == BASE_POLYGON)) {
 		Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid part count (%d): arc and polygon features must have at least 1 part", partCount));
 		return TCL_ERROR;
 	}
 	
 	/* determine how many coordinates to expect for each vertex */
-	if (shapeType == SHPT_POINTZ
-			|| shapeType == SHPT_ARCZ
-			|| shapeType == SHPT_POLYGONZ
-			|| shapeType == SHPT_MULTIPOINTZ) {
-		/* indicates xyzm type */
+	if (shapefile->dimType == DIM_XYZM) {
 		coordinatesPerVertex = 4;
-	} else if (shapeType == SHPT_POINTM
-			|| shapeType == SHPT_ARCM
-			|| shapeType == SHPT_POLYGONM
-			|| shapeType == SHPT_MULTIPOINTM) {
-		/* indicates xym type */
+	} else if (shapefile->dimType == DIM_XYM) {
 		coordinatesPerVertex = 3;
 	} else {
-		/* indicates xy type */
 		coordinatesPerVertex = 2;
 	}
 		
@@ -1077,35 +1100,22 @@ int shapefile_util_coordWrite(
 		partVertexCount = partCoordCount / coordinatesPerVertex;
 		
 		/* validate part by number of vertices according to shape type */
-		if (partVertexCount != 1
-				&& (shapeType == SHPT_POINT
-				|| shapeType == SHPT_POINTM
-				|| shapeType == SHPT_POINTZ)) {
+		if (partVertexCount != 1 && shapefile->baseType == BASE_POINT) {
 			Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid vertex count (%d): point features must have exactly one vertex per part", partVertexCount));
 			returnValue = TCL_ERROR;
 			goto cwRelease;
 		}
-		if (partVertexCount < 1
-				&& (shapeType == SHPT_MULTIPOINT
-				|| shapeType == SHPT_MULTIPOINTM
-				|| shapeType == SHPT_MULTIPOINTZ)) {
+		if (partVertexCount < 1 && shapefile->baseType == BASE_MULTIPOINT) {
 			Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid vertex count (%d): multipoint features must have at least one vertex per part", partVertexCount));
 			returnValue = TCL_ERROR;
 			goto cwRelease;
-
 		}
-		if (partVertexCount < 2
-				&& (shapeType == SHPT_ARC
-				|| shapeType == SHPT_ARCM
-				|| shapeType == SHPT_ARCZ)) {
+		if (partVertexCount < 2 && shapefile->baseType == BASE_ARC) {
 			Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid vertex count (%d): arc features must have at least 2 vertices per part", partVertexCount));
 			returnValue = TCL_ERROR;
 			goto cwRelease;
 		}
-		if (partVertexCount < 4
-				&& (shapeType == SHPT_POLYGON
-				|| shapeType == SHPT_POLYGONM
-				|| shapeType == SHPT_POLYGONZ)) {
+		if (partVertexCount < 4 && shapefile->baseType == BASE_POLYGON) {
 			Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid vertex count (%d): polygon features must have at least 4 vertices per part", partVertexCount));
 			returnValue = TCL_ERROR;
 			goto cwRelease;
@@ -1115,15 +1125,15 @@ int shapefile_util_coordWrite(
 		vertexCount += partVertexCount;
 		xCoords = (double *)ckrealloc((char *)xCoords, sizeof(double) * vertexCount);
 		yCoords = (double *)ckrealloc((char *)yCoords, sizeof(double) * vertexCount);
-		if (coordinatesPerVertex == 4) {
+		if (shapefile->dimType == DIM_XYZM) {
 			zCoords = (double *)ckrealloc((char *)zCoords, sizeof(double) * vertexCount);
 		}
-		if (coordinatesPerVertex == 4 || coordinatesPerVertex == 3) {	
+		if (shapefile->dimType == DIM_XYZM || shapefile->dimType == DIM_XYM) {	
 			mCoords = (double *)ckrealloc((char *)mCoords, sizeof(double) * vertexCount);
 		}
 		if (xCoords == NULL || yCoords == NULL ||
-				(coordinatesPerVertex == 4 && zCoords == NULL) ||
-				((coordinatesPerVertex == 4 || coordinatesPerVertex == 3) && mCoords == NULL)) {
+				(shapefile->dimType == DIM_XYZM && zCoords == NULL) ||
+				((shapefile->dimType == DIM_XYZM || shapefile->dimType == DIM_XYM) && mCoords == NULL)) {
 			Tcl_SetObjResult(interp, Tcl_ObjPrintf("failed to reallocate memory for coordinate arrays"));
 			returnValue = TCL_ERROR;
 			goto cwRelease;
@@ -1154,7 +1164,7 @@ int shapefile_util_coordWrite(
 			yCoords[vertex] = y;
 			
 			/* z & m */
-			if (coordinatesPerVertex == 4) {
+			if (shapefile->dimType == DIM_XYZM) {
 				if (Tcl_ListObjIndex(interp, coords, partCoord + 2, &coord) != TCL_OK) {
 					returnValue = TCL_ERROR;
 					goto cwRelease;
@@ -1177,7 +1187,7 @@ int shapefile_util_coordWrite(
 			}
 			
 			/* m only */
-			if (coordinatesPerVertex == 3) {
+			if (shapefile->dimType == DIM_XYM) {
 				if (Tcl_ListObjIndex(interp, coords, partCoord + 2, &coord) != TCL_OK) {
 					returnValue = TCL_ERROR;
 					goto cwRelease;
@@ -1194,12 +1204,10 @@ int shapefile_util_coordWrite(
 
 		/* validate that the first and last vertex of polygon parts match */
 		/* M coordinates do not have to match, but Z coord of POLYGONZ must */
-		if ((shapeType == SHPT_POLYGON
-				|| shapeType == SHPT_POLYGONM
-				|| shapeType == SHPT_POLYGONZ)
+		if ((shapefile->baseType == BASE_POLYGON)
 				&& ((xCoords[partStarts[part]] != xCoords[vertex-1])
 				|| (yCoords[partStarts[part]] != yCoords[vertex-1])
-				|| (coordinatesPerVertex == 4
+				|| (shapefile->dimType == DIM_XYZM
 				&& (zCoords[partStarts[part]] != zCoords[vertex-1])))) {
 			if (addClosingVertex) {
 				/* close the part automatically by appending the first vertex */
@@ -1207,25 +1215,25 @@ int shapefile_util_coordWrite(
 				vertexCount++;
 				xCoords = (double *)ckrealloc((char *)xCoords, sizeof(double) * vertexCount);
 				yCoords = (double *)ckrealloc((char *)yCoords, sizeof(double) * vertexCount);
-				if (coordinatesPerVertex == 4) {
+				if (shapefile->dimType == DIM_XYZM) {
 					zCoords = (double *)ckrealloc((char *)zCoords, sizeof(double) * vertexCount);
 				}
-				if (coordinatesPerVertex == 4 || coordinatesPerVertex == 3) {
+				if (shapefile->dimType == DIM_XYZM || shapefile->dimType == DIM_XYM) {
 					mCoords = (double *)ckrealloc((char *)mCoords, sizeof(double) * vertexCount);
 				}
 				if (xCoords == NULL || yCoords == NULL ||
-						(coordinatesPerVertex == 4 && zCoords == NULL) ||
-						((coordinatesPerVertex == 4 || coordinatesPerVertex == 3) && mCoords == NULL)) {
+						(shapefile->dimType == DIM_XYZM && zCoords == NULL) ||
+						((shapefile->dimType == DIM_XYZM || shapefile->dimType == DIM_XYM) && mCoords == NULL)) {
 					Tcl_SetObjResult(interp, Tcl_ObjPrintf("failed to reallocate coordinate arrays for closing vertex"));
 					returnValue = TCL_ERROR;
 					goto cwRelease;
 				}
 				xCoords[vertex] = xCoords[partStarts[part]];
 				yCoords[vertex] = yCoords[partStarts[part]];
-				if (coordinatesPerVertex == 4) {
+				if (shapefile->dimType == DIM_XYZM) {
 					zCoords[vertex] = zCoords[partStarts[part]];
 				}
-				if (coordinatesPerVertex == 4 || coordinatesPerVertex == 3) {
+				if (shapefile->dimType == DIM_XYZM || shapefile->dimType == DIM_XYM) {
 					mCoords[vertex] = mCoords[partStarts[part]];
 				}
 				vertex++;
@@ -1238,7 +1246,7 @@ int shapefile_util_coordWrite(
 	}
 	
 	/* assemble the coordinate lists into a new shape (z & m may be NULL) */
-	if ((shape = SHPCreateObject(shapeType, featureId, partCount,
+	if ((shape = SHPCreateObject(shapefile->shapeType, featureId, partCount,
 			partStarts, NULL, vertexCount, xCoords, yCoords, zCoords, mCoords)) == NULL) {
 		Tcl_SetObjResult(interp, Tcl_ObjPrintf("failed to create shape object"));
 		returnValue = TCL_ERROR;
@@ -1285,13 +1293,12 @@ int shapefile_util_coordRead(
 		ShapefilePtr shapefile,
 		int featureId) {
 	
-	int shpType;
 	SHPObject *shape;
 	Tcl_Obj *coordParts;
 	int featureCount, part, partCount, vertex, vertexStart, vertexStop;
 	int returnValue = TCL_OK;
 	
-	SHPGetInfo(shapefile->shp, &featureCount, &shpType, NULL, NULL);
+	SHPGetInfo(shapefile->shp, &featureCount, NULL, NULL, NULL);
 	if (featureId < 0 || featureId >= featureCount) {
 		Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid feature index %d", featureId));
 		return TCL_ERROR;
@@ -1341,12 +1348,8 @@ int shapefile_util_coordRead(
 			
 			/* for Z type features, append Z coordinate before Measure */
 			if (shapefile->getAllCoords
-					|| shpType == SHPT_POINTZ
-					|| shpType == SHPT_ARCZ
-					|| shpType == SHPT_POLYGONZ
-					|| shpType == SHPT_MULTIPOINTZ) {
+					|| shapefile->dimType == DIM_XYZM) {
 				
-				/* append Z coordinate */
 				if (Tcl_ListObjAppendElement(interp, coords, Tcl_NewDoubleObj(shape->padfZ[vertex])) != TCL_OK) {
 					returnValue = TCL_ERROR;
 					goto crRelease;
@@ -1355,14 +1358,8 @@ int shapefile_util_coordRead(
 			
 			/* for M and Z type features, append Measure (if used) last */
 			if (shapefile->getAllCoords
-					|| shpType == SHPT_POINTZ
-					|| shpType == SHPT_ARCZ
-					|| shpType == SHPT_POLYGONZ
-					|| shpType == SHPT_MULTIPOINTZ
-					|| shpType == SHPT_POINTM
-					|| shpType == SHPT_ARCM
-					|| shpType == SHPT_POLYGONM
-					|| shpType == SHPT_MULTIPOINTM) {
+					|| shapefile->dimType == DIM_XYZM
+					|| shapefile->dimType == DIM_XYM) {
 				
 				/* append M coordinate, or 0.0 if unused despite type */
 				if (Tcl_ListObjAppendElement(interp, coords,
@@ -2488,6 +2485,9 @@ int shapefile_commands(
 	shapefile->getAllCoords = 0;
 	shapefile->getOnlyXyCoords = 0;
 	shapefile->readRawStrings = 0;
+	shapefile->shapeType = shpType;
+	shapefile->baseType = shapefile_util_shpTypeBase(shpType);
+	shapefile->dimType = shapefile_util_shpTypeDimension(shpType);
 	
 	Tcl_MutexLock(&COMMAND_COUNT_MUTEX);
 	sprintf(cmdName, "shapefile%d", COMMAND_COUNT++);
