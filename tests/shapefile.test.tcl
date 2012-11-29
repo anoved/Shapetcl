@@ -81,12 +81,8 @@ test shapefile-1.3 {
 
 test shapefile-1.4 {
 # Attempt to open a shapefile with an attribute table that exists but contains no fields
-} -setup {
-	file copy sample/empty.dbf tmp/empty.dbf
 } -body {
-	shapefile tmp/empty
-} -cleanup {
-	file delete tmp/empty.dbf
+	shapefile sample/misc/empty
 } -returnCodes {
 	error
 } -match glob -result {attribute table for "*" contains no fields}
@@ -94,7 +90,7 @@ test shapefile-1.4 {
 test shapefile-1.5 {
 # Attempt to open a shapefile with a valid attribute table but no shp/shx files
 } -setup {
-	file copy sample/110m_physical/ne_110m_land.dbf tmp/foo.dbf
+	file copy sample/xy/point.dbf tmp/foo.dbf
 } -body {
 	shapefile tmp/foo
 } -cleanup {
@@ -106,7 +102,7 @@ test shapefile-1.5 {
 test shapefile-1.6 {
 # Attempt to open a shapefile with a valid attribute table and shp/shx files that are not valid
 } -setup {
-	file copy sample/110m_physical/ne_110m_land.dbf tmp/foo.dbf
+	file copy sample/xy/point.dbf tmp/foo.dbf
 	makeFile {} foo.shp
 	makeFile {} foo.shx
 } -body {
@@ -121,16 +117,8 @@ test shapefile-1.6 {
 
 test shapefile-1.7 {
 # Attempt to open a shapefile that has valid files but mismatched number of records
-} -setup {
-	file copy sample/mismatch.dbf tmp
-	file copy sample/mismatch.shp tmp
-	file copy sample/mismatch.shx tmp
 } -body {
-	shapefile tmp/mismatch
-} -cleanup {
-	file delete tmp/mismatch.dbf
-	file delete tmp/mismatch.shp
-	file delete tmp/mismatch.shx
+	shapefile sample/misc/mismatch
 } -returnCodes {
 	error
 } -match glob -result {shapefile feature count (*) does not match attribute record count (*)}
@@ -143,8 +131,9 @@ test shapefile-1.8 {
 
 test shapefile-1.9 {
 # Attempt to invoke an invalid subcommand
+} -setup {
+	set shp [shapefile sample/xy/point]
 } -body {
-	set shp [shapefile sample/110m_physical/ne_110m_land]
 	$shp funk
 } -cleanup {
 	$shp close
@@ -159,7 +148,7 @@ test shapefile-1.9 {
 test shapefile-2.0 {
 # Attempt to open a valid (polygon) shapefile
 } -body {
-	set shp [shapefile sample/110m_physical/ne_110m_land]
+	set shp [shapefile sample/xy/polygon]
 } -cleanup {
 	$shp close
 } -returnCodes {
@@ -168,8 +157,9 @@ test shapefile-2.0 {
 
 test shapefile-2.1 {
 # Verify that by default shapefiles are opened in readwrite mode
+} -setup {
+	set shp [shapefile sample/xy/point]
 } -body {
-	set shp [shapefile sample/110m_physical/ne_110m_land]
 	$shp mode
 } -cleanup {
 	$shp close
