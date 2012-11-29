@@ -45,6 +45,12 @@ typedef struct shapefile_data * ShapefilePtr;
 static int COMMAND_COUNT = 0;
 TCL_DECLARE_MUTEX(COMMAND_COUNT_MUTEX);
 
+/*
+ * Size of string buffer to use for formatting and measuring numeric values.
+ * Should be sufficiently big to fit any encountered value, including decimals.
+ */
+#define NUMERIC_BUFFER_SIZE 64
+
 int shapefile_util_attrWrite(Tcl_Interp *interp, ShapefilePtr shapefile, int recordId, int validate, Tcl_Obj *attrList);
 
 /*
@@ -1445,7 +1451,7 @@ int shapefile_util_attrValidateField(Tcl_Interp *interp, ShapefilePtr shapefile,
 	int intValue;
 	double doubleValue;
 	const char *stringValue;
-	char numericStringValue[64];
+	char numericStringValue[NUMERIC_BUFFER_SIZE];
 
 	fieldCount = DBFGetFieldCount(shapefile->dbf);
 	if (fieldId < 0 || fieldId >= fieldCount) {
@@ -1466,7 +1472,10 @@ int shapefile_util_attrValidateField(Tcl_Interp *interp, ShapefilePtr shapefile,
 				return TCL_ERROR;
 			}
 			/* does this integer fit within the field width? */
-			sprintf(numericStringValue, "%d", intValue);
+			if (snprintf(numericStringValue, NUMERIC_BUFFER_SIZE, "%d", intValue) >= NUMERIC_BUFFER_SIZE) {
+				Tcl_SetObjResult(interp, Tcl_ObjPrintf("integer value too big for buffer"));
+				return TCL_ERROR;
+			}
 			if (strlen(numericStringValue) > width) {
 				Tcl_SetObjResult(interp, Tcl_ObjPrintf("integer value (%s) would be truncated to field width (%d)", numericStringValue, width));
 				return TCL_ERROR;
@@ -1566,7 +1575,7 @@ int shapefile_util_attrWriteField(Tcl_Interp *interp, ShapefilePtr shapefile, in
 	double doubleValue;
 	const char *stringValue;
 	int width, precision, reserved;
-	char buffer[64];
+	char buffer[NUMERIC_BUFFER_SIZE];
 	
 	if (shapefile->readonly) {
 		Tcl_SetObjResult(interp, Tcl_ObjPrintf("cannot write attribute value to readonly shapefile"));
@@ -1613,14 +1622,21 @@ int shapefile_util_attrWriteField(Tcl_Interp *interp, ShapefilePtr shapefile, in
 			
 			/* If the value formatted as Shapelib would will not fit in width,
 			   reformat it in scientific notation, if not prohibited. */
-			sprintf(buffer, "%*.*f", width, precision, doubleValue);
+			if (snprintf(buffer, NUMERIC_BUFFER_SIZE, "%*.*f", width, precision, doubleValue) >= NUMERIC_BUFFER_SIZE) {
+				Tcl_SetObjResult(interp, Tcl_ObjPrintf("fixed format double value too large for buffer"));
+				return TCL_ERROR;
+			}
+			
 			if ((strlen(buffer) > width) && shapefile->allowAlternateNotation) {
 				reserved = 7 + (doubleValue < 0 ? 1 : 0);
 				if (reserved > width) {
 					Tcl_SetObjResult(interp, Tcl_ObjPrintf("field too narrow (%d) for fixed or scientific notation representation of value \"%s\"", width, buffer));
 					return TCL_ERROR;
 				}
-				sprintf(buffer, "%*.*e", width, width - reserved, doubleValue);
+				if (snprintf(buffer, NUMERIC_BUFFER_SIZE, "%*.*e", width, width - reserved, doubleValue) >= NUMERIC_BUFFER_SIZE) {
+					Tcl_SetObjResult(interp, Tcl_ObjPrintf("exponential notation double value too large for buffer"));
+					return TCL_ERROR;
+				}
 				if (DBFWriteAttributeDirectly(shapefile->dbf, recordId, fieldId, (void *)buffer) == 0) {
 					Tcl_SetObjResult(interp, Tcl_ObjPrintf("failed to write double attribute \"%s\"", buffer));
 					return TCL_ERROR;
