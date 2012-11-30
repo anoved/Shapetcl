@@ -78,6 +78,38 @@ TCL_DECLARE_MUTEX(COMMAND_COUNT_MUTEX);
 #define NUMERIC_BUFFER_SIZE 64
 
 int shapefile_util_attrWrite(Tcl_Interp *interp, ShapefilePtr shapefile, int recordId, int validate, Tcl_Obj *attrList);
+int shapefile_util_shpTypeBase(int shpType);
+int shapefile_util_shpTypeDimension(int shpType);
+void shapefile_util_close(ClientData clientData);
+void shapefile_util_delete(ClientData clientData);
+int shapefile_cmd_close(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]);
+int shapefile_cmd_config(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]);
+int shapefile_cmd_mode(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]);
+int shapefile_cmd_count(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]);
+int shapefile_cmd_type(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]);
+int shapefile_cmd_bounds(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]);
+int shapefile_util_fieldDescription(Tcl_Interp *interp, ShapefilePtr shapefile, int fieldId);
+int shapefile_util_fieldsValidateField(Tcl_Interp *interp, const char *type, const char *name, int width, int precision);
+int shapefile_util_fieldsValidate(Tcl_Interp *interp, Tcl_Obj *definitions);
+int shapefile_util_fieldsAdd(Tcl_Interp *interp, DBFHandle dbf, int validate, Tcl_Obj *definitions);
+int shapefile_util_fieldIndex(Tcl_Interp *interp, ShapefilePtr shapefile, const char *fieldName);
+int shapefile_cmd_fields(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]);
+int shapefile_util_coordWrite(Tcl_Interp *interp, ShapefilePtr shapefile, int featureId, Tcl_Obj *coordParts);
+int shapefile_util_coordRead(Tcl_Interp *interp, ShapefilePtr shapefile, int featureId);
+int shapefile_util_coordReadAll(Tcl_Interp *interp, ShapefilePtr shapefile);
+int shapefile_cmd_coordinates(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]);
+int shapefile_util_attrValidateField(Tcl_Interp *interp, ShapefilePtr shapefile, int fieldId, Tcl_Obj *attrValue);
+int shapefile_util_attrValidate(Tcl_Interp *interp, ShapefilePtr shapefile, Tcl_Obj *attrList);
+int shapefile_util_attrWriteField(Tcl_Interp *interp, ShapefilePtr shapefile, int recordId, int fieldId, int validate, Tcl_Obj *attrValue);
+int shapefile_util_attrWrite(Tcl_Interp *interp, ShapefilePtr shapefile, int recordId, int validate, Tcl_Obj *attrList);
+int shapefile_util_attrReadField(Tcl_Interp *interp, ShapefilePtr shapefile, int recordId, int fieldId);
+int shapefile_util_attrRead(Tcl_Interp *interp, ShapefilePtr shapefile, int recordId);
+int shapefile_cmd_attrReadAll(Tcl_Interp *interp, ShapefilePtr shapefile);
+int shapefile_cmd_attributes(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]);
+int shapefile_cmd_write(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]);
+int shapefile_commands(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]);
+int shapetcl_cmd(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]);
+int Shapetcl_Init(Tcl_Interp *interp);
 
 /*
  * shapefile_util_shpTypeBase
@@ -613,7 +645,7 @@ int shapefile_cmd_bounds(
 int shapefile_util_fieldDescription(
 		Tcl_Interp *interp,
 		ShapefilePtr shapefile,
-		int fieldi) {
+		int fieldId) {
 	
 	char name[12];
 	int width, precision;
@@ -621,7 +653,7 @@ int shapefile_util_fieldDescription(
 	Tcl_Obj *description;
 	
 	description = Tcl_NewListObj(0, NULL);
-	type = DBFGetFieldInfo(shapefile->dbf, fieldi, name, &width, &precision);
+	type = DBFGetFieldInfo(shapefile->dbf, fieldId, name, &width, &precision);
 	
 	switch (type) {
 		case FTString:
@@ -1891,7 +1923,7 @@ int shapefile_util_attrWrite(
 			return TCL_ERROR;
 		}
 	
-		/* writes value attr to field fieldi of record recordId; sets interp result to recordId */
+		/* writes value attr to field fieldId of record recordId; sets interp result to recordId */
 		if (shapefile_util_attrWriteField(interp, shapefile, recordId, fieldId, 0 /* no validation */, attr) != TCL_OK) {
 			return TCL_ERROR;
 		}
