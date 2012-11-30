@@ -77,7 +77,6 @@ TCL_DECLARE_MUTEX(COMMAND_COUNT_MUTEX);
  */
 #define NUMERIC_BUFFER_SIZE 64
 
-int shapefile_util_attrWrite(Tcl_Interp *interp, ShapefilePtr shapefile, int recordId, int validate, Tcl_Obj *attrList);
 int shapefile_util_shpTypeBase(int shpType);
 int shapefile_util_shpTypeDimension(int shpType);
 void shapefile_util_close(ClientData clientData);
@@ -104,7 +103,7 @@ int shapefile_util_attrWriteField(Tcl_Interp *interp, ShapefilePtr shapefile, in
 int shapefile_util_attrWrite(Tcl_Interp *interp, ShapefilePtr shapefile, int recordId, int validate, Tcl_Obj *attrList);
 int shapefile_util_attrReadField(Tcl_Interp *interp, ShapefilePtr shapefile, int recordId, int fieldId);
 int shapefile_util_attrRead(Tcl_Interp *interp, ShapefilePtr shapefile, int recordId);
-int shapefile_cmd_attrReadAll(Tcl_Interp *interp, ShapefilePtr shapefile);
+int shapefile_util_attrReadAll(Tcl_Interp *interp, ShapefilePtr shapefile);
 int shapefile_cmd_attributes(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]);
 int shapefile_cmd_write(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]);
 int shapefile_commands(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]);
@@ -2036,7 +2035,7 @@ int shapefile_util_attrRead(
 }
 
 /*
- * shapefile_cmd_attrReadAll
+ * shapefile_util_attrReadAll
  * 
  * Implements the [$shp attributes read] action of the [$shp attributes]
  * command, used to get a list of attribute value lists for all records.
@@ -2044,7 +2043,7 @@ int shapefile_util_attrRead(
  * Result:
  *   List containing an attribute value list for each record in shapefile.
  */
-int shapefile_cmd_attrReadAll(
+int shapefile_util_attrReadAll(
 		Tcl_Interp *interp,
 		ShapefilePtr shapefile) {
 
@@ -2124,7 +2123,7 @@ int shapefile_cmd_attributes(
 		
 		if (objc == 3) {
 			/* return attributes of all records */
-			if (shapefile_cmd_attrReadAll(interp, shapefile) != TCL_OK) {
+			if (shapefile_util_attrReadAll(interp, shapefile) != TCL_OK) {
 				return TCL_ERROR;
 			}
 		} else if (objc == 4) {
