@@ -2,7 +2,8 @@
 
 package require Tk
 
-lappend auto_path .
+puts [info script]
+lappend auto_path [file dirname [file dirname [file normalize [info script]]]]
 package require Shapetcl
 
 if {$argc != 1} {
@@ -71,7 +72,7 @@ for {set fid 0} {$fid < $fcount} {incr fid} {
 					[expr {[lindex $coords 0] + 3}] [expr {[lindex $coords 1] + 3}] \
 					-tags f$fid -fill black -outline {}
 		} elseif {$basetype eq "arc"} {
-			.f.c create line $coords -tags f$fid -fill black
+			.f.c create line $coords -tags f$fid -fill black -width 4
 		}
 	}
 

@@ -1,6 +1,6 @@
 #!/usr/bin/tclsh
 
-lappend auto_path .
+lappend auto_path [file dirname [file dirname [file normalize [info script]]]]
 package require Shapetcl
 
 if {$argc != 1} {
