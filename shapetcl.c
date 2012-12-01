@@ -84,9 +84,10 @@ void shapefile_util_delete(ClientData clientData);
 int shapefile_cmd_close(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]);
 int shapefile_cmd_config(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]);
 int shapefile_cmd_mode(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]);
-int shapefile_cmd_count(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]);
-int shapefile_cmd_type(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]);
-int shapefile_cmd_bounds(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]);
+int cmd_info(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]);
+int cmd_info_count(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]);
+int cmd_info_type(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]);
+int cmd_info_bounds(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]);
 int shapefile_util_fieldDescription(Tcl_Interp *interp, ShapefilePtr shapefile, int fieldId);
 int shapefile_util_fieldsValidateField(Tcl_Interp *interp, const char *type, const char *name, int width, int precision);
 int shapefile_util_fieldsValidate(Tcl_Interp *interp, Tcl_Obj *definitions);
@@ -359,17 +360,79 @@ int shapefile_cmd_mode(
 }
 
 /*
- * shapefile_cmd_count
+ * cmd_info
+ *
+ * Implements the [$shp info] command used to query read-only information about
+ * the shapefile content. A dispatcher for subcommand actions.
+ *
+ * Command Syntax:
+ *   [$shp info bounds]
+ *     See cmd_info_bounds for details.
+ *   [$shp info count]
+ *     See cmd_info_count for details.
+ *   [$shp info type]
+ *     See cmd_info_type for details.
+ *
+ * Result:
+ *   Result of the selected subcommand.
+ */
+int cmd_info(
+		ClientData clientData,
+		Tcl_Interp *interp,
+		int objc,
+		Tcl_Obj *CONST objv[]) {
+
+	int result = TCL_OK;
+	int actionIndex;
+	static const char *actionNames[] = {
+			"bounds",
+			"count",
+			"type",
+			NULL
+	};
+
+	if (objc < 3) {
+		Tcl_WrongNumArgs(interp, 2, objv, "action ?args?");
+		return TCL_ERROR;
+	}
+	
+	if (Tcl_GetIndexFromObj(
+			interp,
+			objv[2],
+			actionNames,
+			"action",
+			0 /* not TCL_EXACT */,
+			&actionIndex) != TCL_OK) {
+		return TCL_ERROR;
+	}
+	
+	switch (actionIndex) {
+		case 0: /* bounds */
+			result = cmd_info_bounds(clientData, interp, objc, objv);
+			break;
+		case 1: /* count */
+			result = cmd_info_count(clientData, interp, objc, objv);
+			break;
+		case 2: /* type */
+			result = cmd_info_type(clientData, interp, objc, objv);
+			break;
+	}
+	
+	return result;
+}
+
+/*
+ * cmd_info_count
  * 
- * Implements the [$shp count] command used to query number of features in file.
+ * Implements the [$shp info count] action used to get the feature/record count.
  * 
  * Command Syntax:
- *   [$shp count]
+ *   [$shp info count]
  * 
  * Result:
  *   Number of features in shapefile.
  */
-int shapefile_cmd_count(
+int cmd_info_count(
 		ClientData clientData,
 		Tcl_Interp *interp,
 		int objc,
@@ -378,8 +441,8 @@ int shapefile_cmd_count(
 	ShapefilePtr shapefile = (ShapefilePtr)clientData;
 	int shpCount, dbfCount;
 	
-	if (objc != 2) {
-		Tcl_WrongNumArgs(interp, 2, objv, NULL);
+	if (objc != 3) {
+		Tcl_WrongNumArgs(interp, 3, objv, NULL);
 		return TCL_ERROR;
 	}
 	
@@ -397,25 +460,25 @@ int shapefile_cmd_count(
 }
 
 /*
- * shapefile_cmd_type
+ * cmd_info_type
  * 
- * Implements the [$shp type] command used to query feature type.
+ * Implements the [$shp info type] action used to query feature type.
  * 
  * Command Syntax:
- *   [$shp type]
+ *   [$shp info type]
  *     Get the geometry type (one of point, multipoint, arc, polygon, pointm,
  *     multipointm, arcm, polygonm, pointz, multipointz, arcz, or polygonz).
- *   [$shp type numeric]
+ *   [$shp info type numeric]
  *     Get the (non-sequential id) number of the geometry type.
- *   [$shp type base]
+ *   [$shp info type base]
  *     Get the base geometry type (one of point, multipoint, arc, or polygon).
- *   [$shp type dimension]
+ *   [$shp info type dimension]
  *     Get the geometry dimension (one of xy, xym, or xyzm).
  *
  * Result:
  *   Shapefile geometry type, as described under Command Syntax above.
  */
-int shapefile_cmd_type(
+int cmd_info_type(
 		ClientData clientData,
 		Tcl_Interp *interp,
 		int objc,
@@ -430,16 +493,16 @@ int shapefile_cmd_type(
 			NULL
 	};
 	
-	if (objc > 3) {
-		Tcl_WrongNumArgs(interp, 2, objv, "?option?");
+	if (objc > 4) {
+		Tcl_WrongNumArgs(interp, 3, objv, "?option?");
 		return TCL_ERROR;
 	}
 	
-	if (objc == 2) {
+	if (objc == 3) {
 		/* actionIndex 3 for default case of no special type requested */
 		actionIndex = 3;
 	} else {
-		if (Tcl_GetIndexFromObj(interp, objv[2], actionNames, "option", 0, &actionIndex) != TCL_OK) {
+		if (Tcl_GetIndexFromObj(interp, objv[3], actionNames, "option", 0, &actionIndex) != TCL_OK) {
 			return TCL_ERROR;
 		}
 	}
@@ -528,14 +591,14 @@ int shapefile_cmd_type(
 }
 
 /*
- * shapefile_cmd_bounds
+ * cmd_info_bounds
  * 
- * Implements the [$shp bounds] command used to query file or feature extent.
+ * Implements the [$shp info bounds] action used to get file or feature extent.
  * 
  * Command Syntax:
- *   [$shp bounds]
+ *   [$shp info bounds]
  *     Get the bounding box of all features in the shapefile.
- *   [$shp bounds FEATURE]
+ *   [$shp info bounds FEATURE]
  *     Get the bounding box of the specified feature.
  * 
  * Config Options:
@@ -550,7 +613,7 @@ int shapefile_cmd_type(
  *   Example:
  *     {Xmin Ymin Xmax Ymax}
  */
-int shapefile_cmd_bounds(
+int cmd_info_bounds(
 		ClientData clientData,
 		Tcl_Interp *interp,
 		int objc,
@@ -561,8 +624,8 @@ int shapefile_cmd_bounds(
 	Tcl_Obj *bounds;
 	int shpCount;
 	
-	if (objc != 2 && objc != 3) {
-		Tcl_WrongNumArgs(interp, 2, objv, "?index?");
+	if (objc != 3 && objc != 4) {
+		Tcl_WrongNumArgs(interp, 3, objv, "?index?");
 		return TCL_ERROR;
 	}
 	
@@ -570,11 +633,11 @@ int shapefile_cmd_bounds(
 	   feature index, if given, in which case we'll replace min & max result. */
 	SHPGetInfo(shapefile->shp, &shpCount, NULL, min, max);
 	
-	if (objc == 3) {
+	if (objc == 4) {
 		int featureId;
 		SHPObject *obj;
 		
-		if (Tcl_GetIntFromObj(interp, objv[2], &featureId) != TCL_OK) {
+		if (Tcl_GetIntFromObj(interp, objv[3], &featureId) != TCL_OK) {
 			return TCL_ERROR;
 		}
 		
@@ -2295,8 +2358,8 @@ int shapefile_cmd_write(
  * by shapetcl_cmd. The clientData is a ShapefilePtr associated with identifier.
  * 
  * Command Syntax:
- *   [$shp attributes|bounds|close|coordinates|count|fields|mode|type|write ?args?]
- *     Invokes the shapefile_cmd_ function associated with selected subcommand.
+ *   [$shp attributes|close|config|coordinates|fields|info|mode|write ?args?]
+ *     Invokes the function handler associated with selected subcommand.
  *     Unambiguous abbreviations such as [$shp attr] or [$shp coord] are valid.
  * 
  * Result:
@@ -2311,27 +2374,23 @@ int shapefile_commands(
 	int subcommandIndex;
 	static const char *subcommandNames[] = {
 			"attributes",
-			"bounds",
 			"close",
 			"config",
 			"coordinates",
-			"count",
 			"fields",
+			"info",
 			"mode",
-			"type",
 			"write",
 			NULL
 	};
 	Tcl_ObjCmdProc *subcommands[] = {
 			shapefile_cmd_attributes,
-			shapefile_cmd_bounds,
 			shapefile_cmd_close,
 			shapefile_cmd_config,
 			shapefile_cmd_coordinates,
-			shapefile_cmd_count,
 			shapefile_cmd_fields,
+			cmd_info,
 			shapefile_cmd_mode,
-			shapefile_cmd_type,
 			shapefile_cmd_write
 	};
 	
