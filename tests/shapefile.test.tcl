@@ -160,7 +160,7 @@ test shapefile-2.1 {
 } -setup {
 	set shp [shapefile sample/xy/point]
 } -body {
-	$shp mode
+	$shp file mode
 } -cleanup {
 	$shp close
 } -returnCodes {

@@ -41,6 +41,9 @@ struct shapefile_data {
 	/* Dimension (XY, XYM, or XYZM) */
 	int dimType;
 	
+	/* Base path of shapefile */
+	char *path;
+	
 	/* Config Options: */
 	
  	/* Attempt to write double values that don't fit within field width using
@@ -83,7 +86,7 @@ void shapefile_util_close(ClientData clientData);
 void shapefile_util_delete(ClientData clientData);
 int shapefile_cmd_close(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]);
 int shapefile_cmd_config(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]);
-int shapefile_cmd_mode(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]);
+int cmd_file(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]);
 int cmd_info(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]);
 int cmd_info_count(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]);
 int cmd_info_type(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]);
@@ -188,6 +191,8 @@ void shapefile_util_close(ClientData clientData) {
 	shapefile->shp = NULL;
 	DBFClose(shapefile->dbf);
 	shapefile->dbf = NULL;
+	ckfree((void *)shapefile->path);
+	shapefile->path = NULL;
 }
 
 /*
@@ -327,33 +332,52 @@ int shapefile_cmd_config(
 }
 
 /*
- * shapefile_cmd_mode
- * 
- * Implements the [$shp mode] command used to query file access mode.
- * 
+ * cmd_file
+ *
+ * Implements the [$shp file] command use to query read-only information about
+ * the shapefile itself. See cmd_info for queries about the shapefile content.
+ *
  * Command Syntax:
- *   [$shp mode]
- * 
+ *   [$shp file mode]
+ *     Get shapefile access mode. Result is one of readonly or readwrite.
+ *   [$shp file path]
+ *     Get base path of shapefile. Not normalized; returned in same format as
+ *     path argument to [shapefile], less any file extension.
+ *
  * Result:
- *   readonly or readwrite
+ *   As described under Command Syntax.
  */
-int shapefile_cmd_mode(
+int cmd_file(
 		ClientData clientData,
 		Tcl_Interp *interp,
 		int objc,
 		Tcl_Obj *CONST objv[]) {
 	
 	ShapefilePtr shapefile = (ShapefilePtr)clientData;
-
-	if (objc != 2) {
-		Tcl_WrongNumArgs(interp, 2, objv, NULL);
+	int actionIndex;
+	static const char *actionNames[] = {"mode", "path",	NULL};
+	
+	if (objc < 3) {
+		Tcl_WrongNumArgs(interp, 2, objv, "action ?args?");
 		return TCL_ERROR;
 	}
 	
-	if (shapefile->readonly) {
-		Tcl_SetObjResult(interp, Tcl_ObjPrintf("readonly"));
-	} else {
-		Tcl_SetObjResult(interp, Tcl_ObjPrintf("readwrite"));
+	if (Tcl_GetIndexFromObj(interp, objv[2], actionNames, "action",
+			0 /* not TCL_EXACT */, &actionIndex) != TCL_OK) {
+		return TCL_ERROR;
+	}
+	
+	switch (actionIndex) {
+		case 0: /* mode */
+			if (shapefile->readonly) {
+				Tcl_SetObjResult(interp, Tcl_ObjPrintf("readonly"));
+			} else {
+				Tcl_SetObjResult(interp, Tcl_ObjPrintf("readwrite"));
+			}
+			break;
+		case 1: /* path */
+			Tcl_SetObjResult(interp, Tcl_NewStringObj(shapefile->path, -1));
+			break;
 	}
 	
 	return TCL_OK;
@@ -384,25 +408,15 @@ int cmd_info(
 
 	int result = TCL_OK;
 	int actionIndex;
-	static const char *actionNames[] = {
-			"bounds",
-			"count",
-			"type",
-			NULL
-	};
+	static const char *actionNames[] = {"bounds", "count", "type", NULL};
 
 	if (objc < 3) {
 		Tcl_WrongNumArgs(interp, 2, objv, "action ?args?");
 		return TCL_ERROR;
 	}
 	
-	if (Tcl_GetIndexFromObj(
-			interp,
-			objv[2],
-			actionNames,
-			"action",
-			0 /* not TCL_EXACT */,
-			&actionIndex) != TCL_OK) {
+	if (Tcl_GetIndexFromObj(interp, objv[2], actionNames, "action",
+			0 /* not TCL_EXACT */, &actionIndex) != TCL_OK) {
 		return TCL_ERROR;
 	}
 	
@@ -2379,7 +2393,7 @@ int shapefile_commands(
 			"coordinates",
 			"fields",
 			"info",
-			"mode",
+			"file",
 			"write",
 			NULL
 	};
@@ -2390,19 +2404,18 @@ int shapefile_commands(
 			shapefile_cmd_coordinates,
 			shapefile_cmd_fields,
 			cmd_info,
-			shapefile_cmd_mode,
+			cmd_file,
 			shapefile_cmd_write
 	};
 	
 	if (objc < 2) {
-		Tcl_WrongNumArgs(interp, 1, objv, "subcommand ?arg ...?");
+		Tcl_WrongNumArgs(interp, 1, objv, "subcommand ?args?");
 		return TCL_ERROR;
 	}
 	
 	/* identify subcommand, or set result to error message w/valid cmd list */
-	/* specify 0 instead of TCL_EXACT to match unambiguous partial cmd names */
 	if (Tcl_GetIndexFromObj(interp, objv[1], subcommandNames, "subcommand",
-			0 /* allow unambiguous partial cmds */, &subcommandIndex) != TCL_OK) {
+			0 /* not TCL_EXACT */, &subcommandIndex) != TCL_OK) {
 		return TCL_ERROR;
 	}
 		
@@ -2438,7 +2451,7 @@ int shapefile_commands(
 	int readonly = 0;
 	SHPHandle shp;
 	DBFHandle dbf;
-	int shpType;
+	int shpType, i;
 	
 	if (objc < 2 || objc > 4) {
 		Tcl_WrongNumArgs(interp, 1, objv, "path ?mode?|?type fieldDefintions?");
@@ -2578,6 +2591,20 @@ int shapefile_commands(
 	shapefile->shapeType = shpType;
 	shapefile->baseType = shapefile_util_shpTypeBase(shpType);
 	shapefile->dimType = shapefile_util_shpTypeDimension(shpType);
+	
+	/* save the base path of the shapefile, using the same code as Shapelib.
+	   Shapelib duplicates this code at least 4 times, so what's once more? */
+	shapefile->path = (char *)ckalloc(strlen(path) + 1);
+    strcpy(shapefile->path, path);
+    for(i = strlen(shapefile->path) - 1; 
+			(i > 0)
+			&& (shapefile->path[i] != '.')
+			&& (shapefile->path[i] != '/')
+            && (shapefile->path[i] != '\\');
+			i--) {}
+    if(shapefile->path[i] == '.') {
+		shapefile->path[i] = '\0';
+    }
 	
 	Tcl_MutexLock(&COMMAND_COUNT_MUTEX);
 	sprintf(cmdName, "shapefile%d", COMMAND_COUNT++);
