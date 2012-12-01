@@ -80,39 +80,268 @@ TCL_DECLARE_MUTEX(COMMAND_COUNT_MUTEX);
  */
 #define NUMERIC_BUFFER_SIZE 64
 
+int Shapetcl_Init(Tcl_Interp *interp);
+int shapefile_cmd(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]);
 int shapefile_typeBase(int shpType);
 int shapefile_typeDimension(int shpType);
+int cmd_dispatcher(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]);
+
+int cmd_close(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]);
 void shapefile_exit_handler(ClientData clientData);
 void shapefile_delete_handler(ClientData clientData);
-int cmd_close(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]);
+
 int cmd_config(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]);
 int cmd_file(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]);
 int cmd_info(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]);
 int cmd_info_count(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]);
 int cmd_info_type(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]);
 int cmd_info_bounds(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]);
-int cmd_fields_description(Tcl_Interp *interp, ShapefilePtr shapefile, int fieldId);
-int cmd_fields_validateField(Tcl_Interp *interp, const char *type, const char *name, int width, int precision);
-int cmd_fields_validate(Tcl_Interp *interp, Tcl_Obj *definitions);
-int cmd_fields_add(Tcl_Interp *interp, DBFHandle dbf, int validate, Tcl_Obj *definitions);
-int cmd_fields_index(Tcl_Interp *interp, ShapefilePtr shapefile, const char *fieldName);
+
 int cmd_fields(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]);
-int cmd_coordinates_write(Tcl_Interp *interp, ShapefilePtr shapefile, int featureId, Tcl_Obj *coordParts);
-int cmd_coordinates_read(Tcl_Interp *interp, ShapefilePtr shapefile, int featureId);
-int cmd_coordinates_readAll(Tcl_Interp *interp, ShapefilePtr shapefile);
+int cmd_fields_add(Tcl_Interp *interp, DBFHandle dbf, int validate, Tcl_Obj *definitions);
+int cmd_fields_validate(Tcl_Interp *interp, Tcl_Obj *definitions);
+int cmd_fields_validateField(Tcl_Interp *interp, const char *type, const char *name, int width, int precision);
+int cmd_fields_description(Tcl_Interp *interp, ShapefilePtr shapefile, int fieldId);
+int cmd_fields_index(Tcl_Interp *interp, ShapefilePtr shapefile, const char *fieldName);
+
 int cmd_coordinates(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]);
-int cmd_attributes_validateField(Tcl_Interp *interp, ShapefilePtr shapefile, int fieldId, Tcl_Obj *attrValue);
-int cmd_attributes_validate(Tcl_Interp *interp, ShapefilePtr shapefile, Tcl_Obj *attrList);
-int cmd_attributes_writeField(Tcl_Interp *interp, ShapefilePtr shapefile, int recordId, int fieldId, int validate, Tcl_Obj *attrValue);
-int cmd_attributes_write(Tcl_Interp *interp, ShapefilePtr shapefile, int recordId, int validate, Tcl_Obj *attrList);
-int cmd_attributes_readField(Tcl_Interp *interp, ShapefilePtr shapefile, int recordId, int fieldId);
-int cmd_attributes_read(Tcl_Interp *interp, ShapefilePtr shapefile, int recordId);
-int cmd_attributes_readAll(Tcl_Interp *interp, ShapefilePtr shapefile);
+int cmd_coordinates_write(Tcl_Interp *interp, ShapefilePtr shapefile, int featureId, Tcl_Obj *coordParts);
+int cmd_coordinates_readAll(Tcl_Interp *interp, ShapefilePtr shapefile);
+int cmd_coordinates_read(Tcl_Interp *interp, ShapefilePtr shapefile, int featureId);
+
 int cmd_attributes(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]);
+int cmd_attributes_write(Tcl_Interp *interp, ShapefilePtr shapefile, int recordId, int validate, Tcl_Obj *attrList);
+int cmd_attributes_writeField(Tcl_Interp *interp, ShapefilePtr shapefile, int recordId, int fieldId, int validate, Tcl_Obj *attrValue);
+int cmd_attributes_validate(Tcl_Interp *interp, ShapefilePtr shapefile, Tcl_Obj *attrList);
+int cmd_attributes_validateField(Tcl_Interp *interp, ShapefilePtr shapefile, int fieldId, Tcl_Obj *attrValue);
+int cmd_attributes_readAll(Tcl_Interp *interp, ShapefilePtr shapefile);
+int cmd_attributes_read(Tcl_Interp *interp, ShapefilePtr shapefile, int recordId);
+int cmd_attributes_readField(Tcl_Interp *interp, ShapefilePtr shapefile, int recordId, int fieldId);
+
 int cmd_write(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]);
-int cmd_dispatcher(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]);
-int shapefile_cmd(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]);
-int Shapetcl_Init(Tcl_Interp *interp);
+
+/*
+ * Shapetcl_Init
+ * 
+ * Invoked by Tcl when the Shapetcl extension is loaded.
+ * 
+ * Result:
+ *   Registers the [shapefile] command used to open or create shapefiles.
+ */
+int Shapetcl_Init(Tcl_Interp *interp) {
+	
+	if (Tcl_InitStubs(interp, "8.1", 0) == NULL) {
+		return TCL_ERROR;
+	}
+	
+	if (Tcl_PkgProvide(interp, "Shapetcl", "0.1") != TCL_OK) {
+		return TCL_ERROR;
+	}
+	
+	Tcl_CreateObjCommand(interp, "shapefile", shapefile_cmd, NULL, NULL);
+	
+	return TCL_OK;
+}
+
+/*
+ * shapefile_cmd
+ * 
+ * Implements the [shapefile] command used to open a new or existing shapefile.
+ * 
+ * Command Syntax:
+ *   [shapefile PATH ?readonly|readwrite?]
+ *     Open the shapefile at PATH. Default access mode is readwrite.
+ *   [shapefile PATH TYPE FIELDSDEFINITION]
+ *     Create a shapefile at PATH. TYPE defines feature geometry type. FIELDS
+ *     defines initial attribute table format. At least one field is required.
+ *     See the [fields] command for details on FIELDSDEFINITION format. 
+ * 
+ * Result:
+ *   Name of an ensemble command for subsequent operations on the shapefile.
+ */
+ int shapefile_cmd(
+		ClientData clientData,
+		Tcl_Interp *interp,
+		int objc,
+		Tcl_Obj *CONST objv[]) {
+
+	ShapefilePtr shapefile;
+	const char *path;
+	char cmdName[16];
+	int readonly = 0;
+	SHPHandle shp;
+	DBFHandle dbf;
+	int shpType, i;
+	
+	if (objc < 2 || objc > 4) {
+		Tcl_WrongNumArgs(interp, 1, objv, "path ?mode?|?type fieldDefintions?");
+		return TCL_ERROR;
+	}
+
+	path = Tcl_GetString(objv[1]);
+
+	if (objc == 3) {
+		/* opening an existing file, and an access mode is explicitly set */
+		const char *mode = Tcl_GetString(objv[2]);
+		if (strcmp(mode, "readonly") == 0) {
+			readonly = 1;
+		}
+		else if (strcmp(mode, "readwrite") == 0) {
+			readonly = 0;
+		}
+		else {
+			Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid mode \"%s\": should be readonly or readwrite", mode));
+			return TCL_ERROR;
+		}
+	}
+	
+	if (objc == 4) {
+		/* create a new file; access is readwrite. */
+		
+		const char *shpTypeName = Tcl_GetString(objv[2]);
+		
+		if (strcmp(shpTypeName, "point") == 0) {
+			shpType = SHPT_POINT;
+		} else if (strcmp(shpTypeName, "arc") == 0) {
+			shpType = SHPT_ARC;
+		} else if (strcmp(shpTypeName, "polygon") == 0) {
+			shpType = SHPT_POLYGON;
+		} else if (strcmp(shpTypeName, "multipoint") == 0) {
+			shpType = SHPT_MULTIPOINT;
+		} else if (strcmp(shpTypeName, "pointm") == 0) {
+			shpType = SHPT_POINTM;
+		} else if (strcmp(shpTypeName, "arcm") == 0) {
+			shpType = SHPT_ARCM;
+		} else if (strcmp(shpTypeName, "polygonm") == 0) {
+			shpType = SHPT_POLYGONM;
+		} else if (strcmp(shpTypeName, "multipointm") == 0) {
+			shpType = SHPT_MULTIPOINTM;
+		} else if (strcmp(shpTypeName, "pointz") == 0) {
+			shpType = SHPT_POINTZ;
+		} else if (strcmp(shpTypeName, "arcz") == 0) {
+			shpType = SHPT_ARCZ;
+		} else if (strcmp(shpTypeName, "polygonz") == 0) {
+			shpType = SHPT_POLYGONZ;
+		} else if (strcmp(shpTypeName, "multipointz") == 0) {
+			shpType = SHPT_MULTIPOINTZ;
+		} else {
+			Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid shape type \"%s\"", shpTypeName));
+			return TCL_ERROR;
+		}
+		
+		/* verify that the attribute table field definition looks sensible */
+		if (cmd_fields_validate(interp, objv[3]) != TCL_OK) {
+			return TCL_ERROR;
+		}
+		
+		if ((dbf = DBFCreate(path)) == NULL) {
+			Tcl_SetObjResult(interp, Tcl_ObjPrintf("failed to create attribute table for \"%s\"", path));
+			return TCL_ERROR;
+		}
+		
+		/* add pre-validated fields to the dbf */
+		if (cmd_fields_add(interp, dbf, 0 /* don't validate */, objv[3]) != TCL_OK) {
+			DBFClose(dbf);
+			return TCL_ERROR;
+		}
+				
+		if ((shp = SHPCreate(path, shpType)) == NULL) {
+			Tcl_SetObjResult(interp, Tcl_ObjPrintf("failed to create shapefile for \"%s\"", path));
+			DBFClose(dbf);
+			return TCL_ERROR;
+		}
+	}
+	else {		
+		
+		/* open an existing shapefile */
+		int shpCount, dbfCount;
+		
+		if ((dbf = DBFOpen(path, readonly ? "rb" : "rb+")) == NULL) {
+			Tcl_SetObjResult(interp, Tcl_ObjPrintf("failed to open attribute table for \"%s\"", path));
+			return TCL_ERROR;
+		}
+		
+		if (DBFGetFieldCount(dbf) == 0) {
+			Tcl_SetObjResult(interp, Tcl_ObjPrintf("attribute table for \"%s\" contains no fields", path));
+			DBFClose(dbf);
+			return TCL_ERROR;
+		}
+		
+		if ((shp = SHPOpen(path, readonly ? "rb" : "rb+")) == NULL) {
+			Tcl_SetObjResult(interp, Tcl_ObjPrintf("failed to open shapefile for \"%s\"", path));
+			DBFClose(dbf);
+			return TCL_ERROR;
+		}
+		
+		/* Only types we don't handle are SHPT_NULL and SHPT_MULTIPATCH */
+		SHPGetInfo(shp, &shpCount, &shpType, NULL, NULL);
+		if (shpType != SHPT_POINT && shpType != SHPT_POINTM && shpType != SHPT_POINTZ &&
+				shpType != SHPT_ARC && shpType != SHPT_ARCM && shpType != SHPT_ARCZ &&
+				shpType != SHPT_POLYGON && shpType != SHPT_POLYGONM && shpType != SHPT_POLYGONZ &&
+				shpType != SHPT_MULTIPOINT && shpType != SHPT_MULTIPOINTM && shpType != SHPT_MULTIPOINTZ) {
+			Tcl_SetObjResult(interp, Tcl_ObjPrintf("unsupported shape type (%d)", shpType));
+			DBFClose(dbf);
+			SHPClose(shp);
+			return TCL_ERROR;
+		}
+		
+		/* Valid shapefiles must have matching number of features and attribute records */
+		dbfCount = DBFGetRecordCount(dbf);
+		if (dbfCount != shpCount) {
+			Tcl_SetObjResult(interp, Tcl_ObjPrintf("shapefile feature count (%d) does not match attribute record count (%d)", shpCount, dbfCount));
+			DBFClose(dbf);
+			SHPClose(shp);
+			return TCL_ERROR;
+		}
+	}
+	
+	if ((shapefile = (ShapefilePtr)ckalloc(sizeof(struct shapefile_data))) == NULL) {
+		Tcl_SetObjResult(interp, Tcl_ObjPrintf("failed to allocate shapefile command data"));;
+		DBFClose(dbf);
+		SHPClose(shp);
+		return TCL_ERROR;
+	}
+	shapefile->shp = shp;
+	shapefile->dbf = dbf;	
+	shapefile->readonly = readonly;
+	shapefile->allowAlternateNotation = 1;
+	shapefile->getAllCoords = 0;
+	shapefile->getOnlyXyCoords = 0;
+	shapefile->readRawStrings = 0;
+	shapefile->shapeType = shpType;
+	shapefile->baseType = shapefile_typeBase(shpType);
+	shapefile->dimType = shapefile_typeDimension(shpType);
+	
+	/* save the base path of the shapefile, using the same code as Shapelib.
+	   Shapelib duplicates this code at least 4 times, so what's once more? */
+	shapefile->path = (char *)ckalloc(strlen(path) + 1);
+    strcpy(shapefile->path, path);
+    for(i = strlen(shapefile->path) - 1; 
+			(i > 0)
+			&& (shapefile->path[i] != '.')
+			&& (shapefile->path[i] != '/')
+            && (shapefile->path[i] != '\\');
+			i--) {}
+    if(shapefile->path[i] == '.') {
+		shapefile->path[i] = '\0';
+    }
+	
+	Tcl_MutexLock(&COMMAND_COUNT_MUTEX);
+	sprintf(cmdName, "shapefile%d", COMMAND_COUNT++);
+	Tcl_MutexUnlock(&COMMAND_COUNT_MUTEX);
+	
+	if (Tcl_CreateObjCommand(interp, cmdName, cmd_dispatcher, (ClientData)shapefile, shapefile_delete_handler) == NULL) {
+		Tcl_SetObjResult(interp, Tcl_ObjPrintf("failed to create command for %s", cmdName));
+		DBFClose(dbf);
+		SHPClose(shp);
+		ckfree((char *)shapefile);
+		return TCL_ERROR;
+	}
+	Tcl_CreateExitHandler(shapefile_exit_handler, (ClientData)shapefile);
+	Tcl_SetObjResult(interp, Tcl_NewStringObj(cmdName, -1));
+	
+	return TCL_OK;
+}
 
 /*
  * shapefile_typeBase
@@ -179,31 +408,61 @@ int shapefile_typeDimension(int shpType) {
 }
 
 /*
- * shapefile_exit_handler
+ * cmd_dispatcher
  * 
- * Closes the shapefile, writing changes to disk. Invoked by the [$shp close]
- * command. Also invoked as exit handler to ensure any open shapefiles are
- * properly flushed and closed when the interpreter exits.
+ * Ensemble command dispatcher handles the shapefile identifier [$shp] returned
+ * by shapefile_cmd. The clientData is a ShapefilePtr associated with identifier.
+ * 
+ * Command Syntax:
+ *   [$shp attributes|close|config|coordinates|fields|info|mode|write ?args?]
+ *     Invokes the function handler associated with selected subcommand.
+ *     Unambiguous abbreviations such as [$shp attr] or [$shp coord] are valid.
+ * 
+ * Result:
+ *   Result of the selected subcommand.
  */
-void shapefile_exit_handler(ClientData clientData) {
-	ShapefilePtr shapefile = (ShapefilePtr)clientData;
-	SHPClose(shapefile->shp);
-	shapefile->shp = NULL;
-	DBFClose(shapefile->dbf);
-	shapefile->dbf = NULL;
-	ckfree((void *)shapefile->path);
-	shapefile->path = NULL;
-}
+int cmd_dispatcher(
+		ClientData clientData,
+		Tcl_Interp *interp,
+		int objc,
+		Tcl_Obj *CONST objv[]) {
 
-/*
- * shapefile_delete_handler
- * 
- * Deletes exit handler and releases shapefile resources. Invoked as delete
- * handler when [$shp close] command deletes the associated shapefile command.
- */
-void shapefile_delete_handler(ClientData clientData) {
-	Tcl_DeleteExitHandler(shapefile_exit_handler, clientData);
-	ckfree((char *)clientData);
+	int subcommandIndex;
+	static const char *subcommandNames[] = {
+			"attributes",
+			"close",
+			"config",
+			"coordinates",
+			"fields",
+			"info",
+			"file",
+			"write",
+			NULL
+	};
+	Tcl_ObjCmdProc *subcommands[] = {
+			cmd_attributes,
+			cmd_close,
+			cmd_config,
+			cmd_coordinates,
+			cmd_fields,
+			cmd_info,
+			cmd_file,
+			cmd_write
+	};
+	
+	if (objc < 2) {
+		Tcl_WrongNumArgs(interp, 1, objv, "subcommand ?args?");
+		return TCL_ERROR;
+	}
+	
+	/* identify subcommand, or set result to error message w/valid cmd list */
+	if (Tcl_GetIndexFromObj(interp, objv[1], subcommandNames, "subcommand",
+			0 /* not TCL_EXACT */, &subcommandIndex) != TCL_OK) {
+		return TCL_ERROR;
+	}
+		
+	/* invoke the requested subcommand directly, passing on all arguments */
+	return subcommands[subcommandIndex](clientData, interp, objc, objv);
 }
 
 /*
@@ -235,6 +494,34 @@ int cmd_close(
 	Tcl_DeleteCommand(interp, Tcl_GetString(objv[0]));
 	
 	return TCL_OK;
+}
+
+/*
+ * shapefile_exit_handler
+ * 
+ * Closes the shapefile, writing changes to disk. Invoked by the [$shp close]
+ * command. Also invoked as exit handler to ensure any open shapefiles are
+ * properly flushed and closed when the interpreter exits.
+ */
+void shapefile_exit_handler(ClientData clientData) {
+	ShapefilePtr shapefile = (ShapefilePtr)clientData;
+	SHPClose(shapefile->shp);
+	shapefile->shp = NULL;
+	DBFClose(shapefile->dbf);
+	shapefile->dbf = NULL;
+	ckfree((void *)shapefile->path);
+	shapefile->path = NULL;
+}
+
+/*
+ * shapefile_delete_handler
+ * 
+ * Deletes exit handler and releases shapefile resources. Invoked as delete
+ * handler when [$shp close] command deletes the associated shapefile command.
+ */
+void shapefile_delete_handler(ClientData clientData) {
+	Tcl_DeleteExitHandler(shapefile_exit_handler, clientData);
+	ckfree((char *)clientData);
 }
 
 /*
@@ -710,249 +997,6 @@ int cmd_info_bounds(
 }
 
 /*
- * cmd_fields_description
- * 
- * Get field definition list of specified attribute table field. Used by the
- * [$shp fields list ?FIELD?] action. See [$shp fields] command for details.
- * 
- * Result:
- *   Field definition list for the specified field.
- */
-int cmd_fields_description(
-		Tcl_Interp *interp,
-		ShapefilePtr shapefile,
-		int fieldId) {
-	
-	char name[12];
-	int width, precision;
-	DBFFieldType type;
-	Tcl_Obj *description;
-	
-	description = Tcl_NewListObj(0, NULL);
-	type = DBFGetFieldInfo(shapefile->dbf, fieldId, name, &width, &precision);
-	
-	switch (type) {
-		case FTString:
-			if (Tcl_ListObjAppendElement(interp, description, Tcl_NewStringObj("string", -1)) != TCL_OK) {
-				return TCL_ERROR;
-			}
-			break;
-		case FTInteger:
-			if (Tcl_ListObjAppendElement(interp, description, Tcl_NewStringObj("integer", -1)) != TCL_OK) {
-				return TCL_ERROR;
-			}
-			break;
-		case FTDouble:
-			if (Tcl_ListObjAppendElement(interp, description, Tcl_NewStringObj("double", -1)) != TCL_OK) {
-				return TCL_ERROR;
-			}
-			break;
-		default:
-			/* represent unsupported field types by numeric type ID instead of descriptive name */
-			if (Tcl_ListObjAppendElement(interp, description, Tcl_NewIntObj((int)type)) != TCL_OK) {
-				return TCL_ERROR;
-			}
-			break;
-	}
-	
-	if (Tcl_ListObjAppendElement(interp, description, Tcl_NewStringObj(name, -1)) != TCL_OK) {
-		return TCL_ERROR;
-	}
-	if (Tcl_ListObjAppendElement(interp, description, Tcl_NewIntObj(width)) != TCL_OK) {
-		return TCL_ERROR;
-	}
-	if (Tcl_ListObjAppendElement(interp, description, Tcl_NewIntObj(precision)) != TCL_OK) {
-		return TCL_ERROR;
-	}
-	
-	Tcl_SetObjResult(interp, description);
-	return TCL_OK;
-}
-
-/*
- * cmd_fields_validateField
- * 
- * Check that a single field definition describes a valid attribute table
- * field. Used by the cmd_fields_validate function.
- * 
- * Result:
- *   No Tcl result if the field definition is valid. Otherwise, throws error.
- */
-int cmd_fields_validateField(
-		Tcl_Interp *interp,
-		const char *type,
-		const char *name,
-		int width,
-		int precision) {
-	
-	if (strcmp(type, "string") != 0 && strcmp(type, "integer") != 0 && strcmp(type, "double") != 0) {
-		Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid field type \"%s\": should be string, integer, or double", type));
-		return TCL_ERROR;
-	}
-	
-	if (strlen(name) > 10) {
-		Tcl_SetObjResult(interp, Tcl_ObjPrintf("field name \"%s\" too long: 10 characters maximum", name));
-		return TCL_ERROR;
-	}
-	
-	if (strcmp(type, "integer") == 0 && width > 10) {
-		Tcl_SetObjResult(interp, Tcl_ObjPrintf("integer width >10 (%d) would become double", width));
-		return TCL_ERROR;
-	}
-	
-	if (strcmp(type, "double") == 0 && width <= 10 && precision == 0) {
-		Tcl_SetObjResult(interp, Tcl_ObjPrintf("double width <=10 (%d) with 0 precision would become integer", width));
-		return TCL_ERROR;
-	}
-
-	return TCL_OK;
-}
-
-/*
- * cmd_fields_validate
- * 
- * Check that a field definitions list contains valid field definitions. Used
- * by the [$shp fields add] action in contexts where field definitions have not
- * been pre-validated, as when invoked by the [shapefile] command when creating
- * new shapefiles.
- * 
- * Result:
- *   No Tcl result if the field definitions are valid. Otherwise, throws error.
- */
-int cmd_fields_validate(
-		Tcl_Interp *interp,
-		Tcl_Obj *definitions) {
-			
-	Tcl_Obj **definitionElements;
-	int definitionElementCount, i;
-	const char *type, *name;
-	int width, precision;
-	
-	if (Tcl_ListObjGetElements(interp, definitions, &definitionElementCount, &definitionElements) != TCL_OK) {
-		return TCL_ERROR;
-	}
-	
-	if (definitionElementCount % 4 != 0) {
-		Tcl_SetObjResult(interp, Tcl_ObjPrintf("each field requires four values (type, name, width, and precision)"));
-		return TCL_ERROR;
-	}
-	
-	if (definitionElementCount == 0) {
-		Tcl_SetObjResult(interp, Tcl_ObjPrintf("at least one field is required"));
-		return TCL_ERROR;
-	}
-
-	/* validate field specifications before creating dbf */	
-	for (i = 0; i < definitionElementCount; i += 4) {
-		if (((type = Tcl_GetString(definitionElements[i])) == NULL)
-				|| ((name = Tcl_GetString(definitionElements[i + 1])) == NULL)
-				|| (Tcl_GetIntFromObj(interp, definitionElements[i + 2], &width) != TCL_OK)
-				|| (Tcl_GetIntFromObj(interp, definitionElements[i + 3], &precision) != TCL_OK)) {
-			return TCL_ERROR;
-		}		
-		if (cmd_fields_validateField(interp, type, name, width, precision) != TCL_OK) {
-			return TCL_ERROR;
-		}
-	}
-	
-	return TCL_OK;
-}
-
-/*
- * cmd_fields_add
- * 
- * Implements the [$shp fields add FIELDDEFINITIONS] action of the [$shp fields]
- * command, used to add new fields to an existing attribute table. Also used by
- * the [shapefile] command to add initial fields to new attribute tables.
- * 
- * Note that this function takes a DBFHandle argument, instead of a ShapefilePtr
- * like most other util functions, because it may be used by [shapefile] before
- * the ShapefilePtr structure is allocated.
- * 
- * Result:
- *   Index number of the last field added to the attribute table.
- */
-int cmd_fields_add(
-		Tcl_Interp *interp,
-		DBFHandle dbf,
-		int validate,
-		Tcl_Obj *definitions) {
-			
-	Tcl_Obj **definitionElements;
-	int definitionElementCount, i;
-	const char *type, *name;
-	int width, precision;
-	int fieldId = 0;
-	
-	/* check field definition list formatting if not already validated */
-	if (validate && (cmd_fields_validate(interp, definitions) != TCL_OK)) {
-		return TCL_ERROR;
-	}
-	
-	if (Tcl_ListObjGetElements(interp, definitions, &definitionElementCount, &definitionElements) != TCL_OK) {
-		return TCL_ERROR;
-	}
-
-	/* add fields to the dbf */
-	for (i = 0; i < definitionElementCount; i += 4) {
-		if (((type = Tcl_GetString(definitionElements[i])) == NULL)
-				|| ((name = Tcl_GetString(definitionElements[i + 1])) == NULL)
-				|| (Tcl_GetIntFromObj(interp, definitionElements[i + 2], &width) != TCL_OK)
-				|| (Tcl_GetIntFromObj(interp, definitionElements[i + 3], &precision) != TCL_OK)) {
-			return TCL_ERROR;
-		}
-		
-		if (strcmp(type, "integer") == 0) {
-			if ((fieldId = DBFAddField(dbf, name, FTInteger, width, 0)) == -1) {
-				Tcl_SetObjResult(interp, Tcl_ObjPrintf("failed to create integer attribute field \"%s\"", name));
-				return TCL_ERROR;
-			}
-		}
-		else if (strcmp(type, "double") == 0) {
-			if ((fieldId = DBFAddField(dbf, name, FTDouble, width, precision)) == -1) {
-				Tcl_SetObjResult(interp, Tcl_ObjPrintf("failed to create double attribute field \"%s\"", name));
-				return TCL_ERROR;
-			}
-		}
-		else if (strcmp(type, "string") == 0) {
-			if ((fieldId = DBFAddField(dbf, name, FTString, width, 0)) == -1) {
-				Tcl_SetObjResult(interp, Tcl_ObjPrintf("failed to create string attribute field \"%s\"", name));
-				return TCL_ERROR;
-			}
-		}
-	}
-	
-	Tcl_SetObjResult(interp, Tcl_NewIntObj(fieldId));
-	return TCL_OK;
-}
-
-/*
- * cmd_fields_index
- *
- * Implements the [$shp fields index] action used to look up a field by name.
- * Field name search is case insensitive.
- *
- * Result:
- *   Index of named field, or error if no such field is found.
- *
- */
-int cmd_fields_index(
-		Tcl_Interp *interp,
-		ShapefilePtr shapefile,
-		const char *fieldName) {
-	
-	int fieldIndex = DBFGetFieldIndex(shapefile->dbf, fieldName);
-	
-	if (fieldIndex == -1) {
-		Tcl_SetObjResult(interp, Tcl_ObjPrintf("field named \"%s\" not found", fieldName));
-		return TCL_ERROR;
-	}
-	
-	Tcl_SetObjResult(interp, Tcl_NewIntObj(fieldIndex));
-	return TCL_OK;
-}
-
-/*
  * cmd_fields
  * 
  * Implements the [$shp fields] command used to query attribute table format.
@@ -1085,6 +1129,389 @@ int cmd_fields(
 		}
 		/* sets interp result to field index, or not-found error message */
 		if (cmd_fields_index(interp, shapefile, fieldName) != TCL_OK) {
+			return TCL_ERROR;
+		}
+	}
+		
+	return TCL_OK;
+}
+
+/*
+ * cmd_fields_add
+ * 
+ * Implements the [$shp fields add FIELDDEFINITIONS] action of the [$shp fields]
+ * command, used to add new fields to an existing attribute table. Also used by
+ * the [shapefile] command to add initial fields to new attribute tables.
+ * 
+ * Note that this function takes a DBFHandle argument, instead of a ShapefilePtr
+ * like most other util functions, because it may be used by [shapefile] before
+ * the ShapefilePtr structure is allocated.
+ * 
+ * Result:
+ *   Index number of the last field added to the attribute table.
+ */
+int cmd_fields_add(
+		Tcl_Interp *interp,
+		DBFHandle dbf,
+		int validate,
+		Tcl_Obj *definitions) {
+			
+	Tcl_Obj **definitionElements;
+	int definitionElementCount, i;
+	const char *type, *name;
+	int width, precision;
+	int fieldId = 0;
+	
+	/* check field definition list formatting if not already validated */
+	if (validate && (cmd_fields_validate(interp, definitions) != TCL_OK)) {
+		return TCL_ERROR;
+	}
+	
+	if (Tcl_ListObjGetElements(interp, definitions, &definitionElementCount, &definitionElements) != TCL_OK) {
+		return TCL_ERROR;
+	}
+
+	/* add fields to the dbf */
+	for (i = 0; i < definitionElementCount; i += 4) {
+		if (((type = Tcl_GetString(definitionElements[i])) == NULL)
+				|| ((name = Tcl_GetString(definitionElements[i + 1])) == NULL)
+				|| (Tcl_GetIntFromObj(interp, definitionElements[i + 2], &width) != TCL_OK)
+				|| (Tcl_GetIntFromObj(interp, definitionElements[i + 3], &precision) != TCL_OK)) {
+			return TCL_ERROR;
+		}
+		
+		if (strcmp(type, "integer") == 0) {
+			if ((fieldId = DBFAddField(dbf, name, FTInteger, width, 0)) == -1) {
+				Tcl_SetObjResult(interp, Tcl_ObjPrintf("failed to create integer attribute field \"%s\"", name));
+				return TCL_ERROR;
+			}
+		}
+		else if (strcmp(type, "double") == 0) {
+			if ((fieldId = DBFAddField(dbf, name, FTDouble, width, precision)) == -1) {
+				Tcl_SetObjResult(interp, Tcl_ObjPrintf("failed to create double attribute field \"%s\"", name));
+				return TCL_ERROR;
+			}
+		}
+		else if (strcmp(type, "string") == 0) {
+			if ((fieldId = DBFAddField(dbf, name, FTString, width, 0)) == -1) {
+				Tcl_SetObjResult(interp, Tcl_ObjPrintf("failed to create string attribute field \"%s\"", name));
+				return TCL_ERROR;
+			}
+		}
+	}
+	
+	Tcl_SetObjResult(interp, Tcl_NewIntObj(fieldId));
+	return TCL_OK;
+}
+
+/*
+ * cmd_fields_validate
+ * 
+ * Check that a field definitions list contains valid field definitions. Used
+ * by the [$shp fields add] action in contexts where field definitions have not
+ * been pre-validated, as when invoked by the [shapefile] command when creating
+ * new shapefiles.
+ * 
+ * Result:
+ *   No Tcl result if the field definitions are valid. Otherwise, throws error.
+ */
+int cmd_fields_validate(
+		Tcl_Interp *interp,
+		Tcl_Obj *definitions) {
+			
+	Tcl_Obj **definitionElements;
+	int definitionElementCount, i;
+	const char *type, *name;
+	int width, precision;
+	
+	if (Tcl_ListObjGetElements(interp, definitions, &definitionElementCount, &definitionElements) != TCL_OK) {
+		return TCL_ERROR;
+	}
+	
+	if (definitionElementCount % 4 != 0) {
+		Tcl_SetObjResult(interp, Tcl_ObjPrintf("each field requires four values (type, name, width, and precision)"));
+		return TCL_ERROR;
+	}
+	
+	if (definitionElementCount == 0) {
+		Tcl_SetObjResult(interp, Tcl_ObjPrintf("at least one field is required"));
+		return TCL_ERROR;
+	}
+
+	/* validate field specifications before creating dbf */	
+	for (i = 0; i < definitionElementCount; i += 4) {
+		if (((type = Tcl_GetString(definitionElements[i])) == NULL)
+				|| ((name = Tcl_GetString(definitionElements[i + 1])) == NULL)
+				|| (Tcl_GetIntFromObj(interp, definitionElements[i + 2], &width) != TCL_OK)
+				|| (Tcl_GetIntFromObj(interp, definitionElements[i + 3], &precision) != TCL_OK)) {
+			return TCL_ERROR;
+		}		
+		if (cmd_fields_validateField(interp, type, name, width, precision) != TCL_OK) {
+			return TCL_ERROR;
+		}
+	}
+	
+	return TCL_OK;
+}
+
+/*
+ * cmd_fields_validateField
+ * 
+ * Check that a single field definition describes a valid attribute table
+ * field. Used by the cmd_fields_validate function.
+ * 
+ * Result:
+ *   No Tcl result if the field definition is valid. Otherwise, throws error.
+ */
+int cmd_fields_validateField(
+		Tcl_Interp *interp,
+		const char *type,
+		const char *name,
+		int width,
+		int precision) {
+	
+	if (strcmp(type, "string") != 0 && strcmp(type, "integer") != 0 && strcmp(type, "double") != 0) {
+		Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid field type \"%s\": should be string, integer, or double", type));
+		return TCL_ERROR;
+	}
+	
+	if (strlen(name) > 10) {
+		Tcl_SetObjResult(interp, Tcl_ObjPrintf("field name \"%s\" too long: 10 characters maximum", name));
+		return TCL_ERROR;
+	}
+	
+	if (strcmp(type, "integer") == 0 && width > 10) {
+		Tcl_SetObjResult(interp, Tcl_ObjPrintf("integer width >10 (%d) would become double", width));
+		return TCL_ERROR;
+	}
+	
+	if (strcmp(type, "double") == 0 && width <= 10 && precision == 0) {
+		Tcl_SetObjResult(interp, Tcl_ObjPrintf("double width <=10 (%d) with 0 precision would become integer", width));
+		return TCL_ERROR;
+	}
+
+	return TCL_OK;
+}
+
+/*
+ * cmd_fields_description
+ * 
+ * Get field definition list of specified attribute table field. Used by the
+ * [$shp fields list ?FIELD?] action. See [$shp fields] command for details.
+ * 
+ * Result:
+ *   Field definition list for the specified field.
+ */
+int cmd_fields_description(
+		Tcl_Interp *interp,
+		ShapefilePtr shapefile,
+		int fieldId) {
+	
+	char name[12];
+	int width, precision;
+	DBFFieldType type;
+	Tcl_Obj *description;
+	
+	description = Tcl_NewListObj(0, NULL);
+	type = DBFGetFieldInfo(shapefile->dbf, fieldId, name, &width, &precision);
+	
+	switch (type) {
+		case FTString:
+			if (Tcl_ListObjAppendElement(interp, description, Tcl_NewStringObj("string", -1)) != TCL_OK) {
+				return TCL_ERROR;
+			}
+			break;
+		case FTInteger:
+			if (Tcl_ListObjAppendElement(interp, description, Tcl_NewStringObj("integer", -1)) != TCL_OK) {
+				return TCL_ERROR;
+			}
+			break;
+		case FTDouble:
+			if (Tcl_ListObjAppendElement(interp, description, Tcl_NewStringObj("double", -1)) != TCL_OK) {
+				return TCL_ERROR;
+			}
+			break;
+		default:
+			/* represent unsupported field types by numeric type ID instead of descriptive name */
+			if (Tcl_ListObjAppendElement(interp, description, Tcl_NewIntObj((int)type)) != TCL_OK) {
+				return TCL_ERROR;
+			}
+			break;
+	}
+	
+	if (Tcl_ListObjAppendElement(interp, description, Tcl_NewStringObj(name, -1)) != TCL_OK) {
+		return TCL_ERROR;
+	}
+	if (Tcl_ListObjAppendElement(interp, description, Tcl_NewIntObj(width)) != TCL_OK) {
+		return TCL_ERROR;
+	}
+	if (Tcl_ListObjAppendElement(interp, description, Tcl_NewIntObj(precision)) != TCL_OK) {
+		return TCL_ERROR;
+	}
+	
+	Tcl_SetObjResult(interp, description);
+	return TCL_OK;
+}
+
+/*
+ * cmd_fields_index
+ *
+ * Implements the [$shp fields index] action used to look up a field by name.
+ * Field name search is case insensitive.
+ *
+ * Result:
+ *   Index of named field, or error if no such field is found.
+ *
+ */
+int cmd_fields_index(
+		Tcl_Interp *interp,
+		ShapefilePtr shapefile,
+		const char *fieldName) {
+	
+	int fieldIndex = DBFGetFieldIndex(shapefile->dbf, fieldName);
+	
+	if (fieldIndex == -1) {
+		Tcl_SetObjResult(interp, Tcl_ObjPrintf("field named \"%s\" not found", fieldName));
+		return TCL_ERROR;
+	}
+	
+	Tcl_SetObjResult(interp, Tcl_NewIntObj(fieldIndex));
+	return TCL_OK;
+}
+
+/*
+ * cmd_coordinates
+ * 
+ * Implements the [$shp coordinates] command used to get/set feature geometry.
+ * 
+ * Command Syntax:
+ *   [$shp coordinates read FEATURE]
+ *     Get the coordinates of one feature.
+ *   [$shp coordinates read]
+ *     Get the coordinates of all features.
+ *   [$shp coordinates write FEATURE COORDINATES]
+ *     Set the coordinates of one feature.
+ *   [$shp coordinates write COORDINATES]
+ *     Set the coordinates of a new feature. The feature is appended to the
+ *     shapefile. A new attribute record is also created, populated with NULLs.
+ * 
+ * Coordinate Lists:
+ *   Features are comprised of parts; a coordinate list is a list of parts,
+ *   each of which is a list of the vertices which comprise the part. Each
+ *   vertex of a feature part is represented by 2, 3, or 4 coordinate values,
+ *   depending on the feature type (XY, XYM, or XYZM) - but see Config Options.
+ *   Point feature types only have one part, but others may have multiple.
+ *   Clockwise or counterclockwise vertex order of polygon parts indicates
+ *   whether the part represents an outer or inner ring (islands or holes).
+ *   Polygon parts must be closed and have at least four vertices. 
+ *
+ *   2D Examples:
+ *     Point:      {{X Y}}
+ *     Multipoint: {{X1 Y1} {X2 Y2}}
+ *     Arc:        {{X1 Y1 X2 Y2 X3 Y3}}
+ *     Polygon:    {{X1 Y1 X2 Y2 X3 Y3 X1 Y1} {X1' Y1' X3' Y3' X2' Y2' X1' Y1'}}
+ * 
+ * Config Options:
+ *   The format of coordinate lists returned by [$shp coordinates read] may be
+ *   overruled if the getAllCoords or getOnlyXyCoords config options are true.
+ * 
+ * Result:
+ *   Read actions return coordinate lists or lists of coordinate lists.
+ *   Write actions return the index of the written feature.
+ */
+int cmd_coordinates(
+		ClientData clientData,
+		Tcl_Interp *interp,
+		int objc,
+		Tcl_Obj *CONST objv[]) {
+	
+	ShapefilePtr shapefile = (ShapefilePtr)clientData;
+	int featureId;
+	int subcommandIndex;
+	static const char *subcommandNames[] = {
+			"read",
+			"write",
+			NULL
+	};
+		
+	if (objc < 3) {
+		Tcl_WrongNumArgs(interp, 2, objv, "action ?args?");
+		return TCL_ERROR;
+	}
+	if (Tcl_GetIndexFromObj(interp, objv[2], subcommandNames, "action",
+			TCL_EXACT, &subcommandIndex) != TCL_OK) {
+		return TCL_ERROR;
+	}
+	
+	if (subcommandIndex == 0) {
+		/* read coords */
+		
+		if (objc == 3) {
+			/* return coords of all features */
+			if (cmd_coordinates_readAll(interp, shapefile) != TCL_OK) {
+				return TCL_ERROR;
+			}
+		} else if (objc == 4) {
+		
+			/* get feature index to read */			
+			if (Tcl_GetIntFromObj(interp, objv[3], &featureId) != TCL_OK) {
+				return TCL_ERROR;
+			}
+			
+			/* return coords of specified feature index */
+			if (cmd_coordinates_read(interp, shapefile, featureId) != TCL_OK) {
+				return TCL_ERROR;
+			}
+			
+		} else {
+			Tcl_WrongNumArgs(interp, 3, objv, "?index?");
+			return TCL_ERROR;
+		}
+	} else if (subcommandIndex == 1) {
+		/* write coords */
+		
+		if (objc == 4) {
+			/* write coords to a new feature; create complementary blank attribute record */
+			int recordId;
+			
+			/* write coords to a new feature */
+			if (cmd_coordinates_write(interp, shapefile, -1, objv[3]) != TCL_OK) {
+				return TCL_ERROR;
+			}
+			
+			Tcl_GetIntFromObj(interp, Tcl_GetObjResult(interp), &featureId);
+			Tcl_ResetResult(interp);
+			
+			/* interp result is new feature id; create a null attribute record to match */
+			if (cmd_attributes_write(interp, shapefile, -1, 0, NULL) != TCL_OK) {
+				return TCL_ERROR;
+			}
+			
+			Tcl_GetIntFromObj(interp, Tcl_GetObjResult(interp), &recordId);
+			if (featureId != recordId) {
+				Tcl_SetObjResult(interp, Tcl_ObjPrintf("new feature index (%d) does not match new empty attribute record index (%d)", featureId, recordId));
+				return TCL_ERROR;
+			}
+				
+		} else if (objc == 5) {
+			/* write coords to a specific feature index */
+			
+			/* get feature index to overwrite */
+			if (Tcl_GetIntFromObj(interp, objv[3], &featureId) != TCL_OK) {
+				return TCL_ERROR;
+			}
+
+			if (featureId == -1) {
+				Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid feature index %d (use write command)", featureId));
+				return TCL_ERROR;
+			}
+			
+			/* if shape output is successful, interp result is set to output feature id */
+			if (cmd_coordinates_write(interp, shapefile, featureId, objv[4]) != TCL_OK) {
+				return TCL_ERROR;
+			}
+		} else {
+			Tcl_WrongNumArgs(interp, 3, objv, "?index? coordinates");
 			return TCL_ERROR;
 		}
 	}
@@ -1387,6 +1814,42 @@ int cmd_coordinates_write(
 }
 
 /*
+ * cmd_coordinates_readAll
+ * 
+ * Implements the [$shp coordinates read] action of the [$shp coordinates]
+ * command, used to get a list of coordinate lists for all shapefile features.
+ * 
+ * Result:
+ *   List containing a coordinate list for each feature in shapefile.
+ */
+int cmd_coordinates_readAll(
+		Tcl_Interp *interp,
+		ShapefilePtr shapefile) {
+	
+	Tcl_Obj *featureList;
+	int shpCount, featureId;
+	
+	featureList = Tcl_NewListObj(0, NULL);
+	SHPGetInfo(shapefile->shp, &shpCount, NULL, NULL, NULL);
+	
+	for (featureId = 0; featureId < shpCount; featureId++) {
+		
+		if (cmd_coordinates_read(interp, shapefile, featureId) != TCL_OK) {
+			return TCL_ERROR;
+		}
+		
+		if (Tcl_ListObjAppendElement(interp, featureList, Tcl_GetObjResult(interp)) != TCL_OK) {
+			return TCL_ERROR;
+		}
+		
+		Tcl_ResetResult(interp);
+	}
+	
+	Tcl_SetObjResult(interp, featureList);
+	return TCL_OK;
+}
+
+/*
  * cmd_coordinates_read
  * 
  * Implements the [$shp coordinates read FEATURE] action of the [$shp
@@ -1502,287 +1965,204 @@ int cmd_coordinates_read(
 }
 
 /*
- * cmd_coordinates_readAll
+ * cmd_attributes
  * 
- * Implements the [$shp coordinates read] action of the [$shp coordinates]
- * command, used to get a list of coordinate lists for all shapefile features.
- * 
- * Result:
- *   List containing a coordinate list for each feature in shapefile.
- */
-int cmd_coordinates_readAll(
-		Tcl_Interp *interp,
-		ShapefilePtr shapefile) {
-	
-	Tcl_Obj *featureList;
-	int shpCount, featureId;
-	
-	featureList = Tcl_NewListObj(0, NULL);
-	SHPGetInfo(shapefile->shp, &shpCount, NULL, NULL, NULL);
-	
-	for (featureId = 0; featureId < shpCount; featureId++) {
-		
-		if (cmd_coordinates_read(interp, shapefile, featureId) != TCL_OK) {
-			return TCL_ERROR;
-		}
-		
-		if (Tcl_ListObjAppendElement(interp, featureList, Tcl_GetObjResult(interp)) != TCL_OK) {
-			return TCL_ERROR;
-		}
-		
-		Tcl_ResetResult(interp);
-	}
-	
-	Tcl_SetObjResult(interp, featureList);
-	return TCL_OK;
-}
-
-/*
- * cmd_coordinates
- * 
- * Implements the [$shp coordinates] command used to get/set feature geometry.
+ * Implements the [$shp attributes] command used to get or set attribute data.
  * 
  * Command Syntax:
- *   [$shp coordinates read FEATURE]
- *     Get the coordinates of one feature.
- *   [$shp coordinates read]
- *     Get the coordinates of all features.
- *   [$shp coordinates write FEATURE COORDINATES]
- *     Set the coordinates of one feature.
- *   [$shp coordinates write COORDINATES]
- *     Set the coordinates of a new feature. The feature is appended to the
- *     shapefile. A new attribute record is also created, populated with NULLs.
- * 
- * Coordinate Lists:
- *   Features are comprised of parts; a coordinate list is a list of parts,
- *   each of which is a list of the vertices which comprise the part. Each
- *   vertex of a feature part is represented by 2, 3, or 4 coordinate values,
- *   depending on the feature type (XY, XYM, or XYZM) - but see Config Options.
- *   Point feature types only have one part, but others may have multiple.
- *   Clockwise or counterclockwise vertex order of polygon parts indicates
- *   whether the part represents an outer or inner ring (islands or holes).
- *   Polygon parts must be closed and have at least four vertices. 
- *
- *   2D Examples:
- *     Point:      {{X Y}}
- *     Multipoint: {{X1 Y1} {X2 Y2}}
- *     Arc:        {{X1 Y1 X2 Y2 X3 Y3}}
- *     Polygon:    {{X1 Y1 X2 Y2 X3 Y3 X1 Y1} {X1' Y1' X3' Y3' X2' Y2' X1' Y1'}}
- * 
- * Config Options:
- *   The format of coordinate lists returned by [$shp coordinates read] may be
- *   overruled if the getAllCoords or getOnlyXyCoords config options are true.
+ *   [$shp attributes read RECORD FIELD]
+ *     Get the value of one field in one record.
+ *   [$shp attributes read RECORD]
+ *     Get the value of all fields in one record.
+ *   [$shp attributes read]
+ *     Get the value of all fields in all records.
+ *   [$shp attributes write RECORD FIELD VALUE]
+ *     Set the value of one field in one record.
+ *   [$shp attributes write RECORD VALUELIST]
+ *     Set the value of all fields in one record.
+ *   [$shp attributes write VALUELIST]
+ *     Set the value of all fields in a new record. The record is appended to
+ *     the attribute table. A new feature with NULL geometry is also created.
  * 
  * Result:
- *   Read actions return coordinate lists or lists of coordinate lists.
- *   Write actions return the index of the written feature.
+ *   Read actions return attribute data in value (X), value list ({X Y Z}), or
+ *   value list list ({{X Y Z} {A B C} {1 2 3}}) format, respectively.
+ *   Write actions return the index of the written attribute record.
  */
-int cmd_coordinates(
+int cmd_attributes(
 		ClientData clientData,
 		Tcl_Interp *interp,
 		int objc,
 		Tcl_Obj *CONST objv[]) {
-	
+
 	ShapefilePtr shapefile = (ShapefilePtr)clientData;
-	int featureId;
-	int subcommandIndex;
-	static const char *subcommandNames[] = {
+	int recordId;
+	int actionIndex;
+	static const char *actionNames[] = {
 			"read",
 			"write",
 			NULL
 	};
-		
+	
 	if (objc < 3) {
 		Tcl_WrongNumArgs(interp, 2, objv, "action ?args?");
 		return TCL_ERROR;
 	}
-	if (Tcl_GetIndexFromObj(interp, objv[2], subcommandNames, "action",
-			TCL_EXACT, &subcommandIndex) != TCL_OK) {
+	if (Tcl_GetIndexFromObj(interp, objv[2], actionNames, "action", TCL_EXACT, &actionIndex) != TCL_OK) {
 		return TCL_ERROR;
 	}
 	
-	if (subcommandIndex == 0) {
-		/* read coords */
+	if (actionIndex == 0) {
+		/* read attributes */
 		
 		if (objc == 3) {
-			/* return coords of all features */
-			if (cmd_coordinates_readAll(interp, shapefile) != TCL_OK) {
+			/* return attributes of all records */
+			if (cmd_attributes_readAll(interp, shapefile) != TCL_OK) {
 				return TCL_ERROR;
 			}
 		} else if (objc == 4) {
-		
-			/* get feature index to read */			
-			if (Tcl_GetIntFromObj(interp, objv[3], &featureId) != TCL_OK) {
+			/* return attributes of specified index */
+	
+			if (Tcl_GetIntFromObj(interp, objv[3], &recordId) != TCL_OK) {
 				return TCL_ERROR;
 			}
 			
-			/* return coords of specified feature index */
-			if (cmd_coordinates_read(interp, shapefile, featureId) != TCL_OK) {
+			if (cmd_attributes_read(interp, shapefile, recordId) != TCL_OK) {
 				return TCL_ERROR;
 			}
 			
+		} else if (objc == 5) {
+			/* return value of specified field of specified index */
+			int fieldId;
+						
+			if (Tcl_GetIntFromObj(interp, objv[3], &recordId) != TCL_OK) {
+				return TCL_ERROR;
+			}
+			
+			if (Tcl_GetIntFromObj(interp, objv[4], &fieldId) != TCL_OK) {
+				return TCL_ERROR;
+			}
+			
+			/* sets interp result to field value; validates recordId and fieldId */
+			if (cmd_attributes_readField(interp, shapefile, recordId, fieldId) != TCL_OK) {
+				return TCL_ERROR;
+			}			
 		} else {
-			Tcl_WrongNumArgs(interp, 3, objv, "?index?");
+			Tcl_WrongNumArgs(interp, 3, objv, "?recordIndex ?fieldIndex??");
 			return TCL_ERROR;
-		}
-	} else if (subcommandIndex == 1) {
-		/* write coords */
+		}	
+	} else if (actionIndex == 1) {
+		/* write attributes */
 		
 		if (objc == 4) {
-			/* write coords to a new feature; create complementary blank attribute record */
-			int recordId;
+			/* write attributes to new record; create complementary null shape */
+			int featureId;
 			
-			/* write coords to a new feature */
-			if (cmd_coordinates_write(interp, shapefile, -1, objv[3]) != TCL_OK) {
-				return TCL_ERROR;
-			}
-			
-			Tcl_GetIntFromObj(interp, Tcl_GetObjResult(interp), &featureId);
-			Tcl_ResetResult(interp);
-			
-			/* interp result is new feature id; create a null attribute record to match */
-			if (cmd_attributes_write(interp, shapefile, -1, 0, NULL) != TCL_OK) {
+			if (cmd_attributes_write(interp, shapefile, -1 /* new record */, 1 /* validate */, objv[3]) != TCL_OK) {
 				return TCL_ERROR;
 			}
 			
 			Tcl_GetIntFromObj(interp, Tcl_GetObjResult(interp), &recordId);
-			if (featureId != recordId) {
-				Tcl_SetObjResult(interp, Tcl_ObjPrintf("new feature index (%d) does not match new empty attribute record index (%d)", featureId, recordId));
+			Tcl_ResetResult(interp);
+			
+			if (cmd_coordinates_write(interp, shapefile, -1 /* new record */, NULL /* no coordinates */) != TCL_OK) {
+				return TCL_ERROR;
+			}
+			
+			Tcl_GetIntFromObj(interp, Tcl_GetObjResult(interp), &featureId);
+			if (recordId != featureId) {
+				Tcl_SetObjResult(interp, Tcl_ObjPrintf("new record index (%d) does not match new null feature index (%d)", recordId, featureId));
+				return TCL_ERROR;
+			}
+			
+		} else if (objc == 5) {
+			/* write attributes to record index */
+			
+			if (Tcl_GetIntFromObj(interp, objv[3], &recordId) != TCL_OK) {
+				return TCL_ERROR;
+			}
+			if (recordId == -1) {
+				Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid record index %d (use write command)", recordId));
+				return TCL_ERROR;
+			}
+			
+			/* if successful, sets interp's result to the recordId of the written record */
+			if (cmd_attributes_write(interp, shapefile, recordId, 1 /* validate */, objv[4]) != TCL_OK) {
+				return TCL_ERROR;
+			}
+			
+		} else if (objc == 6) {
+			/* write value to field index of record index */
+			int fieldId;
+			
+			if (Tcl_GetIntFromObj(interp, objv[3], &recordId) != TCL_OK) {
 				return TCL_ERROR;
 			}
 				
-		} else if (objc == 5) {
-			/* write coords to a specific feature index */
-			
-			/* get feature index to overwrite */
-			if (Tcl_GetIntFromObj(interp, objv[3], &featureId) != TCL_OK) {
-				return TCL_ERROR;
-			}
-
-			if (featureId == -1) {
-				Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid feature index %d (use write command)", featureId));
+			if (Tcl_GetIntFromObj(interp, objv[4], &fieldId) != TCL_OK) {
 				return TCL_ERROR;
 			}
 			
-			/* if shape output is successful, interp result is set to output feature id */
-			if (cmd_coordinates_write(interp, shapefile, featureId, objv[4]) != TCL_OK) {
+			if (cmd_attributes_writeField(interp, shapefile, recordId, fieldId, 1 /* validate */, objv[5]) != TCL_OK) {
 				return TCL_ERROR;
 			}
 		} else {
-			Tcl_WrongNumArgs(interp, 3, objv, "?index? coordinates");
+			Tcl_WrongNumArgs(interp, 3, objv, "?recordIndex ?fieldIndex?? attributes");
 			return TCL_ERROR;
 		}
 	}
-		
+			
 	return TCL_OK;
 }
 
 /*
- * cmd_attributes_validateField
+ * cmd_attributes_write
  * 
- * Confirm that a single attribute value conforms to the specified attribute
- * table field definition. Used by the cmd_attributes_validate function and
- * by the [$shp attributes write RECORD FIELD VALUE] action in contexts where
- * VALUE has previously been pre-validated.
+ * Implements the [$shp attributes write ?RECORD? VALUELIST] action of the
+ * [$shp attributes] command, used to write values to a new or existing record.
  * 
  * Result:
- *   No Tcl result if the attribute value passes validation. Otherwise, errors
- *   may be thrown.
+ *   Index number of the attribute record that was written.
  */
-int cmd_attributes_validateField(
+int cmd_attributes_write(
 		Tcl_Interp *interp,
 		ShapefilePtr shapefile,
-		int fieldId,
-		Tcl_Obj *attrValue) {
+		int recordId,
+		int validate,
+		Tcl_Obj *attrList) {
 	
-	int fieldCount, width, precision, fieldType;
-	int intValue;
-	double doubleValue;
-	const char *stringValue;
-	char buffer[NUMERIC_BUFFER_SIZE];
-
-	fieldCount = DBFGetFieldCount(shapefile->dbf);
-	if (fieldId < 0 || fieldId >= fieldCount) {
-		Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid field index %d", fieldId));
+	Tcl_Obj *attr;
+	int fieldId, fieldCount, attrCount, dbfCount;
+	
+	if (shapefile->readonly) {
+		Tcl_SetObjResult(interp, Tcl_ObjPrintf("cannot write attributes to readonly shapefile"));
 		return TCL_ERROR;
 	}
 	
-	/* null fields are ok; validation doesn't need to set any result if OK */
-	if (attrValue == NULL || (Tcl_GetCharLength(attrValue) == 0)) {
+	dbfCount = DBFGetRecordCount(shapefile->dbf);
+	if (recordId < -1 || recordId >= dbfCount) {
+		Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid record index %d", recordId));
+		return TCL_ERROR;
+	}
+	if (recordId == -1) {
+		recordId = dbfCount;
+	}
+	
+	fieldCount = DBFGetFieldCount(shapefile->dbf);
+	
+	/* as a special case, simply write null values for all fields if attrList is NULL */
+	if (attrList == NULL) {
+		for (fieldId = 0; fieldId < fieldCount; fieldId++) {
+			if (DBFWriteNULLAttribute(shapefile->dbf, recordId, fieldId) == 0) {
+				Tcl_SetObjResult(interp, Tcl_ObjPrintf("failed to write null attribute"));
+				return TCL_ERROR;
+			}
+		}
+		Tcl_SetObjResult(interp, Tcl_NewIntObj(recordId));
 		return TCL_OK;
 	}
 	
-	fieldType = (int)DBFGetFieldInfo(shapefile->dbf, fieldId, NULL, &width, &precision);
-	switch (fieldType) {
-		case FTInteger:
-			/* can this value be parsed as an integer? */
-			if (Tcl_GetIntFromObj(interp, attrValue, &intValue) != TCL_OK) {
-				return TCL_ERROR;
-			}
-			/* does this integer fit within the field width? */
-			if (snprintf(buffer, NUMERIC_BUFFER_SIZE, "%d", intValue) >= NUMERIC_BUFFER_SIZE) {
-				Tcl_SetObjResult(interp, Tcl_ObjPrintf("integer value too big for buffer"));
-				return TCL_ERROR;
-			}
-			if (strlen(buffer) > width) {
-				Tcl_SetObjResult(interp, Tcl_ObjPrintf("integer value (%s) would be truncated to field width (%d)", buffer, width));
-				return TCL_ERROR;
-			}
-			break;
-		case FTDouble:
-			/* can this value be parsed as a double? */
-			if (Tcl_GetDoubleFromObj(interp, attrValue, &doubleValue) != TCL_OK) {
-				return TCL_ERROR;
-			}
-			/* does this double fit within the field width? */
-			/* disabling double width check now with conditional scientific notation output */
-			/*sprintf(numericStringValue, "%.*lf", precision, doubleValue);
-			if (strlen(numericStringValue) > width) {
-				Tcl_SetObjResult(interp, Tcl_ObjPrintf("double value (%s) would be truncated to field width (%d)", numericStringValue, width));
-				return TCL_ERROR;
-			}*/
-			break;
-		case FTString:
-			/* can this value be parsed as a string? */
-			if ((stringValue = Tcl_GetString(attrValue)) == NULL) {
-				return TCL_ERROR;
-			}
-			
-			/* does this string fit within the field width? */
-			if (strlen(stringValue) > width) {
-				Tcl_SetObjResult(interp, Tcl_ObjPrintf("string value (%s) would be truncated to field width (%d)", stringValue, width));
-				return TCL_ERROR;
-			}
-			break;
-		default:
-			break;
-	}
-
-	return TCL_OK;	
-}
-
-/*
- * cmd_attributes_validate
- * 
- * Confirm that a list of attribute values conforms to the shapefile's field
- * definitions. Used by the [$shp write] command and [$shp attributes write]
- * action in contexts where the value list has not already been pre-validated
- * to check for obvious errors before writing attribute values to disk. Intent
- * is to minimize the chance of leaving shapefile in an invalid state.
- * 
- * Result:
- *   No Tcl result if the attribute value list passes validation. Otherwise,
- *   errors may be thrown.
- */
-int cmd_attributes_validate(
-		Tcl_Interp *interp,
-		ShapefilePtr shapefile,
-		Tcl_Obj *attrList) {
-	
-	int fieldId, fieldCount, attrCount;
-	Tcl_Obj *attr;
-	
-	fieldCount = DBFGetFieldCount(shapefile->dbf);
+	/* verify the provided attribute value list matches field count */
 	if (Tcl_ListObjLength(interp, attrList, &attrCount) != TCL_OK) {
 		return TCL_ERROR;
 	}
@@ -1790,20 +2170,29 @@ int cmd_attributes_validate(
 		Tcl_SetObjResult(interp, Tcl_ObjPrintf("attribute count (%d) does not match field count (%d)", attrCount, fieldCount));
 		return TCL_ERROR;
 	}
-
+	
+	/* in the attributes command context, we validate now; w/the write command,
+	   we receive attrList pre-validated and can proceed to write it as-is. */
+	if (validate && (cmd_attributes_validate(interp, shapefile, attrList) != TCL_OK)) {
+		return TCL_ERROR;
+	}
+		
+	/* output pass - once the fields are validated, write 'em out. Output is
+	   performed separately from validation to avoid mangled/partial output. */
 	for (fieldId = 0; fieldId < fieldCount; fieldId++) {
 		
 		/* grab the attr provided for this field */
 		if (Tcl_ListObjIndex(interp, attrList, fieldId, &attr) != TCL_OK) {
 			return TCL_ERROR;
 		}
-		
-		/* validate this field */
-		if (cmd_attributes_validateField(interp, shapefile, fieldId, attr) != TCL_OK) {
+	
+		/* writes value attr to field fieldId of record recordId; sets interp result to recordId */
+		if (cmd_attributes_writeField(interp, shapefile, recordId, fieldId, 0 /* no validation */, attr) != TCL_OK) {
 			return TCL_ERROR;
 		}
 	}
-	
+		
+	Tcl_SetObjResult(interp, Tcl_NewIntObj(recordId));
 	return TCL_OK;
 }
 
@@ -1929,53 +2318,27 @@ int cmd_attributes_writeField(
 }
 
 /*
- * cmd_attributes_write
+ * cmd_attributes_validate
  * 
- * Implements the [$shp attributes write ?RECORD? VALUELIST] action of the
- * [$shp attributes] command, used to write values to a new or existing record.
+ * Confirm that a list of attribute values conforms to the shapefile's field
+ * definitions. Used by the [$shp write] command and [$shp attributes write]
+ * action in contexts where the value list has not already been pre-validated
+ * to check for obvious errors before writing attribute values to disk. Intent
+ * is to minimize the chance of leaving shapefile in an invalid state.
  * 
  * Result:
- *   Index number of the attribute record that was written.
+ *   No Tcl result if the attribute value list passes validation. Otherwise,
+ *   errors may be thrown.
  */
-int cmd_attributes_write(
+int cmd_attributes_validate(
 		Tcl_Interp *interp,
 		ShapefilePtr shapefile,
-		int recordId,
-		int validate,
 		Tcl_Obj *attrList) {
 	
+	int fieldId, fieldCount, attrCount;
 	Tcl_Obj *attr;
-	int fieldId, fieldCount, attrCount, dbfCount;
-	
-	if (shapefile->readonly) {
-		Tcl_SetObjResult(interp, Tcl_ObjPrintf("cannot write attributes to readonly shapefile"));
-		return TCL_ERROR;
-	}
-	
-	dbfCount = DBFGetRecordCount(shapefile->dbf);
-	if (recordId < -1 || recordId >= dbfCount) {
-		Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid record index %d", recordId));
-		return TCL_ERROR;
-	}
-	if (recordId == -1) {
-		recordId = dbfCount;
-	}
 	
 	fieldCount = DBFGetFieldCount(shapefile->dbf);
-	
-	/* as a special case, simply write null values for all fields if attrList is NULL */
-	if (attrList == NULL) {
-		for (fieldId = 0; fieldId < fieldCount; fieldId++) {
-			if (DBFWriteNULLAttribute(shapefile->dbf, recordId, fieldId) == 0) {
-				Tcl_SetObjResult(interp, Tcl_ObjPrintf("failed to write null attribute"));
-				return TCL_ERROR;
-			}
-		}
-		Tcl_SetObjResult(interp, Tcl_NewIntObj(recordId));
-		return TCL_OK;
-	}
-	
-	/* verify the provided attribute value list matches field count */
 	if (Tcl_ListObjLength(interp, attrList, &attrCount) != TCL_OK) {
 		return TCL_ERROR;
 	}
@@ -1983,29 +2346,182 @@ int cmd_attributes_write(
 		Tcl_SetObjResult(interp, Tcl_ObjPrintf("attribute count (%d) does not match field count (%d)", attrCount, fieldCount));
 		return TCL_ERROR;
 	}
-	
-	/* in the attributes command context, we validate now; w/the write command,
-	   we receive attrList pre-validated and can proceed to write it as-is. */
-	if (validate && (cmd_attributes_validate(interp, shapefile, attrList) != TCL_OK)) {
-		return TCL_ERROR;
-	}
-		
-	/* output pass - once the fields are validated, write 'em out. Output is
-	   performed separately from validation to avoid mangled/partial output. */
+
 	for (fieldId = 0; fieldId < fieldCount; fieldId++) {
 		
 		/* grab the attr provided for this field */
 		if (Tcl_ListObjIndex(interp, attrList, fieldId, &attr) != TCL_OK) {
 			return TCL_ERROR;
 		}
-	
-		/* writes value attr to field fieldId of record recordId; sets interp result to recordId */
-		if (cmd_attributes_writeField(interp, shapefile, recordId, fieldId, 0 /* no validation */, attr) != TCL_OK) {
+		
+		/* validate this field */
+		if (cmd_attributes_validateField(interp, shapefile, fieldId, attr) != TCL_OK) {
 			return TCL_ERROR;
 		}
 	}
+	
+	return TCL_OK;
+}
+
+/*
+ * cmd_attributes_validateField
+ * 
+ * Confirm that a single attribute value conforms to the specified attribute
+ * table field definition. Used by the cmd_attributes_validate function and
+ * by the [$shp attributes write RECORD FIELD VALUE] action in contexts where
+ * VALUE has previously been pre-validated.
+ * 
+ * Result:
+ *   No Tcl result if the attribute value passes validation. Otherwise, errors
+ *   may be thrown.
+ */
+int cmd_attributes_validateField(
+		Tcl_Interp *interp,
+		ShapefilePtr shapefile,
+		int fieldId,
+		Tcl_Obj *attrValue) {
+	
+	int fieldCount, width, precision, fieldType;
+	int intValue;
+	double doubleValue;
+	const char *stringValue;
+	char buffer[NUMERIC_BUFFER_SIZE];
+
+	fieldCount = DBFGetFieldCount(shapefile->dbf);
+	if (fieldId < 0 || fieldId >= fieldCount) {
+		Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid field index %d", fieldId));
+		return TCL_ERROR;
+	}
+	
+	/* null fields are ok; validation doesn't need to set any result if OK */
+	if (attrValue == NULL || (Tcl_GetCharLength(attrValue) == 0)) {
+		return TCL_OK;
+	}
+	
+	fieldType = (int)DBFGetFieldInfo(shapefile->dbf, fieldId, NULL, &width, &precision);
+	switch (fieldType) {
+		case FTInteger:
+			/* can this value be parsed as an integer? */
+			if (Tcl_GetIntFromObj(interp, attrValue, &intValue) != TCL_OK) {
+				return TCL_ERROR;
+			}
+			/* does this integer fit within the field width? */
+			if (snprintf(buffer, NUMERIC_BUFFER_SIZE, "%d", intValue) >= NUMERIC_BUFFER_SIZE) {
+				Tcl_SetObjResult(interp, Tcl_ObjPrintf("integer value too big for buffer"));
+				return TCL_ERROR;
+			}
+			if (strlen(buffer) > width) {
+				Tcl_SetObjResult(interp, Tcl_ObjPrintf("integer value (%s) would be truncated to field width (%d)", buffer, width));
+				return TCL_ERROR;
+			}
+			break;
+		case FTDouble:
+			/* can this value be parsed as a double? */
+			if (Tcl_GetDoubleFromObj(interp, attrValue, &doubleValue) != TCL_OK) {
+				return TCL_ERROR;
+			}
+			/* does this double fit within the field width? */
+			/* disabling double width check now with conditional scientific notation output */
+			/*sprintf(numericStringValue, "%.*lf", precision, doubleValue);
+			if (strlen(numericStringValue) > width) {
+				Tcl_SetObjResult(interp, Tcl_ObjPrintf("double value (%s) would be truncated to field width (%d)", numericStringValue, width));
+				return TCL_ERROR;
+			}*/
+			break;
+		case FTString:
+			/* can this value be parsed as a string? */
+			if ((stringValue = Tcl_GetString(attrValue)) == NULL) {
+				return TCL_ERROR;
+			}
+			
+			/* does this string fit within the field width? */
+			if (strlen(stringValue) > width) {
+				Tcl_SetObjResult(interp, Tcl_ObjPrintf("string value (%s) would be truncated to field width (%d)", stringValue, width));
+				return TCL_ERROR;
+			}
+			break;
+		default:
+			break;
+	}
+
+	return TCL_OK;	
+}
+
+/*
+ * cmd_attributes_readAll
+ * 
+ * Implements the [$shp attributes read] action of the [$shp attributes]
+ * command, used to get a list of attribute value lists for all records.
+ * 
+ * Result:
+ *   List containing an attribute value list for each record in shapefile.
+ */
+int cmd_attributes_readAll(
+		Tcl_Interp *interp,
+		ShapefilePtr shapefile) {
+
+	Tcl_Obj *recordList;
+	int dbfCount, recordId;
+	
+	recordList = Tcl_NewListObj(0, NULL);
+	dbfCount = DBFGetRecordCount(shapefile->dbf);
+
+	for (recordId = 0; recordId < dbfCount; recordId++) {
 		
-	Tcl_SetObjResult(interp, Tcl_NewIntObj(recordId));
+		if (cmd_attributes_read(interp, shapefile, recordId) != TCL_OK) {
+			return TCL_ERROR;
+		}
+					
+		if (Tcl_ListObjAppendElement(interp, recordList, Tcl_GetObjResult(interp)) != TCL_OK) {
+			return TCL_ERROR;
+		}
+		
+		Tcl_ResetResult(interp);
+	}
+	
+	Tcl_SetObjResult(interp, recordList);
+	return TCL_OK;
+}
+
+/*
+ * cmd_attributes_read
+ * 
+ * Implements the [$shp attributes read RECORD] action of the [$shp attributes]
+ * command, used to get a list of attribute values for a specified record. Also
+ * used by the [$shp attributes read] action to get each record value list.
+ * 
+ * Result:
+ *   List containing each attribute value from the specified record.
+ */
+int cmd_attributes_read(
+		Tcl_Interp *interp,
+		ShapefilePtr shapefile,
+		int recordId) {
+	
+	Tcl_Obj *attributes = Tcl_NewListObj(0, NULL);
+	int dbfCount, fieldId, fieldCount;
+	
+	dbfCount = DBFGetRecordCount(shapefile->dbf);
+	if (recordId < 0 || recordId >= dbfCount) {
+		Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid record index %d", recordId));
+		return TCL_ERROR;
+	}
+	
+	fieldCount = DBFGetFieldCount(shapefile->dbf);
+	for (fieldId = 0; fieldId < fieldCount; fieldId++) {
+				
+		if (cmd_attributes_readField(interp, shapefile, recordId, fieldId) != TCL_OK) {
+			return TCL_ERROR;
+		}
+		
+		if (Tcl_ListObjAppendElement(interp, attributes, Tcl_GetObjResult(interp)) != TCL_OK) {
+			return TCL_ERROR;
+		}
+		
+		Tcl_ResetResult(interp);
+	}
+	
+	Tcl_SetObjResult(interp, attributes);
 	return TCL_OK;
 }
 
@@ -2067,235 +2583,6 @@ int cmd_attributes_readField(
 	}
 	
 	return TCL_OK;	
-}
-
-/*
- * cmd_attributes_read
- * 
- * Implements the [$shp attributes read RECORD] action of the [$shp attributes]
- * command, used to get a list of attribute values for a specified record. Also
- * used by the [$shp attributes read] action to get each record value list.
- * 
- * Result:
- *   List containing each attribute value from the specified record.
- */
-int cmd_attributes_read(
-		Tcl_Interp *interp,
-		ShapefilePtr shapefile,
-		int recordId) {
-	
-	Tcl_Obj *attributes = Tcl_NewListObj(0, NULL);
-	int dbfCount, fieldId, fieldCount;
-	
-	dbfCount = DBFGetRecordCount(shapefile->dbf);
-	if (recordId < 0 || recordId >= dbfCount) {
-		Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid record index %d", recordId));
-		return TCL_ERROR;
-	}
-	
-	fieldCount = DBFGetFieldCount(shapefile->dbf);
-	for (fieldId = 0; fieldId < fieldCount; fieldId++) {
-				
-		if (cmd_attributes_readField(interp, shapefile, recordId, fieldId) != TCL_OK) {
-			return TCL_ERROR;
-		}
-		
-		if (Tcl_ListObjAppendElement(interp, attributes, Tcl_GetObjResult(interp)) != TCL_OK) {
-			return TCL_ERROR;
-		}
-		
-		Tcl_ResetResult(interp);
-	}
-	
-	Tcl_SetObjResult(interp, attributes);
-	return TCL_OK;
-}
-
-/*
- * cmd_attributes_readAll
- * 
- * Implements the [$shp attributes read] action of the [$shp attributes]
- * command, used to get a list of attribute value lists for all records.
- * 
- * Result:
- *   List containing an attribute value list for each record in shapefile.
- */
-int cmd_attributes_readAll(
-		Tcl_Interp *interp,
-		ShapefilePtr shapefile) {
-
-	Tcl_Obj *recordList;
-	int dbfCount, recordId;
-	
-	recordList = Tcl_NewListObj(0, NULL);
-	dbfCount = DBFGetRecordCount(shapefile->dbf);
-
-	for (recordId = 0; recordId < dbfCount; recordId++) {
-		
-		if (cmd_attributes_read(interp, shapefile, recordId) != TCL_OK) {
-			return TCL_ERROR;
-		}
-					
-		if (Tcl_ListObjAppendElement(interp, recordList, Tcl_GetObjResult(interp)) != TCL_OK) {
-			return TCL_ERROR;
-		}
-		
-		Tcl_ResetResult(interp);
-	}
-	
-	Tcl_SetObjResult(interp, recordList);
-	return TCL_OK;
-}
-
-/*
- * cmd_attributes
- * 
- * Implements the [$shp attributes] command used to get or set attribute data.
- * 
- * Command Syntax:
- *   [$shp attributes read RECORD FIELD]
- *     Get the value of one field in one record.
- *   [$shp attributes read RECORD]
- *     Get the value of all fields in one record.
- *   [$shp attributes read]
- *     Get the value of all fields in all records.
- *   [$shp attributes write RECORD FIELD VALUE]
- *     Set the value of one field in one record.
- *   [$shp attributes write RECORD VALUELIST]
- *     Set the value of all fields in one record.
- *   [$shp attributes write VALUELIST]
- *     Set the value of all fields in a new record. The record is appended to
- *     the attribute table. A new feature with NULL geometry is also created.
- * 
- * Result:
- *   Read actions return attribute data in value (X), value list ({X Y Z}), or
- *   value list list ({{X Y Z} {A B C} {1 2 3}}) format, respectively.
- *   Write actions return the index of the written attribute record.
- */
-int cmd_attributes(
-		ClientData clientData,
-		Tcl_Interp *interp,
-		int objc,
-		Tcl_Obj *CONST objv[]) {
-
-	ShapefilePtr shapefile = (ShapefilePtr)clientData;
-	int recordId;
-	int actionIndex;
-	static const char *actionNames[] = {
-			"read",
-			"write",
-			NULL
-	};
-	
-	if (objc < 3) {
-		Tcl_WrongNumArgs(interp, 2, objv, "action ?args?");
-		return TCL_ERROR;
-	}
-	if (Tcl_GetIndexFromObj(interp, objv[2], actionNames, "action", TCL_EXACT, &actionIndex) != TCL_OK) {
-		return TCL_ERROR;
-	}
-	
-	if (actionIndex == 0) {
-		/* read attributes */
-		
-		if (objc == 3) {
-			/* return attributes of all records */
-			if (cmd_attributes_readAll(interp, shapefile) != TCL_OK) {
-				return TCL_ERROR;
-			}
-		} else if (objc == 4) {
-			/* return attributes of specified index */
-	
-			if (Tcl_GetIntFromObj(interp, objv[3], &recordId) != TCL_OK) {
-				return TCL_ERROR;
-			}
-			
-			if (cmd_attributes_read(interp, shapefile, recordId) != TCL_OK) {
-				return TCL_ERROR;
-			}		
-			
-		} else if (objc == 5) {
-			/* return value of specified field of specified index */
-			int fieldId;
-						
-			if (Tcl_GetIntFromObj(interp, objv[3], &recordId) != TCL_OK) {
-				return TCL_ERROR;
-			}
-			
-			if (Tcl_GetIntFromObj(interp, objv[4], &fieldId) != TCL_OK) {
-				return TCL_ERROR;
-			}
-			
-			/* sets interp result to field value; validates recordId and fieldId */
-			if (cmd_attributes_readField(interp, shapefile, recordId, fieldId) != TCL_OK) {
-				return TCL_ERROR;
-			}			
-		} else {
-			Tcl_WrongNumArgs(interp, 3, objv, "?recordIndex ?fieldIndex??");
-			return TCL_ERROR;
-		}	
-	} else if (actionIndex == 1) {
-		/* write attributes */
-		
-		if (objc == 4) {
-			/* write attributes to new record; create complementary null shape */
-			int featureId;
-			
-			if (cmd_attributes_write(interp, shapefile, -1 /* new record */, 1 /* validate */, objv[3]) != TCL_OK) {
-				return TCL_ERROR;
-			}
-			
-			Tcl_GetIntFromObj(interp, Tcl_GetObjResult(interp), &recordId);
-			Tcl_ResetResult(interp);
-			
-			if (cmd_coordinates_write(interp, shapefile, -1 /* new record */, NULL /* no coordinates */) != TCL_OK) {
-				return TCL_ERROR;
-			}
-			
-			Tcl_GetIntFromObj(interp, Tcl_GetObjResult(interp), &featureId);
-			if (recordId != featureId) {
-				Tcl_SetObjResult(interp, Tcl_ObjPrintf("new record index (%d) does not match new null feature index (%d)", recordId, featureId));
-				return TCL_ERROR;
-			}
-			
-		} else if (objc == 5) {
-			/* write attributes to record index */
-			
-			if (Tcl_GetIntFromObj(interp, objv[3], &recordId) != TCL_OK) {
-				return TCL_ERROR;
-			}
-			if (recordId == -1) {
-				Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid record index %d (use write command)", recordId));
-				return TCL_ERROR;
-			}
-			
-			/* if successful, sets interp's result to the recordId of the written record */
-			if (cmd_attributes_write(interp, shapefile, recordId, 1 /* validate */, objv[4]) != TCL_OK) {
-				return TCL_ERROR;
-			}
-			
-		} else if (objc == 6) {
-			/* write value to field index of record index */
-			int fieldId;
-			
-			if (Tcl_GetIntFromObj(interp, objv[3], &recordId) != TCL_OK) {
-				return TCL_ERROR;
-			}
-				
-			if (Tcl_GetIntFromObj(interp, objv[4], &fieldId) != TCL_OK) {
-				return TCL_ERROR;
-			}
-			
-			if (cmd_attributes_writeField(interp, shapefile, recordId, fieldId, 1 /* validate */, objv[5]) != TCL_OK) {
-				return TCL_ERROR;
-			}
-		} else {
-			Tcl_WrongNumArgs(interp, 3, objv, "?recordIndex ?fieldIndex?? attributes");
-			return TCL_ERROR;
-		}
-	}
-			
-	return TCL_OK;
 }
 
 /*
@@ -2365,283 +2652,3 @@ int cmd_write(
 	return TCL_OK;
 }
 
-/*
- * cmd_dispatcher
- * 
- * Ensemble command dispatcher handles the shapefile identifier [$shp] returned
- * by shapefile_cmd. The clientData is a ShapefilePtr associated with identifier.
- * 
- * Command Syntax:
- *   [$shp attributes|close|config|coordinates|fields|info|mode|write ?args?]
- *     Invokes the function handler associated with selected subcommand.
- *     Unambiguous abbreviations such as [$shp attr] or [$shp coord] are valid.
- * 
- * Result:
- *   Result of the selected subcommand.
- */
-int cmd_dispatcher(
-		ClientData clientData,
-		Tcl_Interp *interp,
-		int objc,
-		Tcl_Obj *CONST objv[]) {
-
-	int subcommandIndex;
-	static const char *subcommandNames[] = {
-			"attributes",
-			"close",
-			"config",
-			"coordinates",
-			"fields",
-			"info",
-			"file",
-			"write",
-			NULL
-	};
-	Tcl_ObjCmdProc *subcommands[] = {
-			cmd_attributes,
-			cmd_close,
-			cmd_config,
-			cmd_coordinates,
-			cmd_fields,
-			cmd_info,
-			cmd_file,
-			cmd_write
-	};
-	
-	if (objc < 2) {
-		Tcl_WrongNumArgs(interp, 1, objv, "subcommand ?args?");
-		return TCL_ERROR;
-	}
-	
-	/* identify subcommand, or set result to error message w/valid cmd list */
-	if (Tcl_GetIndexFromObj(interp, objv[1], subcommandNames, "subcommand",
-			0 /* not TCL_EXACT */, &subcommandIndex) != TCL_OK) {
-		return TCL_ERROR;
-	}
-		
-	/* invoke the requested subcommand directly, passing on all arguments */
-	return subcommands[subcommandIndex](clientData, interp, objc, objv);
-}
-
-/*
- * shapefile_cmd
- * 
- * Implements the [shapefile] command used to open a new or existing shapefile.
- * 
- * Command Syntax:
- *   [shapefile PATH ?readonly|readwrite?]
- *     Open the shapefile at PATH. Default access mode is readwrite.
- *   [shapefile PATH TYPE FIELDSDEFINITION]
- *     Create a shapefile at PATH. TYPE defines feature geometry type. FIELDS
- *     defines initial attribute table format. At least one field is required.
- *     See the [fields] command for details on FIELDSDEFINITION format. 
- * 
- * Result:
- *   Name of an ensemble command for subsequent operations on the shapefile.
- */
- int shapefile_cmd(
-		ClientData clientData,
-		Tcl_Interp *interp,
-		int objc,
-		Tcl_Obj *CONST objv[]) {
-
-	ShapefilePtr shapefile;
-	const char *path;
-	char cmdName[16];
-	int readonly = 0;
-	SHPHandle shp;
-	DBFHandle dbf;
-	int shpType, i;
-	
-	if (objc < 2 || objc > 4) {
-		Tcl_WrongNumArgs(interp, 1, objv, "path ?mode?|?type fieldDefintions?");
-		return TCL_ERROR;
-	}
-
-	path = Tcl_GetString(objv[1]);
-
-	if (objc == 3) {
-		/* opening an existing file, and an access mode is explicitly set */
-		const char *mode = Tcl_GetString(objv[2]);
-		if (strcmp(mode, "readonly") == 0) {
-			readonly = 1;
-		}
-		else if (strcmp(mode, "readwrite") == 0) {
-			readonly = 0;
-		}
-		else {
-			Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid mode \"%s\": should be readonly or readwrite", mode));
-			return TCL_ERROR;
-		}
-	}
-	
-	if (objc == 4) {
-		/* create a new file; access is readwrite. */
-		
-		const char *shpTypeName = Tcl_GetString(objv[2]);
-		
-		if (strcmp(shpTypeName, "point") == 0) {
-			shpType = SHPT_POINT;
-		} else if (strcmp(shpTypeName, "arc") == 0) {
-			shpType = SHPT_ARC;
-		} else if (strcmp(shpTypeName, "polygon") == 0) {
-			shpType = SHPT_POLYGON;
-		} else if (strcmp(shpTypeName, "multipoint") == 0) {
-			shpType = SHPT_MULTIPOINT;
-		} else if (strcmp(shpTypeName, "pointm") == 0) {
-			shpType = SHPT_POINTM;
-		} else if (strcmp(shpTypeName, "arcm") == 0) {
-			shpType = SHPT_ARCM;
-		} else if (strcmp(shpTypeName, "polygonm") == 0) {
-			shpType = SHPT_POLYGONM;
-		} else if (strcmp(shpTypeName, "multipointm") == 0) {
-			shpType = SHPT_MULTIPOINTM;
-		} else if (strcmp(shpTypeName, "pointz") == 0) {
-			shpType = SHPT_POINTZ;
-		} else if (strcmp(shpTypeName, "arcz") == 0) {
-			shpType = SHPT_ARCZ;
-		} else if (strcmp(shpTypeName, "polygonz") == 0) {
-			shpType = SHPT_POLYGONZ;
-		} else if (strcmp(shpTypeName, "multipointz") == 0) {
-			shpType = SHPT_MULTIPOINTZ;
-		} else {
-			Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid shape type \"%s\"", shpTypeName));
-			return TCL_ERROR;
-		}
-		
-		/* verify that the attribute table field definition looks sensible */
-		if (cmd_fields_validate(interp, objv[3]) != TCL_OK) {
-			return TCL_ERROR;
-		}
-		
-		if ((dbf = DBFCreate(path)) == NULL) {
-			Tcl_SetObjResult(interp, Tcl_ObjPrintf("failed to create attribute table for \"%s\"", path));
-			return TCL_ERROR;
-		}
-		
-		/* add pre-validated fields to the dbf */
-		if (cmd_fields_add(interp, dbf, 0 /* don't validate */, objv[3]) != TCL_OK) {
-			DBFClose(dbf);
-			return TCL_ERROR;
-		}
-				
-		if ((shp = SHPCreate(path, shpType)) == NULL) {
-			Tcl_SetObjResult(interp, Tcl_ObjPrintf("failed to create shapefile for \"%s\"", path));
-			DBFClose(dbf);
-			return TCL_ERROR;
-		}
-	}
-	else {		
-		
-		/* open an existing shapefile */
-		int shpCount, dbfCount;
-		
-		if ((dbf = DBFOpen(path, readonly ? "rb" : "rb+")) == NULL) {
-			Tcl_SetObjResult(interp, Tcl_ObjPrintf("failed to open attribute table for \"%s\"", path));
-			return TCL_ERROR;
-		}
-		
-		if (DBFGetFieldCount(dbf) == 0) {
-			Tcl_SetObjResult(interp, Tcl_ObjPrintf("attribute table for \"%s\" contains no fields", path));
-			DBFClose(dbf);
-			return TCL_ERROR;
-		}
-		
-		if ((shp = SHPOpen(path, readonly ? "rb" : "rb+")) == NULL) {
-			Tcl_SetObjResult(interp, Tcl_ObjPrintf("failed to open shapefile for \"%s\"", path));
-			DBFClose(dbf);
-			return TCL_ERROR;
-		}
-		
-		/* Only types we don't handle are SHPT_NULL and SHPT_MULTIPATCH */
-		SHPGetInfo(shp, &shpCount, &shpType, NULL, NULL);
-		if (shpType != SHPT_POINT && shpType != SHPT_POINTM && shpType != SHPT_POINTZ &&
-				shpType != SHPT_ARC && shpType != SHPT_ARCM && shpType != SHPT_ARCZ &&
-				shpType != SHPT_POLYGON && shpType != SHPT_POLYGONM && shpType != SHPT_POLYGONZ &&
-				shpType != SHPT_MULTIPOINT && shpType != SHPT_MULTIPOINTM && shpType != SHPT_MULTIPOINTZ) {
-			Tcl_SetObjResult(interp, Tcl_ObjPrintf("unsupported shape type (%d)", shpType));
-			DBFClose(dbf);
-			SHPClose(shp);
-			return TCL_ERROR;
-		}
-		
-		/* Valid shapefiles must have matching number of features and attribute records */
-		dbfCount = DBFGetRecordCount(dbf);
-		if (dbfCount != shpCount) {
-			Tcl_SetObjResult(interp, Tcl_ObjPrintf("shapefile feature count (%d) does not match attribute record count (%d)", shpCount, dbfCount));
-			DBFClose(dbf);
-			SHPClose(shp);
-			return TCL_ERROR;
-		}
-	}
-	
-	if ((shapefile = (ShapefilePtr)ckalloc(sizeof(struct shapefile_data))) == NULL) {
-		Tcl_SetObjResult(interp, Tcl_ObjPrintf("failed to allocate shapefile command data"));;
-		DBFClose(dbf);
-		SHPClose(shp);
-		return TCL_ERROR;
-	}
-	shapefile->shp = shp;
-	shapefile->dbf = dbf;	
-	shapefile->readonly = readonly;
-	shapefile->allowAlternateNotation = 1;
-	shapefile->getAllCoords = 0;
-	shapefile->getOnlyXyCoords = 0;
-	shapefile->readRawStrings = 0;
-	shapefile->shapeType = shpType;
-	shapefile->baseType = shapefile_typeBase(shpType);
-	shapefile->dimType = shapefile_typeDimension(shpType);
-	
-	/* save the base path of the shapefile, using the same code as Shapelib.
-	   Shapelib duplicates this code at least 4 times, so what's once more? */
-	shapefile->path = (char *)ckalloc(strlen(path) + 1);
-    strcpy(shapefile->path, path);
-    for(i = strlen(shapefile->path) - 1; 
-			(i > 0)
-			&& (shapefile->path[i] != '.')
-			&& (shapefile->path[i] != '/')
-            && (shapefile->path[i] != '\\');
-			i--) {}
-    if(shapefile->path[i] == '.') {
-		shapefile->path[i] = '\0';
-    }
-	
-	Tcl_MutexLock(&COMMAND_COUNT_MUTEX);
-	sprintf(cmdName, "shapefile%d", COMMAND_COUNT++);
-	Tcl_MutexUnlock(&COMMAND_COUNT_MUTEX);
-	
-	if (Tcl_CreateObjCommand(interp, cmdName, cmd_dispatcher, (ClientData)shapefile, shapefile_delete_handler) == NULL) {
-		Tcl_SetObjResult(interp, Tcl_ObjPrintf("failed to create command for %s", cmdName));
-		DBFClose(dbf);
-		SHPClose(shp);
-		ckfree((char *)shapefile);
-		return TCL_ERROR;
-	}
-	Tcl_CreateExitHandler(shapefile_exit_handler, (ClientData)shapefile);
-	Tcl_SetObjResult(interp, Tcl_NewStringObj(cmdName, -1));
-	
-	return TCL_OK;
-}
-
-/*
- * Shapetcl_Init
- * 
- * Invoked by Tcl when the Shapetcl extension is loaded.
- * 
- * Result:
- *   Registers the [shapefile] command used to open or create shapefiles.
- */
-int Shapetcl_Init(Tcl_Interp *interp) {
-	
-	if (Tcl_InitStubs(interp, "8.1", 0) == NULL) {
-		return TCL_ERROR;
-	}
-	
-	if (Tcl_PkgProvide(interp, "Shapetcl", "0.1") != TCL_OK) {
-		return TCL_ERROR;
-	}
-	
-	Tcl_CreateObjCommand(interp, "shapefile", shapefile_cmd, NULL, NULL);
-	
-	return TCL_OK;
-}
