@@ -80,47 +80,47 @@ TCL_DECLARE_MUTEX(COMMAND_COUNT_MUTEX);
  */
 #define NUMERIC_BUFFER_SIZE 64
 
-int shapefile_util_shpTypeBase(int shpType);
-int shapefile_util_shpTypeDimension(int shpType);
-void shapefile_util_close(ClientData clientData);
-void shapefile_util_delete(ClientData clientData);
-int shapefile_cmd_close(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]);
-int shapefile_cmd_config(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]);
+int shapefile_typeBase(int shpType);
+int shapefile_typeDimension(int shpType);
+void shapefile_exit_handler(ClientData clientData);
+void shapefile_delete_handler(ClientData clientData);
+int cmd_close(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]);
+int cmd_config(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]);
 int cmd_file(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]);
 int cmd_info(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]);
 int cmd_info_count(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]);
 int cmd_info_type(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]);
 int cmd_info_bounds(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]);
-int shapefile_util_fieldDescription(Tcl_Interp *interp, ShapefilePtr shapefile, int fieldId);
-int shapefile_util_fieldsValidateField(Tcl_Interp *interp, const char *type, const char *name, int width, int precision);
-int shapefile_util_fieldsValidate(Tcl_Interp *interp, Tcl_Obj *definitions);
-int shapefile_util_fieldsAdd(Tcl_Interp *interp, DBFHandle dbf, int validate, Tcl_Obj *definitions);
-int shapefile_util_fieldIndex(Tcl_Interp *interp, ShapefilePtr shapefile, const char *fieldName);
-int shapefile_cmd_fields(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]);
-int shapefile_util_coordWrite(Tcl_Interp *interp, ShapefilePtr shapefile, int featureId, Tcl_Obj *coordParts);
-int shapefile_util_coordRead(Tcl_Interp *interp, ShapefilePtr shapefile, int featureId);
-int shapefile_util_coordReadAll(Tcl_Interp *interp, ShapefilePtr shapefile);
-int shapefile_cmd_coordinates(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]);
-int shapefile_util_attrValidateField(Tcl_Interp *interp, ShapefilePtr shapefile, int fieldId, Tcl_Obj *attrValue);
-int shapefile_util_attrValidate(Tcl_Interp *interp, ShapefilePtr shapefile, Tcl_Obj *attrList);
-int shapefile_util_attrWriteField(Tcl_Interp *interp, ShapefilePtr shapefile, int recordId, int fieldId, int validate, Tcl_Obj *attrValue);
-int shapefile_util_attrWrite(Tcl_Interp *interp, ShapefilePtr shapefile, int recordId, int validate, Tcl_Obj *attrList);
-int shapefile_util_attrReadField(Tcl_Interp *interp, ShapefilePtr shapefile, int recordId, int fieldId);
-int shapefile_util_attrRead(Tcl_Interp *interp, ShapefilePtr shapefile, int recordId);
-int shapefile_util_attrReadAll(Tcl_Interp *interp, ShapefilePtr shapefile);
-int shapefile_cmd_attributes(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]);
-int shapefile_cmd_write(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]);
-int shapefile_commands(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]);
-int shapetcl_cmd(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]);
+int cmd_fields_description(Tcl_Interp *interp, ShapefilePtr shapefile, int fieldId);
+int cmd_fields_validateField(Tcl_Interp *interp, const char *type, const char *name, int width, int precision);
+int cmd_fields_validate(Tcl_Interp *interp, Tcl_Obj *definitions);
+int cmd_fields_add(Tcl_Interp *interp, DBFHandle dbf, int validate, Tcl_Obj *definitions);
+int cmd_fields_index(Tcl_Interp *interp, ShapefilePtr shapefile, const char *fieldName);
+int cmd_fields(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]);
+int cmd_coordinates_write(Tcl_Interp *interp, ShapefilePtr shapefile, int featureId, Tcl_Obj *coordParts);
+int cmd_coordinates_read(Tcl_Interp *interp, ShapefilePtr shapefile, int featureId);
+int cmd_coordinates_readAll(Tcl_Interp *interp, ShapefilePtr shapefile);
+int cmd_coordinates(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]);
+int cmd_attributes_validateField(Tcl_Interp *interp, ShapefilePtr shapefile, int fieldId, Tcl_Obj *attrValue);
+int cmd_attributes_validate(Tcl_Interp *interp, ShapefilePtr shapefile, Tcl_Obj *attrList);
+int cmd_attributes_writeField(Tcl_Interp *interp, ShapefilePtr shapefile, int recordId, int fieldId, int validate, Tcl_Obj *attrValue);
+int cmd_attributes_write(Tcl_Interp *interp, ShapefilePtr shapefile, int recordId, int validate, Tcl_Obj *attrList);
+int cmd_attributes_readField(Tcl_Interp *interp, ShapefilePtr shapefile, int recordId, int fieldId);
+int cmd_attributes_read(Tcl_Interp *interp, ShapefilePtr shapefile, int recordId);
+int cmd_attributes_readAll(Tcl_Interp *interp, ShapefilePtr shapefile);
+int cmd_attributes(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]);
+int cmd_write(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]);
+int cmd_dispatcher(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]);
+int shapefile_cmd(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]);
 int Shapetcl_Init(Tcl_Interp *interp);
 
 /*
- * shapefile_util_shpTypeBase
+ * shapefile_typeBase
  * 
  * Return the base type (BASE_POINT, BASE_ARC, BASE_POLYGON, or BASE_MULTIPOINT)
  * of the specified shape type, regardless of dimension. 
  */
-int shapefile_util_shpTypeBase(int shpType) {
+int shapefile_typeBase(int shpType) {
 	int base = -1;
 	switch (shpType) {
 		case SHPT_POINT:
@@ -148,12 +148,12 @@ int shapefile_util_shpTypeBase(int shpType) {
 }
 
 /*
- * shapefile_util_shpTypeDimension
+ * shapefile_typeDimension
  * 
  * Return the dimension (DIM_XY, DIM_XYM, or DIM_XYZM) of the specified shape
  * type, regardless of base type. 
  */
-int shapefile_util_shpTypeDimension(int shpType) {
+int shapefile_typeDimension(int shpType) {
 	int dimension = -1;
 	switch (shpType) {
 		case SHPT_POINT:
@@ -179,13 +179,13 @@ int shapefile_util_shpTypeDimension(int shpType) {
 }
 
 /*
- * shapefile_util_close
+ * shapefile_exit_handler
  * 
  * Closes the shapefile, writing changes to disk. Invoked by the [$shp close]
  * command. Also invoked as exit handler to ensure any open shapefiles are
  * properly flushed and closed when the interpreter exits.
  */
-void shapefile_util_close(ClientData clientData) {
+void shapefile_exit_handler(ClientData clientData) {
 	ShapefilePtr shapefile = (ShapefilePtr)clientData;
 	SHPClose(shapefile->shp);
 	shapefile->shp = NULL;
@@ -196,18 +196,18 @@ void shapefile_util_close(ClientData clientData) {
 }
 
 /*
- * shapefile_util_delete
+ * shapefile_delete_handler
  * 
  * Deletes exit handler and releases shapefile resources. Invoked as delete
  * handler when [$shp close] command deletes the associated shapefile command.
  */
-void shapefile_util_delete(ClientData clientData) {
-	Tcl_DeleteExitHandler(shapefile_util_close, clientData);
+void shapefile_delete_handler(ClientData clientData) {
+	Tcl_DeleteExitHandler(shapefile_exit_handler, clientData);
 	ckfree((char *)clientData);
 }
 
 /*
- * shapefile_cmd_close
+ * cmd_close
  * 
  * Implements the [$shp close] command used to close shapefile and save changes.
  * 
@@ -218,7 +218,7 @@ void shapefile_util_delete(ClientData clientData) {
  *   No Tcl return value. Changes to readwrite shapefiles are written to disk.
  *   $shp command is deleted and associated resources are released.
  */
-int shapefile_cmd_close(
+int cmd_close(
 		ClientData clientData,
 		Tcl_Interp *interp,
 		int objc,
@@ -231,14 +231,14 @@ int shapefile_cmd_close(
 		return TCL_ERROR;
 	}
 	
-	shapefile_util_close(shapefile);
+	shapefile_exit_handler(shapefile);
 	Tcl_DeleteCommand(interp, Tcl_GetString(objv[0]));
 	
 	return TCL_OK;
 }
 
 /*
- * shapefile_cmd_config
+ * cmd_config
  *
  * Implements the [$shp config] command use to get and set shapefile IO options.
  *
@@ -260,7 +260,7 @@ int shapefile_cmd_close(
  * Result:
  *   Returns boolean value of specified option.
  */
-int shapefile_cmd_config(
+int cmd_config(
 		ClientData clientData,
 		Tcl_Interp *interp,
 		int objc,
@@ -710,7 +710,7 @@ int cmd_info_bounds(
 }
 
 /*
- * shapefile_util_fieldDescription
+ * cmd_fields_description
  * 
  * Get field definition list of specified attribute table field. Used by the
  * [$shp fields list ?FIELD?] action. See [$shp fields] command for details.
@@ -718,7 +718,7 @@ int cmd_info_bounds(
  * Result:
  *   Field definition list for the specified field.
  */
-int shapefile_util_fieldDescription(
+int cmd_fields_description(
 		Tcl_Interp *interp,
 		ShapefilePtr shapefile,
 		int fieldId) {
@@ -770,15 +770,15 @@ int shapefile_util_fieldDescription(
 }
 
 /*
- * shapefile_util_fieldsValidateField
+ * cmd_fields_validateField
  * 
  * Check that a single field definition describes a valid attribute table
- * field. Used by the shapefile_util_fieldsValidate function.
+ * field. Used by the cmd_fields_validate function.
  * 
  * Result:
  *   No Tcl result if the field definition is valid. Otherwise, throws error.
  */
-int shapefile_util_fieldsValidateField(
+int cmd_fields_validateField(
 		Tcl_Interp *interp,
 		const char *type,
 		const char *name,
@@ -809,7 +809,7 @@ int shapefile_util_fieldsValidateField(
 }
 
 /*
- * shapefile_util_fieldsValidate
+ * cmd_fields_validate
  * 
  * Check that a field definitions list contains valid field definitions. Used
  * by the [$shp fields add] action in contexts where field definitions have not
@@ -819,7 +819,7 @@ int shapefile_util_fieldsValidateField(
  * Result:
  *   No Tcl result if the field definitions are valid. Otherwise, throws error.
  */
-int shapefile_util_fieldsValidate(
+int cmd_fields_validate(
 		Tcl_Interp *interp,
 		Tcl_Obj *definitions) {
 			
@@ -850,7 +850,7 @@ int shapefile_util_fieldsValidate(
 				|| (Tcl_GetIntFromObj(interp, definitionElements[i + 3], &precision) != TCL_OK)) {
 			return TCL_ERROR;
 		}		
-		if (shapefile_util_fieldsValidateField(interp, type, name, width, precision) != TCL_OK) {
+		if (cmd_fields_validateField(interp, type, name, width, precision) != TCL_OK) {
 			return TCL_ERROR;
 		}
 	}
@@ -859,7 +859,7 @@ int shapefile_util_fieldsValidate(
 }
 
 /*
- * shapefile_util_fieldsAdd
+ * cmd_fields_add
  * 
  * Implements the [$shp fields add FIELDDEFINITIONS] action of the [$shp fields]
  * command, used to add new fields to an existing attribute table. Also used by
@@ -872,7 +872,7 @@ int shapefile_util_fieldsValidate(
  * Result:
  *   Index number of the last field added to the attribute table.
  */
-int shapefile_util_fieldsAdd(
+int cmd_fields_add(
 		Tcl_Interp *interp,
 		DBFHandle dbf,
 		int validate,
@@ -885,7 +885,7 @@ int shapefile_util_fieldsAdd(
 	int fieldId = 0;
 	
 	/* check field definition list formatting if not already validated */
-	if (validate && (shapefile_util_fieldsValidate(interp, definitions) != TCL_OK)) {
+	if (validate && (cmd_fields_validate(interp, definitions) != TCL_OK)) {
 		return TCL_ERROR;
 	}
 	
@@ -927,16 +927,16 @@ int shapefile_util_fieldsAdd(
 }
 
 /*
- * shapefile_util_fieldIndex
+ * cmd_fields_index
  *
- * Implements the [$shp field index] action used to look up a field by name.
+ * Implements the [$shp fields index] action used to look up a field by name.
  * Field name search is case insensitive.
  *
  * Result:
  *   Index of named field, or error if no such field is found.
  *
  */
-int shapefile_util_fieldIndex(
+int cmd_fields_index(
 		Tcl_Interp *interp,
 		ShapefilePtr shapefile,
 		const char *fieldName) {
@@ -953,7 +953,7 @@ int shapefile_util_fieldIndex(
 }
 
 /*
- * shapefile_cmd_fields
+ * cmd_fields
  * 
  * Implements the [$shp fields] command used to query attribute table format.
  * Also used to modify attribute table format, eg. by adding fields.
@@ -991,7 +991,7 @@ int shapefile_util_fieldIndex(
  *   add action returns field index of last new field added.
  *   name action returns named field index or error if none
  */
-int shapefile_cmd_fields(
+int cmd_fields(
 		ClientData clientData,
 		Tcl_Interp *interp,
 		int objc,
@@ -1025,7 +1025,7 @@ int shapefile_cmd_fields(
 			return TCL_ERROR;
 		}
 		/* sets interp result to index of last added field */
-		if (shapefile_util_fieldsAdd(interp, shapefile->dbf, 1 /* validate */, objv[3]) != TCL_OK) {
+		if (cmd_fields_add(interp, shapefile->dbf, 1 /* validate */, objv[3]) != TCL_OK) {
 			return TCL_ERROR;
 		}
 	} else if (actionIndex == 1) {
@@ -1050,7 +1050,7 @@ int shapefile_cmd_fields(
 				Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid field index %d", fieldId));
 				return TCL_ERROR;
 			}
-			if (shapefile_util_fieldDescription(interp, shapefile, fieldId) != TCL_OK) {
+			if (cmd_fields_description(interp, shapefile, fieldId) != TCL_OK) {
 				return TCL_ERROR;
 			}
 		} else {
@@ -1059,7 +1059,7 @@ int shapefile_cmd_fields(
 			for (fieldId = 0; fieldId < fieldCount; fieldId++) {
 				
 				/* get information about this field */
-				if (shapefile_util_fieldDescription(interp, shapefile, fieldId) != TCL_OK) {
+				if (cmd_fields_description(interp, shapefile, fieldId) != TCL_OK) {
 					return TCL_ERROR;
 				}
 				
@@ -1084,7 +1084,7 @@ int shapefile_cmd_fields(
 			return TCL_ERROR;
 		}
 		/* sets interp result to field index, or not-found error message */
-		if (shapefile_util_fieldIndex(interp, shapefile, fieldName) != TCL_OK) {
+		if (cmd_fields_index(interp, shapefile, fieldName) != TCL_OK) {
 			return TCL_ERROR;
 		}
 	}
@@ -1093,7 +1093,7 @@ int shapefile_cmd_fields(
 }
 
 /*
- * shapefile_util_coordWrite
+ * cmd_coordinates_write
  * 
  * Implements the [$shp coordinates write ?FEATURE? COORDINATELIST] actions of
  * the [$shp coordinates] command, used to set the coordinates of a new feature
@@ -1102,7 +1102,7 @@ int shapefile_cmd_fields(
  * Result:
  *   Index number of the feature that was written.
  */
-int shapefile_util_coordWrite(
+int cmd_coordinates_write(
 		Tcl_Interp *interp,
 		ShapefilePtr shapefile,
 		int featureId,
@@ -1387,7 +1387,7 @@ int shapefile_util_coordWrite(
 }
 
 /*
- * shapefile_util_coordRead
+ * cmd_coordinates_read
  * 
  * Implements the [$shp coordinates read FEATURE] action of the [$shp
  * coordinates] command, used to get coordinate list of the specified featured.
@@ -1396,7 +1396,7 @@ int shapefile_util_coordWrite(
  * Result:
  *   Coordinate list for the specified feature.
  */
-int shapefile_util_coordRead(
+int cmd_coordinates_read(
 		Tcl_Interp *interp,
 		ShapefilePtr shapefile,
 		int featureId) {
@@ -1502,7 +1502,7 @@ int shapefile_util_coordRead(
 }
 
 /*
- * shapefile_util_coordReadAll
+ * cmd_coordinates_readAll
  * 
  * Implements the [$shp coordinates read] action of the [$shp coordinates]
  * command, used to get a list of coordinate lists for all shapefile features.
@@ -1510,7 +1510,7 @@ int shapefile_util_coordRead(
  * Result:
  *   List containing a coordinate list for each feature in shapefile.
  */
-int shapefile_util_coordReadAll(
+int cmd_coordinates_readAll(
 		Tcl_Interp *interp,
 		ShapefilePtr shapefile) {
 	
@@ -1522,7 +1522,7 @@ int shapefile_util_coordReadAll(
 	
 	for (featureId = 0; featureId < shpCount; featureId++) {
 		
-		if (shapefile_util_coordRead(interp, shapefile, featureId) != TCL_OK) {
+		if (cmd_coordinates_read(interp, shapefile, featureId) != TCL_OK) {
 			return TCL_ERROR;
 		}
 		
@@ -1538,7 +1538,7 @@ int shapefile_util_coordReadAll(
 }
 
 /*
- * shapefile_cmd_coordinates
+ * cmd_coordinates
  * 
  * Implements the [$shp coordinates] command used to get/set feature geometry.
  * 
@@ -1577,7 +1577,7 @@ int shapefile_util_coordReadAll(
  *   Read actions return coordinate lists or lists of coordinate lists.
  *   Write actions return the index of the written feature.
  */
-int shapefile_cmd_coordinates(
+int cmd_coordinates(
 		ClientData clientData,
 		Tcl_Interp *interp,
 		int objc,
@@ -1606,7 +1606,7 @@ int shapefile_cmd_coordinates(
 		
 		if (objc == 3) {
 			/* return coords of all features */
-			if (shapefile_util_coordReadAll(interp, shapefile) != TCL_OK) {
+			if (cmd_coordinates_readAll(interp, shapefile) != TCL_OK) {
 				return TCL_ERROR;
 			}
 		} else if (objc == 4) {
@@ -1617,7 +1617,7 @@ int shapefile_cmd_coordinates(
 			}
 			
 			/* return coords of specified feature index */
-			if (shapefile_util_coordRead(interp, shapefile, featureId) != TCL_OK) {
+			if (cmd_coordinates_read(interp, shapefile, featureId) != TCL_OK) {
 				return TCL_ERROR;
 			}
 			
@@ -1633,7 +1633,7 @@ int shapefile_cmd_coordinates(
 			int recordId;
 			
 			/* write coords to a new feature */
-			if (shapefile_util_coordWrite(interp, shapefile, -1, objv[3]) != TCL_OK) {
+			if (cmd_coordinates_write(interp, shapefile, -1, objv[3]) != TCL_OK) {
 				return TCL_ERROR;
 			}
 			
@@ -1641,7 +1641,7 @@ int shapefile_cmd_coordinates(
 			Tcl_ResetResult(interp);
 			
 			/* interp result is new feature id; create a null attribute record to match */
-			if (shapefile_util_attrWrite(interp, shapefile, -1, 0, NULL) != TCL_OK) {
+			if (cmd_attributes_write(interp, shapefile, -1, 0, NULL) != TCL_OK) {
 				return TCL_ERROR;
 			}
 			
@@ -1665,7 +1665,7 @@ int shapefile_cmd_coordinates(
 			}
 			
 			/* if shape output is successful, interp result is set to output feature id */
-			if (shapefile_util_coordWrite(interp, shapefile, featureId, objv[4]) != TCL_OK) {
+			if (cmd_coordinates_write(interp, shapefile, featureId, objv[4]) != TCL_OK) {
 				return TCL_ERROR;
 			}
 		} else {
@@ -1678,10 +1678,10 @@ int shapefile_cmd_coordinates(
 }
 
 /*
- * shapefile_util_attrValidateField
+ * cmd_attributes_validateField
  * 
  * Confirm that a single attribute value conforms to the specified attribute
- * table field definition. Used by the shapefile_util_attrValidate function and
+ * table field definition. Used by the cmd_attributes_validate function and
  * by the [$shp attributes write RECORD FIELD VALUE] action in contexts where
  * VALUE has previously been pre-validated.
  * 
@@ -1689,7 +1689,7 @@ int shapefile_cmd_coordinates(
  *   No Tcl result if the attribute value passes validation. Otherwise, errors
  *   may be thrown.
  */
-int shapefile_util_attrValidateField(
+int cmd_attributes_validateField(
 		Tcl_Interp *interp,
 		ShapefilePtr shapefile,
 		int fieldId,
@@ -1762,7 +1762,7 @@ int shapefile_util_attrValidateField(
 }
 
 /*
- * shapefile_util_attrValidate
+ * cmd_attributes_validate
  * 
  * Confirm that a list of attribute values conforms to the shapefile's field
  * definitions. Used by the [$shp write] command and [$shp attributes write]
@@ -1774,7 +1774,7 @@ int shapefile_util_attrValidateField(
  *   No Tcl result if the attribute value list passes validation. Otherwise,
  *   errors may be thrown.
  */
-int shapefile_util_attrValidate(
+int cmd_attributes_validate(
 		Tcl_Interp *interp,
 		ShapefilePtr shapefile,
 		Tcl_Obj *attrList) {
@@ -1799,7 +1799,7 @@ int shapefile_util_attrValidate(
 		}
 		
 		/* validate this field */
-		if (shapefile_util_attrValidateField(interp, shapefile, fieldId, attr) != TCL_OK) {
+		if (cmd_attributes_validateField(interp, shapefile, fieldId, attr) != TCL_OK) {
 			return TCL_ERROR;
 		}
 	}
@@ -1808,7 +1808,7 @@ int shapefile_util_attrValidate(
 }
 
 /*
- * shapefile_util_attrWriteField
+ * cmd_attributes_writeField
  * 
  * Implements the [$shp attributes write RECORD FIELD VALUE] action of the
  * [$shp attributes] command, used to set the value of a single field of a
@@ -1821,7 +1821,7 @@ int shapefile_util_attrValidate(
  * Result:
  *   Index number of the record containing the value that was written.
  */
-int shapefile_util_attrWriteField(
+int cmd_attributes_writeField(
 		Tcl_Interp *interp,
 		ShapefilePtr shapefile,
 		int recordId,
@@ -1853,7 +1853,7 @@ int shapefile_util_attrWriteField(
 		return TCL_ERROR;
 	}
 
-	if (validate && (shapefile_util_attrValidateField(interp, shapefile, fieldId, attrValue) != TCL_OK)) {
+	if (validate && (cmd_attributes_validateField(interp, shapefile, fieldId, attrValue) != TCL_OK)) {
 		return TCL_ERROR;
 	}
 	
@@ -1929,7 +1929,7 @@ int shapefile_util_attrWriteField(
 }
 
 /*
- * shapefile_util_attrWrite
+ * cmd_attributes_write
  * 
  * Implements the [$shp attributes write ?RECORD? VALUELIST] action of the
  * [$shp attributes] command, used to write values to a new or existing record.
@@ -1937,7 +1937,7 @@ int shapefile_util_attrWriteField(
  * Result:
  *   Index number of the attribute record that was written.
  */
-int shapefile_util_attrWrite(
+int cmd_attributes_write(
 		Tcl_Interp *interp,
 		ShapefilePtr shapefile,
 		int recordId,
@@ -1986,7 +1986,7 @@ int shapefile_util_attrWrite(
 	
 	/* in the attributes command context, we validate now; w/the write command,
 	   we receive attrList pre-validated and can proceed to write it as-is. */
-	if (validate && (shapefile_util_attrValidate(interp, shapefile, attrList) != TCL_OK)) {
+	if (validate && (cmd_attributes_validate(interp, shapefile, attrList) != TCL_OK)) {
 		return TCL_ERROR;
 	}
 		
@@ -2000,7 +2000,7 @@ int shapefile_util_attrWrite(
 		}
 	
 		/* writes value attr to field fieldId of record recordId; sets interp result to recordId */
-		if (shapefile_util_attrWriteField(interp, shapefile, recordId, fieldId, 0 /* no validation */, attr) != TCL_OK) {
+		if (cmd_attributes_writeField(interp, shapefile, recordId, fieldId, 0 /* no validation */, attr) != TCL_OK) {
 			return TCL_ERROR;
 		}
 	}
@@ -2010,7 +2010,7 @@ int shapefile_util_attrWrite(
 }
 
 /*
- * shapefile_util_attrReadField
+ * cmd_attributes_readField
  * 
  * Implements the [$shp attributes read RECORD FIELD] action of the
  * [$shp attributes] command, used to get the value of a single attribute field
@@ -2022,7 +2022,7 @@ int shapefile_util_attrWrite(
  *   represented as empty strings ({}). Unsupported field type values are
  *   represented as strings (as stored within the DBF file).
  */
-int shapefile_util_attrReadField(
+int cmd_attributes_readField(
 		Tcl_Interp *interp,
 		ShapefilePtr shapefile,
 		int recordId,
@@ -2070,7 +2070,7 @@ int shapefile_util_attrReadField(
 }
 
 /*
- * shapefile_util_attrRead
+ * cmd_attributes_read
  * 
  * Implements the [$shp attributes read RECORD] action of the [$shp attributes]
  * command, used to get a list of attribute values for a specified record. Also
@@ -2079,7 +2079,7 @@ int shapefile_util_attrReadField(
  * Result:
  *   List containing each attribute value from the specified record.
  */
-int shapefile_util_attrRead(
+int cmd_attributes_read(
 		Tcl_Interp *interp,
 		ShapefilePtr shapefile,
 		int recordId) {
@@ -2096,7 +2096,7 @@ int shapefile_util_attrRead(
 	fieldCount = DBFGetFieldCount(shapefile->dbf);
 	for (fieldId = 0; fieldId < fieldCount; fieldId++) {
 				
-		if (shapefile_util_attrReadField(interp, shapefile, recordId, fieldId) != TCL_OK) {
+		if (cmd_attributes_readField(interp, shapefile, recordId, fieldId) != TCL_OK) {
 			return TCL_ERROR;
 		}
 		
@@ -2112,7 +2112,7 @@ int shapefile_util_attrRead(
 }
 
 /*
- * shapefile_util_attrReadAll
+ * cmd_attributes_readAll
  * 
  * Implements the [$shp attributes read] action of the [$shp attributes]
  * command, used to get a list of attribute value lists for all records.
@@ -2120,7 +2120,7 @@ int shapefile_util_attrRead(
  * Result:
  *   List containing an attribute value list for each record in shapefile.
  */
-int shapefile_util_attrReadAll(
+int cmd_attributes_readAll(
 		Tcl_Interp *interp,
 		ShapefilePtr shapefile) {
 
@@ -2132,7 +2132,7 @@ int shapefile_util_attrReadAll(
 
 	for (recordId = 0; recordId < dbfCount; recordId++) {
 		
-		if (shapefile_util_attrRead(interp, shapefile, recordId) != TCL_OK) {
+		if (cmd_attributes_read(interp, shapefile, recordId) != TCL_OK) {
 			return TCL_ERROR;
 		}
 					
@@ -2148,7 +2148,7 @@ int shapefile_util_attrReadAll(
 }
 
 /*
- * shapefile_cmd_attributes
+ * cmd_attributes
  * 
  * Implements the [$shp attributes] command used to get or set attribute data.
  * 
@@ -2172,7 +2172,7 @@ int shapefile_util_attrReadAll(
  *   value list list ({{X Y Z} {A B C} {1 2 3}}) format, respectively.
  *   Write actions return the index of the written attribute record.
  */
-int shapefile_cmd_attributes(
+int cmd_attributes(
 		ClientData clientData,
 		Tcl_Interp *interp,
 		int objc,
@@ -2200,7 +2200,7 @@ int shapefile_cmd_attributes(
 		
 		if (objc == 3) {
 			/* return attributes of all records */
-			if (shapefile_util_attrReadAll(interp, shapefile) != TCL_OK) {
+			if (cmd_attributes_readAll(interp, shapefile) != TCL_OK) {
 				return TCL_ERROR;
 			}
 		} else if (objc == 4) {
@@ -2210,7 +2210,7 @@ int shapefile_cmd_attributes(
 				return TCL_ERROR;
 			}
 			
-			if (shapefile_util_attrRead(interp, shapefile, recordId) != TCL_OK) {
+			if (cmd_attributes_read(interp, shapefile, recordId) != TCL_OK) {
 				return TCL_ERROR;
 			}		
 			
@@ -2227,7 +2227,7 @@ int shapefile_cmd_attributes(
 			}
 			
 			/* sets interp result to field value; validates recordId and fieldId */
-			if (shapefile_util_attrReadField(interp, shapefile, recordId, fieldId) != TCL_OK) {
+			if (cmd_attributes_readField(interp, shapefile, recordId, fieldId) != TCL_OK) {
 				return TCL_ERROR;
 			}			
 		} else {
@@ -2241,14 +2241,14 @@ int shapefile_cmd_attributes(
 			/* write attributes to new record; create complementary null shape */
 			int featureId;
 			
-			if (shapefile_util_attrWrite(interp, shapefile, -1 /* new record */, 1 /* validate */, objv[3]) != TCL_OK) {
+			if (cmd_attributes_write(interp, shapefile, -1 /* new record */, 1 /* validate */, objv[3]) != TCL_OK) {
 				return TCL_ERROR;
 			}
 			
 			Tcl_GetIntFromObj(interp, Tcl_GetObjResult(interp), &recordId);
 			Tcl_ResetResult(interp);
 			
-			if (shapefile_util_coordWrite(interp, shapefile, -1 /* new record */, NULL /* no coordinates */) != TCL_OK) {
+			if (cmd_coordinates_write(interp, shapefile, -1 /* new record */, NULL /* no coordinates */) != TCL_OK) {
 				return TCL_ERROR;
 			}
 			
@@ -2270,7 +2270,7 @@ int shapefile_cmd_attributes(
 			}
 			
 			/* if successful, sets interp's result to the recordId of the written record */
-			if (shapefile_util_attrWrite(interp, shapefile, recordId, 1 /* validate */, objv[4]) != TCL_OK) {
+			if (cmd_attributes_write(interp, shapefile, recordId, 1 /* validate */, objv[4]) != TCL_OK) {
 				return TCL_ERROR;
 			}
 			
@@ -2286,7 +2286,7 @@ int shapefile_cmd_attributes(
 				return TCL_ERROR;
 			}
 			
-			if (shapefile_util_attrWriteField(interp, shapefile, recordId, fieldId, 1 /* validate */, objv[5]) != TCL_OK) {
+			if (cmd_attributes_writeField(interp, shapefile, recordId, fieldId, 1 /* validate */, objv[5]) != TCL_OK) {
 				return TCL_ERROR;
 			}
 		} else {
@@ -2299,7 +2299,7 @@ int shapefile_cmd_attributes(
 }
 
 /*
- * shapefile_cmd_write
+ * cmd_write
  * 
  * Implements the [$shp write] command used to add a new feature and attribute
  * record to the shapefile.
@@ -2313,7 +2313,7 @@ int shapefile_cmd_attributes(
  * Result:
  *   Index number of the new feature.
  */
-int shapefile_cmd_write(
+int cmd_write(
 		ClientData clientData,
 		Tcl_Interp *interp,
 		int objc,
@@ -2333,13 +2333,13 @@ int shapefile_cmd_write(
 	}
 	
 	/* pre-validate attributes before writing anything */
-	if (shapefile_util_attrValidate(interp, shapefile, objv[3]) != TCL_OK) {
+	if (cmd_attributes_validate(interp, shapefile, objv[3]) != TCL_OK) {
 		return TCL_ERROR;
 	}
 	Tcl_ResetResult(interp);
 	
 	/* write the new feature coords (nothing written if coordWrite fails) */
-	if (shapefile_util_coordWrite(interp, shapefile, -1, objv[2]) != TCL_OK) {
+	if (cmd_coordinates_write(interp, shapefile, -1, objv[2]) != TCL_OK) {
 		return TCL_ERROR;
 	}
 	if (Tcl_GetIntFromObj(interp, Tcl_GetObjResult(interp), &outputFeatureId) != TCL_OK) {
@@ -2348,7 +2348,7 @@ int shapefile_cmd_write(
 	Tcl_ResetResult(interp);
 	
 	/* write the pre-validated attribute record */
-	if (shapefile_util_attrWrite(interp, shapefile, -1, 0, objv[3]) != TCL_OK) {
+	if (cmd_attributes_write(interp, shapefile, -1, 0, objv[3]) != TCL_OK) {
 		return TCL_ERROR;
 	}
 	if (Tcl_GetIntFromObj(interp, Tcl_GetObjResult(interp), &outputAttributeId) != TCL_OK) {
@@ -2366,10 +2366,10 @@ int shapefile_cmd_write(
 }
 
 /*
- * shapefile_commands
+ * cmd_dispatcher
  * 
- * Ensemble command dispatcher handles the shapefile identifier ($shp) returned
- * by shapetcl_cmd. The clientData is a ShapefilePtr associated with identifier.
+ * Ensemble command dispatcher handles the shapefile identifier [$shp] returned
+ * by shapefile_cmd. The clientData is a ShapefilePtr associated with identifier.
  * 
  * Command Syntax:
  *   [$shp attributes|close|config|coordinates|fields|info|mode|write ?args?]
@@ -2379,7 +2379,7 @@ int shapefile_cmd_write(
  * Result:
  *   Result of the selected subcommand.
  */
-int shapefile_commands(
+int cmd_dispatcher(
 		ClientData clientData,
 		Tcl_Interp *interp,
 		int objc,
@@ -2398,14 +2398,14 @@ int shapefile_commands(
 			NULL
 	};
 	Tcl_ObjCmdProc *subcommands[] = {
-			shapefile_cmd_attributes,
-			shapefile_cmd_close,
-			shapefile_cmd_config,
-			shapefile_cmd_coordinates,
-			shapefile_cmd_fields,
+			cmd_attributes,
+			cmd_close,
+			cmd_config,
+			cmd_coordinates,
+			cmd_fields,
 			cmd_info,
 			cmd_file,
-			shapefile_cmd_write
+			cmd_write
 	};
 	
 	if (objc < 2) {
@@ -2424,7 +2424,7 @@ int shapefile_commands(
 }
 
 /*
- * shapetcl_cmd
+ * shapefile_cmd
  * 
  * Implements the [shapefile] command used to open a new or existing shapefile.
  * 
@@ -2439,7 +2439,7 @@ int shapefile_commands(
  * Result:
  *   Name of an ensemble command for subsequent operations on the shapefile.
  */
- int shapetcl_cmd(
+ int shapefile_cmd(
 		ClientData clientData,
 		Tcl_Interp *interp,
 		int objc,
@@ -2510,7 +2510,7 @@ int shapefile_commands(
 		}
 		
 		/* verify that the attribute table field definition looks sensible */
-		if (shapefile_util_fieldsValidate(interp, objv[3]) != TCL_OK) {
+		if (cmd_fields_validate(interp, objv[3]) != TCL_OK) {
 			return TCL_ERROR;
 		}
 		
@@ -2520,7 +2520,7 @@ int shapefile_commands(
 		}
 		
 		/* add pre-validated fields to the dbf */
-		if (shapefile_util_fieldsAdd(interp, dbf, 0 /* don't validate */, objv[3]) != TCL_OK) {
+		if (cmd_fields_add(interp, dbf, 0 /* don't validate */, objv[3]) != TCL_OK) {
 			DBFClose(dbf);
 			return TCL_ERROR;
 		}
@@ -2589,8 +2589,8 @@ int shapefile_commands(
 	shapefile->getOnlyXyCoords = 0;
 	shapefile->readRawStrings = 0;
 	shapefile->shapeType = shpType;
-	shapefile->baseType = shapefile_util_shpTypeBase(shpType);
-	shapefile->dimType = shapefile_util_shpTypeDimension(shpType);
+	shapefile->baseType = shapefile_typeBase(shpType);
+	shapefile->dimType = shapefile_typeDimension(shpType);
 	
 	/* save the base path of the shapefile, using the same code as Shapelib.
 	   Shapelib duplicates this code at least 4 times, so what's once more? */
@@ -2610,14 +2610,14 @@ int shapefile_commands(
 	sprintf(cmdName, "shapefile%d", COMMAND_COUNT++);
 	Tcl_MutexUnlock(&COMMAND_COUNT_MUTEX);
 	
-	if (Tcl_CreateObjCommand(interp, cmdName, shapefile_commands, (ClientData)shapefile, shapefile_util_delete) == NULL) {
+	if (Tcl_CreateObjCommand(interp, cmdName, cmd_dispatcher, (ClientData)shapefile, shapefile_delete_handler) == NULL) {
 		Tcl_SetObjResult(interp, Tcl_ObjPrintf("failed to create command for %s", cmdName));
 		DBFClose(dbf);
 		SHPClose(shp);
 		ckfree((char *)shapefile);
 		return TCL_ERROR;
 	}
-	Tcl_CreateExitHandler(shapefile_util_close, (ClientData)shapefile);
+	Tcl_CreateExitHandler(shapefile_exit_handler, (ClientData)shapefile);
 	Tcl_SetObjResult(interp, Tcl_NewStringObj(cmdName, -1));
 	
 	return TCL_OK;
@@ -2641,7 +2641,7 @@ int Shapetcl_Init(Tcl_Interp *interp) {
 		return TCL_ERROR;
 	}
 	
-	Tcl_CreateObjCommand(interp, "shapefile", shapetcl_cmd, NULL, NULL);
+	Tcl_CreateObjCommand(interp, "shapefile", shapefile_cmd, NULL, NULL);
 	
 	return TCL_OK;
 }
