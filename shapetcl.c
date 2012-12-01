@@ -89,6 +89,7 @@ int cmd_dispatcher(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj 
 int cmd_close(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]);
 void shapefile_exit_handler(ClientData clientData);
 void shapefile_delete_handler(ClientData clientData);
+int cmd_flush(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]);
 
 int cmd_config(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]);
 int cmd_file(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]);
@@ -436,6 +437,7 @@ int cmd_dispatcher(
 			"fields",
 			"info",
 			"file",
+			"flush",
 			"write",
 			NULL
 	};
@@ -447,6 +449,7 @@ int cmd_dispatcher(
 			cmd_fields,
 			cmd_info,
 			cmd_file,
+			cmd_flush,
 			cmd_write
 	};
 	
@@ -522,6 +525,54 @@ void shapefile_exit_handler(ClientData clientData) {
 void shapefile_delete_handler(ClientData clientData) {
 	Tcl_DeleteExitHandler(shapefile_exit_handler, clientData);
 	ckfree((char *)clientData);
+}
+
+/*
+ * cmd_flush
+ * 
+ * Implements the [$shp flush] command used to write changes to disk.
+ * 
+ * Command Syntax:
+ *   [$shp flush]
+ * 
+ * Result:
+ *   None if successful. Files are closed, flushing changes, and reopened.
+ */
+int cmd_flush(
+		ClientData clientData,
+		Tcl_Interp *interp,
+		int objc,
+		Tcl_Obj *CONST objv[]) {
+
+	ShapefilePtr shapefile = (ShapefilePtr)clientData;
+	
+	if (objc != 2) {
+		Tcl_WrongNumArgs(interp, 1, objv, NULL);
+		return TCL_ERROR;
+	}
+	
+	/* no changes to flush if readonly */
+	if (shapefile->readonly) {
+		return TCL_OK;
+	}
+	
+	SHPClose(shapefile->shp);
+	DBFClose(shapefile->dbf);
+	
+	/* Trust the shapefile will not be changed this instant... */	
+	
+	shapefile->shp = SHPOpen(shapefile->path, "rb+");
+	shapefile->dbf = DBFOpen(shapefile->path, "rb+");
+	
+	/* If the shapefile cannot be reopened, close the command as well. */
+	if (shapefile->shp == NULL || shapefile->dbf == NULL) {
+		shapefile_exit_handler(shapefile);
+		Tcl_DeleteCommand(interp, Tcl_GetString(objv[0]));
+		Tcl_SetObjResult(interp, Tcl_ObjPrintf("cannot reopen flushed shapefile \"%s\"", shapefile->path));
+		return TCL_ERROR;
+	}
+	
+	return TCL_OK;
 }
 
 /*
