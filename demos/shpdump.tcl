@@ -9,9 +9,9 @@ if {$argc != 1} {
 }
 
 set shp [shapefile [lindex $argv 0]]
-puts "File type: [$shp type]"
+puts "File type: [$shp info type]"
 
-set fcount [$shp count]
+set fcount [$shp info count]
 puts "Features in file: $fcount"
 
 # iterate through all features

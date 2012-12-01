@@ -41,8 +41,8 @@ pack .f -fill both -expand true
 
 # load shapefile
 set shp [shapefile [lindex $argv 0]]
-set basetype [$shp type base]
-set fcount [$shp count]
+set basetype [$shp info type base]
+set fcount [$shp info count]
 
 # add each feature to the canvas
 $shp config getOnlyXyCoordinates 1

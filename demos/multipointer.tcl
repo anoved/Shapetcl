@@ -10,9 +10,9 @@ if {$argc != 2} {
 lassign $argv inFile outFile
 
 set in [shapefile $inFile readonly]
-set count [$in count]
-set inBaseType [$in type base]
-set dimension [$in type dimension]
+set count [$in info count]
+set inBaseType [$in info type base]
+set dimension [$in info type dimension]
 switch $dimension {
 	xy {set outType "multipoint"}
 	xym {set outType "multipointm"}

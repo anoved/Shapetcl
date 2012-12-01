@@ -46,8 +46,8 @@ if {$argc < 2 || $argc > 4} {
 }
 lassign $argv inFile outFile mFormat zFormat
 set in [shapefile $inFile readonly]
-set basetype [$in type base]
-set dimtype [$in type dimension]
+set basetype [$in info type base]
+set dimtype [$in info type dimension]
 set outType $basetype
 if {$zFormat ne {}} {
 	append outType z
@@ -56,7 +56,7 @@ if {$zFormat ne {}} {
 }
 set out [shapefile $outFile $outType [$in fields list]]
 
-set count [$in count]
+set count [$in info count]
 for {set i 0} {$i < $count} {incr i} {
 	set inCoords [$in coordinates read $i]
 	set outCoords {}
