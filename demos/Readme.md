@@ -21,7 +21,7 @@ Here is an example with a shapefile named `arc` that has four fields:
 
 	infodump.tcl SHAPEFILE
 
-This script reports the base path of `SHAPEFILE` and lists basic metadata about the shapefile contents. Shapetcl's main `shapefile` command accepts paths with or without any file extension; the base path is the canonical form to which .shp, .shx, and .dbf extensions are appended to comprise the actual shapefile. Metadata includes the feature type, base type (point/arc/polygon/multipoint geometry, regardless of additional X and/or M dimension), dimension (xy/xym/xyzm, regardless of base geometry type), entity count, and file bounds (min xy[zm]/max xy[zm]).
+This script reports the base path of `SHAPEFILE` and lists basic metadata about the shapefile contents. Shapetcl's main `shapefile` command accepts paths with or without any file extension; the base path is the canonical form to which .shp, .shx, and .dbf extensions are appended to comprise the actual shapefile. Metadata includes the feature type, base type (point/arc/polygon/multipoint geometry, regardless of additional Z and/or M dimension), dimension (xy/xym/xyzm, regardless of base geometry type), entity count, and file bounds (min xy[zm]/max xy[zm]).
 
 	> infodump.tcl tests/sample/xym/arcm.dbf
 	 Base Path: tests/sample/xym/arcm
