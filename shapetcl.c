@@ -1037,8 +1037,8 @@ int cmd_info_bounds(
 			Tcl_ListObjAppendElement(interp, bounds, Tcl_NewDoubleObj(max[2]));
 		}
 		if (shapefile->getAllCoords
-				|| shapefile->shapeType == DIM_XYZM
-				|| shapefile->shapeType == DIM_XYM) {
+				|| shapefile->dimType == DIM_XYZM
+				|| shapefile->dimType == DIM_XYM) {
 			Tcl_ListObjAppendElement(interp, bounds, Tcl_NewDoubleObj(max[3]));
 		}	
 	}
