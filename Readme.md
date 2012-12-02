@@ -23,3 +23,16 @@ Shapetcl was written to fill a particular niche I perceived to be unoccupied, bu
 - [Tclshp](https://sourceforge.net/projects/tclshp/) by Devin J. Eyre. The `Tclshp` package provides limited read-write access to shapefile geometry and attribute tables. It is essentially a wrapper for some of the example code distributed with Shapelib. Each procedure call opens, accesses, and closes the shapefile, so performance may not be suitable for repeated operations. I created a simplified version as I was learning about writing Tcl extensions: [anoved/Tclshp](https://github.com/anoved/Tclshp).
 - [tclshp](http://geology.usgs.gov/tools/metadata/tclshp/) and [tcldbf](http://geology.usgs.gov/tools/metadata/tcldbf/) by Peter N. Schweitzer. The `tclshp` package provides read-only access to shapefile geometry. The `tcldbf` package provides read-write access to shapefile attribute tables.
 - [gpsmanshp](http://gpsmanshp.sourceforge.net) by Miguel Filgueiras. The `gpsmanshp` package provides a Tcl interface to work with higher-level GPS data using Shapelib. It is a component of [GPSMan](http://gpsman.sourceforge.net).
+
+License
+-------
+
+Shapetcl is freely distributed under an open source [MIT License](http://opensource.org/licenses/MIT):
+
+> Copyright (c) 2012 Jim DeVona
+>
+> Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+>
+> The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+>
+> THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
