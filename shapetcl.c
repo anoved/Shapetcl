@@ -695,12 +695,12 @@ int cmd_file(
 	int actionIndex;
 	static const char *actionNames[] = {"mode", "path",	NULL};
 	
-	if (objc < 3) {
-		Tcl_WrongNumArgs(interp, 2, objv, "action ?args?");
+	if (objc != 3) {
+		Tcl_WrongNumArgs(interp, 2, objv, "option");
 		return TCL_ERROR;
 	}
 	
-	if (Tcl_GetIndexFromObj(interp, objv[2], actionNames, "action",
+	if (Tcl_GetIndexFromObj(interp, objv[2], actionNames, "option",
 			0 /* not TCL_EXACT */, &actionIndex) != TCL_OK) {
 		return TCL_ERROR;
 	}

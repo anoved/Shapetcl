@@ -27,6 +27,18 @@ test config-1.0 {
 	error
 } -match glob -result {wrong # args: *}
 
+test config-1.0b {
+# invoke config command with too few arguments
+} -setup {
+	set shp [shapefile sample/xy/point readonly]
+} -body {
+	$shp config
+} -cleanup {
+	$shp close
+} -returnCodes {
+	error
+} -match glob -result {wrong # args: *}
+
 test config-1.1 {
 # invoke config command with invalid option name
 } -setup {
