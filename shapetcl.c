@@ -745,20 +745,20 @@ int cmd_info(
 		Tcl_Obj *CONST objv[]) {
 
 	int result = TCL_OK;
-	int actionIndex;
-	static const char *actionNames[] = {"bounds", "count", "type", NULL};
+	int optionIndex;
+	static const char *optionNames[] = {"bounds", "count", "type", NULL};
 
 	if (objc < 3) {
-		Tcl_WrongNumArgs(interp, 2, objv, "action ?args?");
+		Tcl_WrongNumArgs(interp, 2, objv, "option ?args?");
 		return TCL_ERROR;
 	}
 	
-	if (Tcl_GetIndexFromObj(interp, objv[2], actionNames, "action",
-			0 /* not TCL_EXACT */, &actionIndex) != TCL_OK) {
+	if (Tcl_GetIndexFromObj(interp, objv[2], optionNames, "option",
+			0 /* not TCL_EXACT */, &optionIndex) != TCL_OK) {
 		return TCL_ERROR;
 	}
 	
-	switch (actionIndex) {
+	switch (optionIndex) {
 		case 0: /* bounds */
 			result = cmd_info_bounds(clientData, interp, objc, objv);
 			break;
