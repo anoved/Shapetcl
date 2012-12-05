@@ -1963,6 +1963,13 @@ int cmd_coordinates_read(
 		return TCL_ERROR;
 	}
 	
+	/* If this is a NULL shape, return empty list {} explicitly (just leaving
+	   coordParts empty would return a list containing an empty list). */
+	if (shape->nSHPType == SHPT_NULL) {
+		Tcl_SetObjResult(interp, Tcl_NewObj());
+		return TCL_OK;
+	}
+	
 	/* prepare a list of coordinate lists; each member list represents one part
 	   (a "ring") of the feature. Some features only have one part. */
 	coordParts = Tcl_NewListObj(0, NULL);
