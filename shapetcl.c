@@ -107,6 +107,7 @@ int cmd_fields_index(Tcl_Interp *interp, ShapefilePtr shapefile, const char *fie
 
 int cmd_coordinates(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]);
 int cmd_coordinates_write(Tcl_Interp *interp, ShapefilePtr shapefile, int featureId, Tcl_Obj *coordParts);
+int cmd_coordinates_writeNull(Tcl_Interp *interp, ShapefilePtr shapefile, int featureId);
 int cmd_coordinates_readAll(Tcl_Interp *interp, ShapefilePtr shapefile);
 int cmd_coordinates_read(Tcl_Interp *interp, ShapefilePtr shapefile, int featureId);
 
@@ -1624,38 +1625,25 @@ int cmd_coordinates_write(
 	}
 	/* a featureId of -1 indicates a new feature should be output */
 	
-	/* a NULL coordinate list is a simple case: just write a NULL object and be done */
+	/* write a null feature if the coordinate list is a NULL pointer */
 	if (coordParts == NULL) {
-		if ((shape = SHPCreateSimpleObject(SHPT_NULL, 0, NULL, NULL, NULL)) == NULL) {
-			Tcl_SetObjResult(interp, Tcl_ObjPrintf("failed to create NULL shape object"));
-			return TCL_ERROR;
-		}
-	
-		/* write the shape to the shapefile */
-		if ((outputFeatureId = SHPWriteObject(shapefile->shp, featureId, shape)) == -1) {
-			Tcl_SetObjResult(interp, Tcl_ObjPrintf("failed to write shape object"));
-			return TCL_ERROR;
-		}
-	
-		Tcl_SetObjResult(interp, Tcl_NewIntObj(outputFeatureId));
-		return TCL_OK;
+		return cmd_coordinates_writeNull(interp, shapefile, featureId);
 	}
 	
 	if (Tcl_ListObjLength(interp, coordParts, &partCount) != TCL_OK) {
 		return TCL_ERROR;
 	}
 	
-	/* validate feature by number of parts according to shape type */
-	if (partCount != 1
-			&& (shapefile->baseType == BASE_POINT
-			|| shapefile->baseType == BASE_MULTIPOINT)) {
-		Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid part count (%d): point and multipoint features must have exactly 1 part", partCount));
-		return TCL_ERROR;
+	/* also write a null feature if the if the coordinate list is empty */
+	if (partCount == 0) {
+		return cmd_coordinates_writeNull(interp, shapefile, featureId);
 	}
-	if (partCount < 1
-			&& (shapefile->baseType == BASE_ARC
-			|| shapefile->baseType == BASE_POLYGON)) {
-		Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid part count (%d): arc and polygon features must have at least 1 part", partCount));
+	
+	/* validate feature by number of parts according to shape type */
+	if (partCount > 1
+			&& (shapefile->baseType == BASE_POINT
+				|| shapefile->baseType == BASE_MULTIPOINT)) {
+		Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid part count (%d): point and multipoint features must have exactly 1 part", partCount));
 		return TCL_ERROR;
 	}
 	
@@ -1875,6 +1863,37 @@ int cmd_coordinates_write(
 	if (mCoords != NULL) ckfree((char *)mCoords);
 	
 	return returnValue;
+}
+
+/*
+ * cmd_coordinates_writeNull
+ *
+ * Write a null feature (a no-geometry placeholder); used by [$shp coordinates]
+ * when no coordinate list is present.
+ *
+ * Result:
+ *   Index number of the null feature that was written.
+ */
+int cmd_coordinates_writeNull(
+		Tcl_Interp *interp,
+		ShapefilePtr shapefile,
+		int featureId) {
+	
+	int outputFeatureId;
+	SHPObject *shape;
+	
+	if ((shape = SHPCreateSimpleObject(SHPT_NULL, 0, NULL, NULL, NULL)) == NULL) {
+		Tcl_SetObjResult(interp, Tcl_ObjPrintf("failed to create NULL shape object"));
+		return TCL_ERROR;
+	}
+
+	if ((outputFeatureId = SHPWriteObject(shapefile->shp, featureId, shape)) == -1) {
+		Tcl_SetObjResult(interp, Tcl_ObjPrintf("failed to write shape object"));
+		return TCL_ERROR;
+	}
+
+	Tcl_SetObjResult(interp, Tcl_NewIntObj(outputFeatureId));
+	return TCL_OK;
 }
 
 /*
