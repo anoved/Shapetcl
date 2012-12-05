@@ -1113,77 +1113,78 @@ int cmd_fields(
 	
 	fieldCount = DBFGetFieldCount(shapefile->dbf);
 
-	if (actionIndex == 0) {
-		/* add field */
-		if (objc != 4) {
-			Tcl_WrongNumArgs(interp, 3, objv, "fieldDefinitions");
-			return TCL_ERROR;
-		}
-		/* sets interp result to index of last added field */
-		if (cmd_fields_add(interp, shapefile->dbf, 1 /* validate */, objv[3]) != TCL_OK) {
-			return TCL_ERROR;
-		}
-	} else if (actionIndex == 1) {
-		/* count fields */
-		if (objc > 3) {
-			Tcl_WrongNumArgs(interp, 3, objv, NULL);
-			return TCL_ERROR;
-		}
-		Tcl_SetObjResult(interp, Tcl_NewIntObj(fieldCount));
-	} else if (actionIndex == 2) {
-		/* list field definitions */
-		if (objc > 4) {
-			Tcl_WrongNumArgs(interp, 3, objv, "?fieldIndex?");
-			return TCL_ERROR;
-		}
-		if (objc == 4) {
-			/* list a specific field's definition */
-			if (Tcl_GetIntFromObj(interp, objv[3], &fieldId) != TCL_OK) {
+	switch (actionIndex) {
+		case 0: /* add */
+			if (objc != 4) {
+				Tcl_WrongNumArgs(interp, 3, objv, "fieldDefinitions");
 				return TCL_ERROR;
 			}
-			if (fieldId < 0 || fieldId >= fieldCount) {
-				Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid field index %d", fieldId));
+			if (shapefile->readonly) {
+				Tcl_SetObjResult(interp, Tcl_ObjPrintf("cannot add field to readonly shapefile"));
 				return TCL_ERROR;
 			}
-			if (cmd_fields_description(interp, shapefile, fieldId) != TCL_OK) {
+			/* sets interp result to index of last added field */
+			if (cmd_fields_add(interp, shapefile->dbf, 1 /* validate */, objv[3]) != TCL_OK) {
 				return TCL_ERROR;
 			}
-		} else {
-			/* list all field definitions */
-			Tcl_Obj *descriptions = Tcl_NewListObj(0, NULL);
-			for (fieldId = 0; fieldId < fieldCount; fieldId++) {
-				
-				/* get information about this field */
+			break;
+		case 1: /* count */
+			if (objc > 3) {
+				Tcl_WrongNumArgs(interp, 3, objv, NULL);
+				return TCL_ERROR;
+			}
+			Tcl_SetObjResult(interp, Tcl_NewIntObj(fieldCount));
+			break;
+		case 2: /* list */
+			if (objc > 4) {
+				Tcl_WrongNumArgs(interp, 3, objv, "?fieldIndex?");
+				return TCL_ERROR;
+			}
+			if (objc == 4) {
+				/* list a specific field's definition */
+				if (Tcl_GetIntFromObj(interp, objv[3], &fieldId) != TCL_OK) {
+					return TCL_ERROR;
+				}
+				if (fieldId < 0 || fieldId >= fieldCount) {
+					Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid field index %d", fieldId));
+					return TCL_ERROR;
+				}
 				if (cmd_fields_description(interp, shapefile, fieldId) != TCL_OK) {
 					return TCL_ERROR;
 				}
+			} else {
+				/* list all field definitions */
+				Tcl_Obj *descriptions = Tcl_NewListObj(0, NULL);
+				for (fieldId = 0; fieldId < fieldCount; fieldId++) {
 				
-				/* append information about this field to our list of information about all fields */
-				if (Tcl_ListObjAppendList(interp, descriptions, Tcl_GetObjResult(interp)) != TCL_OK) {
-					return TCL_ERROR;
+					/* get information about this field */
+					if (cmd_fields_description(interp, shapefile, fieldId) != TCL_OK) {
+						return TCL_ERROR;
+					}
+				
+					/* append information about this field to our list of information about all fields */
+					if (Tcl_ListObjAppendList(interp, descriptions, Tcl_GetObjResult(interp)) != TCL_OK) {
+						return TCL_ERROR;
+					}
+				
+					Tcl_ResetResult(interp);
 				}
-				
-				Tcl_ResetResult(interp);
-			}
 			
-			Tcl_SetObjResult(interp, descriptions);
-		}
-	} else if (actionIndex == 3) {
-		/* get field index from name */
-		const char *fieldName;
-		if (objc != 4) {
-			Tcl_WrongNumArgs(interp, 3, objv, "fieldName");
-			return TCL_ERROR;
-		}
-		if ((fieldName = Tcl_GetString(objv[3])) == NULL) {
-			return TCL_ERROR;
-		}
-		/* sets interp result to field index, or not-found error message */
-		if (cmd_fields_index(interp, shapefile, fieldName) != TCL_OK) {
-			return TCL_ERROR;
-		}
+				Tcl_SetObjResult(interp, descriptions);
+			}
+			break;
+		case 3: /* index */
+			if (objc != 4) {
+				Tcl_WrongNumArgs(interp, 3, objv, "fieldName");
+				return TCL_ERROR;
+			}
+			/* sets interp result to field index, or not-found error message */
+			if (cmd_fields_index(interp, shapefile, Tcl_GetString(objv[3])) != TCL_OK) {
+				return TCL_ERROR;
+			}
+			break;
 	}
-		
+
 	return TCL_OK;
 }
 
@@ -1280,12 +1281,12 @@ int cmd_fields_validate(
 	}
 	
 	if (definitionElementCount % 4 != 0) {
-		Tcl_SetObjResult(interp, Tcl_ObjPrintf("each field requires four values (type, name, width, and precision)"));
+		Tcl_SetObjResult(interp, Tcl_ObjPrintf("malformed field definition: type, name, width, and precision expected"));
 		return TCL_ERROR;
 	}
 	
 	if (definitionElementCount == 0) {
-		Tcl_SetObjResult(interp, Tcl_ObjPrintf("at least one field is required"));
+		Tcl_SetObjResult(interp, Tcl_ObjPrintf("missing field definition: at least one field definition is required"));
 		return TCL_ERROR;
 	}
 
@@ -1327,17 +1328,22 @@ int cmd_fields_validateField(
 	}
 	
 	if (strlen(name) > 10) {
-		Tcl_SetObjResult(interp, Tcl_ObjPrintf("field name \"%s\" too long: 10 characters maximum", name));
+		Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid field name \"%s\": too long (10 characters maximum)", name));
+		return TCL_ERROR;
+	}
+	
+	if (strlen(name) < 1) {
+		Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid field name: too short (1 character minimum)"));
 		return TCL_ERROR;
 	}
 	
 	if (strcmp(type, "integer") == 0 && width > 10) {
-		Tcl_SetObjResult(interp, Tcl_ObjPrintf("integer width >10 (%d) would become double", width));
+		Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid integer field definition: maximum 32-bit integer width is 10 digits (%d is too wide)", width));
 		return TCL_ERROR;
 	}
 	
 	if (strcmp(type, "double") == 0 && width <= 10 && precision == 0) {
-		Tcl_SetObjResult(interp, Tcl_ObjPrintf("double width <=10 (%d) with 0 precision would become integer", width));
+		Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid double field definition: numeric field with width <=10 digits (%d) and 0 precision is an integer", width));
 		return TCL_ERROR;
 	}
 
@@ -1419,7 +1425,14 @@ int cmd_fields_index(
 		ShapefilePtr shapefile,
 		const char *fieldName) {
 	
-	int fieldIndex = DBFGetFieldIndex(shapefile->dbf, fieldName);
+	int fieldIndex;
+	
+	if (fieldName == NULL || strlen(fieldName) == 0) {
+		Tcl_SetObjResult(interp, Tcl_ObjPrintf("missing field name"));
+		return TCL_ERROR;
+	}
+	
+	fieldIndex = DBFGetFieldIndex(shapefile->dbf, fieldName);
 	
 	if (fieldIndex == -1) {
 		Tcl_SetObjResult(interp, Tcl_ObjPrintf("field named \"%s\" not found", fieldName));
