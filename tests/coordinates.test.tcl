@@ -139,7 +139,7 @@ test coord-2.6 {
 } -result {1}
 
 test coord-2.7 {
-# confirm [coord read] returns the expected number of coordinate lists
+# confirm [coord read] all returns the expected number of coordinate lists
 } -setup {
 	set shp [shapefile sample/xy/point readonly]
 } -body {
@@ -147,6 +147,18 @@ test coord-2.7 {
 } -cleanup {
 	$shp close
 } -result {243}
+
+test coord-2.8 {
+# confirm [coord read] all returns empty list as expected
+} -setup {
+	# create an empty new shapefile
+	set shp [shapefile tmp/foo point {integer Id 10 0}]
+} -body {
+	$shp coord read
+} -cleanup {
+	$shp close
+	file delete {*}[glob tmp/foo.*]
+} -result {}
 
 #
 # [coord write] action
@@ -278,9 +290,359 @@ test coord-3.6 {
 } -result {}
 
 #
-# numerous additional tests needed to check coordinate list formatting, etc.
-# perhaps also some stress-testing with large numbers of vertices, etc.
-# 
+# [coord write] point geometry
+#
+
+test coord-4.0 {
+# attempt to write point with empty part
+} -setup {
+	set shp [shapefile tmp/foo point {integer Id 10 0}]
+} -body {
+	$shp coord write {{}}
+} -cleanup {
+	$shp close
+	file delete {*}[glob tmp/foo.*]
+} -returnCodes {
+	error
+} -match glob -result "invalid vertex count *: point features *"
+
+test coord-4.1 {
+# attempt to write xy point with too few vertex coordinate
+} -setup {
+	set shp [shapefile tmp/foo point {integer Id 10 0}]
+} -body {
+	$shp coord write {{1}}
+} -cleanup {
+	$shp close
+	file delete {*}[glob tmp/foo.*]
+} -returnCodes {
+	error
+} -result "2 coordinate values are expected for each vertex"
+
+test coord-4.2 {
+# attempt to write xy point with too many vertex coordinates
+} -setup {
+	set shp [shapefile tmp/foo point {integer Id 10 0}]
+} -body {
+	$shp coord write {{1 1 1}}
+} -cleanup {
+	$shp close
+	file delete {*}[glob tmp/foo.*]
+} -returnCodes {
+	error
+} -result "2 coordinate values are expected for each vertex"
+
+test coord-4.3 {
+# attempt to write xy point with multiple parts
+} -setup {
+	set shp [shapefile tmp/foo point {integer Id 10 0}]
+} -body {
+	$shp coord write {{0 0} {1 1}}
+} -cleanup {
+	$shp close
+	file delete {*}[glob tmp/foo.*]
+} -returnCodes {
+	error
+} -match glob -result "invalid part count *: point and multipoint *"
+
+test coord-4.4 {
+# write xy point successful
+} -setup {
+	set shp [shapefile tmp/foo point {integer Id 10 0}]
+} -body {
+	$shp coord write {{0 0}}
+} -cleanup {
+	$shp close
+	file delete {*}[glob tmp/foo.*]
+} -result {0}
+
+test coord-4.5 {
+# attempt to write xym point too few coordinates
+} -setup {
+	set shp [shapefile tmp/foo pointm {integer Id 10 0}]
+} -body {
+	$shp coord write {{0 0}}
+} -cleanup {
+	$shp close
+	file delete {*}[glob tmp/foo.*]
+} -returnCodes {
+	error
+} -result "3 coordinate values are expected for each vertex"
+
+test coord-4.6 {
+# attempt to write xym point with too many coordinates
+} -setup {
+	set shp [shapefile tmp/foo pointm {integer Id 10 0}]
+} -body {
+	$shp coord write {{0 0 0 0}}
+} -cleanup {
+	$shp close
+	file delete {*}[glob tmp/foo.*]
+} -returnCodes {
+	error
+} -result "3 coordinate values are expected for each vertex"
+
+test coord-4.7 {
+# attempt to write xym point with too many parts
+} -setup {
+	set shp [shapefile tmp/foo pointm {integer Id 10 0}]
+} -body {
+	$shp coord write {{0 0 0} {1 1 1}}
+} -cleanup {
+	$shp close
+	file delete {*}[glob tmp/foo.*]
+} -returnCodes {
+	error
+} -match glob -result "invalid part count *: point and multipoint *"
+
+test coord-4.8 {
+# write xym point
+} -setup {
+	set shp [shapefile tmp/foo pointm {integer Id 10 0}]
+} -body {
+	$shp coord write {{1 1 0}}
+} -cleanup {
+	$shp close
+	file delete {*}[glob tmp/foo.*]
+} -result {0}
+
+test coord-4.9 {
+# attemt to write xyzm point with too few coordinates
+} -setup {
+	set shp [shapefile tmp/foo pointz {integer Id 10 0}]
+} -body {
+	$shp coord write {{0 0 0}}
+} -cleanup {
+	$shp close
+	file delete {*}[glob tmp/foo.*]
+} -returnCodes {
+	error
+} -result "4 coordinate values are expected for each vertex"
+
+test coord-4.10 {
+# attempt to write xyzm point with too many coordinates
+} -setup {
+	set shp [shapefile tmp/foo pointz {integer Id 10 0}]
+} -body {
+	$shp coord write {{0 0 0 0 0}}
+} -cleanup {
+	$shp close
+	file delete {*}[glob tmp/foo.*]
+} -returnCodes {
+	error
+} -result "4 coordinate values are expected for each vertex"
+
+test coord-4.11 {
+# attempt to write xyzm point with too many parts
+} -setup {
+	set shp [shapefile tmp/foo pointz {integer Id 10 0}]
+} -body {
+	$shp coord write {{0 0 0 0} {1 1 0 0}}
+} -cleanup {
+	$shp close
+	file delete {*}[glob tmp/foo.*]
+} -returnCodes {
+	error
+} -match glob -result "invalid part count *: point and multipoint *"
+
+test coord-4.12 {
+# write xyzm point
+} -setup {
+	set shp [shapefile tmp/foo pointz {integer Id 10 0}]
+} -body {
+	$shp coord write {{1 1 1 0}}
+} -cleanup {
+	$shp close
+	file delete {*}[glob tmp/foo.*]
+} -result {0}
+
+test coord-4.13 {
+# attempt to write xy point with invalid (non-numeric) coordinate value
+} -setup {
+	set shp [shapefile tmp/foo point {integer id 10 0}]
+} -body {
+	$shp coord write {{10 foo}}
+} -cleanup {
+	$shp close
+	file delete {*}[glob tmp/foo.*]
+} -returnCodes {
+	error
+} -match glob -result "expected floating-point number but got *"
+
+#
+# [coord write] arc geometry
+#
+
+test coord-5.0 {
+# attempt to write arc with empty part (too few vertices)
+} -setup {
+	set shp [shapefile tmp/foo arc {integer Id 10 0}]
+} -body {
+	$shp coord write {{}}
+} -cleanup {
+	$shp close
+	file delete {*}[glob tmp/foo.*]
+} -returnCodes {
+	error
+} -match glob -result "invalid vertex count *: arc features *"
+
+test coord-5.1 {
+# attempt to write arc with too few vertices (minimum of 2)
+} -setup {
+	set shp [shapefile tmp/foo arc {integer Id 10 0}]
+} -body {
+	$shp coord write {{10 10}}
+} -cleanup {
+	$shp close
+	file delete {*}[glob tmp/foo.*]
+} -returnCodes {
+	error
+} -match glob -result "invalid vertex count *: arc features *"
+
+test coord-5.2 {
+# attempt to write xy arc with malformed coordinate list (too few coordintes)
+} -setup {
+	set shp [shapefile tmp/foo arc {integer Id 10 0}]
+} -body {
+	$shp coord write {{10 10 12}}
+} -cleanup {
+	$shp close
+	file delete {*}[glob tmp/foo.*]
+} -returnCodes {
+	error
+} -result "2 coordinate values are expected for each vertex"
+
+test coord-5.3 {
+# attempt to write xy arc with malformed coordinate list (too many coordinates)
+} -setup {
+	set shp [shapefile tmp/foo arc {integer id 10 0}]
+} -body {
+	$shp coord write {{10 10 12 12 9}}
+} -cleanup {
+	$shp close
+	file delete {*}[glob tmp/foo.*]
+} -returnCodes {
+	error
+} -result "2 coordinate values are expected for each vertex"
+
+test coord-5.4 {
+# write xy arc
+} -setup {
+	set shp [shapefile tmp/foo arc {integer id 10 0}]
+} -body {
+	$shp coord write {{0 0 10 10}}
+} -cleanup {
+	$shp close
+	file delete {*}[glob tmp/foo.*]
+} -result {0}
+
+test coord-5.5 {
+# attempt to write xy arc with non-numeric coordinate
+} -setup {
+	set shp [shapefile tmp/foo arc {integer id 10 0}]
+} -body {
+	$shp coord write {{0 0 foo bar}}
+} -cleanup {
+	$shp close
+	file delete {*}[glob tmp/foo.*]
+} -returnCodes {
+	error
+} -match glob -result "expected floating-point number but got *"
+
+test coord-5.6 {
+# write multi-part xy arc
+} -setup {
+	set shp [shapefile tmp/foo arc {integer id 10 0}]
+} -body {
+	$shp coord write {{0 0 10 0} {0 5 10 5}}
+} -cleanup {
+	$shp close
+	file delete {*}[glob tmp/foo.*]
+} -result {0}
+
+test coord-5.7 {
+# zero-length arcs are disallowed by shapefile spec, although arcs may contain
+# identical vertices as long as there is at least one different vertex.
+# (this constraint is not currently enforced by Shapetcl; tally arc length)
+} -constraints {
+	emptyTest
+}
+
+test coord-5.8 {
+# write an xy arc with many vertices
+} -setup {
+	set shp [shapefile tmp/foo arc {integer id 10 0}]
+} -body {
+	for {set i 0} {$i < 180} {incr i} {
+		lappend vertices $i [expr {$i / 2}]
+	}
+	$shp coord write [list $vertices]
+} -cleanup {
+	$shp close
+	file delete {*}[glob tmp/foo.*]
+} -result {0}
+
+test coord-5.9 {
+# write an xy arc with many parts
+} -setup {
+	set shp [shapefile tmp/foo arc {integer id 10 0}]
+} -body {
+	for {set i 0} {$i < 180} {incr i 2} {
+		lappend coords [list $i [expr {$i / 2}] [expr {$i + 1}] [expr {$i / 2}]]
+	}
+	$shp coord write $coords
+} -cleanup {
+	$shp close
+	file delete {*}[glob tmp/foo.*]
+} -result {0}
+
+test coord-5.10 {
+# attempt to write an xym arc with too few coordinates
+} -setup {
+	set shp [shapefile tmp/foo arcm {integer id 10 0}]
+} -body {
+	$shp coord write {{0 0 10 10}}
+} -cleanup {
+	$shp close
+	file delete {*}[glob tmp/foo.*]
+} -returnCodes {
+	error
+} -result "3 coordinate values are expected for each vertex"
+
+# note there are some ambiguous cases - such as six coordinates given for an
+# xym arc. do they represent two xym points (valid input), or three xy points
+# (invalid input)? Since the feature type is xym, it makes sense to presume xym,
+# but it does mean we can't necessarily catch all cases where the application
+# provides the wrong number of verticess
+
+test coord-5.11 {
+# write an xym arc
+} -setup {
+	set shp [shapefile tmp/foo arcm {integer id 10 0}]
+} -body {
+	$shp coord write {{0 0 0 1 1 0}}
+} -cleanup {
+	$shp close
+	file delete {*}[glob tmp/foo.*]
+} -result {0}
+
+test coord-5.12 {
+# write an xyzm arc
+} -setup {
+	set shp [shapefile tmp/foo arcz {integer id 10 0}]
+} -body {
+	$shp coord write {{0 0 0 0 1 1 1 0}}
+} -cleanup {
+	$shp close
+	file delete {*}[glob tmp/foo.*]
+} -result {0}
+
+#
+# [coord write] multipoint geometry
+#
+
+#
+# [coord write] polygon geometry (supplement/subsume polygons.test.tcl)
 #
 
 ::tcltest::cleanupTests
