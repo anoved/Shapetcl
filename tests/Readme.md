@@ -14,6 +14,7 @@ These files contain tests that exercise specific Shapetcl [sub]commands. All com
 - `file.test.tcl` tests the `file` subcommand
 - `fields.test.tcl` tests the `fields` subcommand
 - `flush.test.tcl` tests the `flush` subcommand
+- `coordinates.test.tcl` tests the `coordinates` subcommand
 
 ## Miscellaneous Tests
 
