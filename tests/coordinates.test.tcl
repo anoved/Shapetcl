@@ -500,7 +500,7 @@ test coord-5.1 {
 } -match glob -result "invalid vertex count *: arc features *"
 
 test coord-5.2 {
-# attempt to write xy arc with malformed coordinate list (too few coordintes)
+# attempt to write xy arc with malformed coordinate list (incomplete arc)
 } -setup {
 	set shp [shapefile tmp/foo arc {integer Id 10 0}]
 } -body {
@@ -513,11 +513,11 @@ test coord-5.2 {
 } -result "2 coordinate values are expected for each vertex"
 
 test coord-5.3 {
-# attempt to write xy arc with malformed coordinate list (too many coordinates)
+# attempt to write xy arc with malformed coordinate list
 } -setup {
 	set shp [shapefile tmp/foo arc {integer id 10 0}]
 } -body {
-	$shp coord write {{10 10 12 12 9}}
+	$shp coord write {{10 10  12 12  9}}
 } -cleanup {
 	$shp close
 	file delete {*}[glob tmp/foo.*]
@@ -530,7 +530,7 @@ test coord-5.4 {
 } -setup {
 	set shp [shapefile tmp/foo arc {integer id 10 0}]
 } -body {
-	$shp coord write {{0 0 10 10}}
+	$shp coord write {{0 0  10 10}}
 } -cleanup {
 	$shp close
 	file delete {*}[glob tmp/foo.*]
@@ -554,7 +554,7 @@ test coord-5.6 {
 } -setup {
 	set shp [shapefile tmp/foo arc {integer id 10 0}]
 } -body {
-	$shp coord write {{0 0 10 0} {0 5 10 5}}
+	$shp coord write {{0 0  10 0} {0 5  10 5}}
 } -cleanup {
 	$shp close
 	file delete {*}[glob tmp/foo.*]
@@ -620,7 +620,7 @@ test coord-5.11 {
 } -setup {
 	set shp [shapefile tmp/foo arcm {integer id 10 0}]
 } -body {
-	$shp coord write {{0 0 0 1 1 0}}
+	$shp coord write {{0 0 0  1 1 0}}
 } -cleanup {
 	$shp close
 	file delete {*}[glob tmp/foo.*]
@@ -631,7 +631,7 @@ test coord-5.12 {
 } -setup {
 	set shp [shapefile tmp/foo arcz {integer id 10 0}]
 } -body {
-	$shp coord write {{0 0 0 0 1 1 1 0}}
+	$shp coord write {{0 0 0 0  1 1 1 0}}
 } -cleanup {
 	$shp close
 	file delete {*}[glob tmp/foo.*]
@@ -641,8 +641,252 @@ test coord-5.12 {
 # [coord write] multipoint geometry
 #
 
+test coord-6.0 {
+# attempt to write a multipoint feature with an empty part
+} -setup {
+	set shp [shapefile tmp/foo multipoint {integer id 10 0}]
+} -body {
+	$shp coord write {{}}
+} -cleanup {
+	$shp close
+	file delete {*}[glob tmp/foo.*]
+} -returnCodes {
+	error
+} -match glob -result "invalid vertex count *: multipoint *"
+
+test coord-6.1 {
+# attempt to write multipoint with multiple parts
+} -setup {
+	set shp [shapefile tmp/foo multipoint {integer id 10 0}]
+} -body {
+	$shp coord write {{0 0} {1 1}}
+} -cleanup {
+	$shp close
+	file delete {*}[glob tmp/foo.*]
+} -returnCodes {
+	error
+} -match glob -result "invalid part count *: point and multipoint *"
+
+test coord-6.2 {
+# attempt to write multipoint with invalid number of coordinates
+} -setup {
+	set shp [shapefile tmp/foo multipoint {integer id 10 0}]
+} -body {
+	$shp coord write {{0 0 0}}
+} -cleanup {
+	$shp close
+	file delete {*}[glob tmp/foo.*]
+} -returnCodes {
+	error
+} -result "2 coordinate values are expected for each vertex"
+
+test coord-6.3 {
+# write multipoint feature with one point
+} -setup {
+	set shp [shapefile tmp/foo multipoint {integer id 10 0}]
+} -body {
+	$shp coord write {{0 0}}
+} -cleanup {
+	$shp close
+	file delete {*}[glob tmp/foo.*]
+} -result {0}
+
+test coord-6.4 {
+# write multipoint feature with many points
+} -setup {
+	set shp [shapefile tmp/foo multipoint {integer id 10 0}]
+} -body {
+	for {set i 0} {$i < 180} {incr i} {
+		lappend vertices $i [expr {$i / 2}]
+	}
+	$shp coord write [list $vertices]
+} -cleanup {
+	$shp close
+	file delete {*}[glob tmp/foo.*]
+} -result {0}
+
+test coord-6.5 {
+# attempt to write multipoint feature with invalid (non-numeric) coordinates
+} -setup {
+	set shp [shapefile tmp/foo multipoint {integer id 10 0}]
+} -body {
+	$shp coord write {{foo bar}}
+} -cleanup {
+	$shp close
+	file delete {*}[glob tmp/foo.*]
+} -returnCodes {
+	error
+} -match glob -result "expected floating-point number but got *"
+
+test coord-6.6 {
+# write multipointm feature
+} -setup {
+	set shp [shapefile tmp/foo multipointm {integer id 10 0}]
+} -body {
+	$shp coord write {{0 0 1  10 10 2  88 88 3}}
+} -cleanup {
+	$shp close
+	file delete {*}[glob tmp/foo.*]
+} -result {0}
+
+test coord-6.7 {
+# write multipointz feature
+} -setup {
+	set shp [shapefile tmp/foo multipointz {integer id 10 0}]
+} -body {
+	$shp coord write {{0 0 0 33  1 1 1 33  2 2 2 33  3 3 3 33}}
+} -cleanup {
+	$shp close
+	file delete {*}[glob tmp/foo.*]
+} -result {0}
+
+
 #
-# [coord write] polygon geometry (supplement/subsume polygons.test.tcl)
+# [coord write] polygon geometry
+# (polygons.test.tcl checks that polygon samples meet geometry constraints)
 #
+
+test coord-7.0 {
+# zero-length or zero-area polygons are disallowed by shapefile spec, although
+# parts may contain identical vertices as long as the whole part is not zero. 
+# (this constraint is not currently enforced by Shapetcl; tally polygon props.)
+} -constraints {
+	emptyTest
+}
+
+test coord-7.1 {
+# attempt to write a polygon with an empty part
+} -setup {
+	set shp [shapefile tmp/foo polygon {integer id 10 0}]
+} -body {
+	$shp coord write {{}}
+} -cleanup {
+	$shp close
+	file delete {*}[glob tmp/foo.*]
+} -returnCodes {
+	error
+} -match glob -result "invalid vertex count *: polygon *"
+
+test coord-7.2 {
+# attempt to write a polygon with too few vertices
+} -setup {
+	set shp [shapefile tmp/foo polygon {integer id 10 0}]
+} -body {
+	$shp coord write {{0 10  10 10  0 0}}
+} -cleanup {
+	$shp close
+	file delete {*}[glob tmp/foo.*]
+} -returnCodes {
+	error
+} -match glob -result "invalid vertex count *: polygon *"
+
+test coord-7.3 {
+# attempt to write a polygon that is not closed (last vertex != first vertex)
+} -setup {
+	set shp [shapefile tmp/foo polygon {integer id 10 0}]
+} -body {
+	$shp coord write {{0 10  10 10  10 0  0 0}}
+} -cleanup {
+	$shp close
+	file delete {*}[glob tmp/foo.*]
+} -returnCodes {
+	error
+} -match glob -result "invalid part geometry: polygon rings must be closed *"
+
+test coord-7.4 {
+# use autoClosePolygon to write a polygon that is not explicitly closed
+} -setup {
+	set shp [shapefile tmp/foo polygon {integer id 10 0}]
+	$shp config autoClosePolygons 1
+} -body {
+	$shp coord write {{0 10  10 10  10 0  0 0}}
+	$shp coord read 0
+} -cleanup {
+	$shp close
+	file delete {*}[glob tmp/foo.*]
+} -result {{0.0 10.0 10.0 10.0 10.0 0.0 0.0 0.0 0.0 10.0}}
+
+# compare to coord-7.2 (same test without autoClosePolygons)
+test coord-7.5 {
+# use autoClosePolygons to complete a polygon from three open vertices
+} -setup {
+	set shp [shapefile tmp/foo polygon {integer id 10 0}]
+	$shp config autoClosePolygons 1
+} -body {
+	$shp coord write {{0 10  10 10  0 0}}
+	$shp coord read 0
+} -cleanup {
+	$shp close
+	file delete {*}[glob tmp/foo.*]
+} -result {{0.0 10.0 10.0 10.0 0.0 0.0 0.0 10.0}}
+
+# 3 vertices that are closed implies points A B A; adding another A means it's
+# still just line segment A B, and thus zero area and an invalid polygon. We
+# can catch this zero-area case because it's inescapable w/only 2 points.
+test coord-7.6 {
+# autoClose can't help an already-closed "polygon" of 3 vertices (a line seg)
+} -setup {
+	set shp [shapefile tmp/foo polygon {integer id 10 0}]
+	$shp config autoClosePolygons 1
+} -body {
+	$shp coord write {{0 10  10 10  0 10}}
+} -cleanup {
+	$shp close
+	file delete {*}[glob tmp/foo.*]
+} -returnCodes {
+	error
+} -result "invalid part geometry: closed ring with only 3 vertices"
+
+test coord-7.7 {
+# write an xy polygon
+} -setup {
+	set shp [shapefile tmp/foo polygon {integer id 10 0}]
+} -body {
+	$shp coord write {{0 10  10 10  10 0  0 0  0 10}}
+	$shp coord read 0
+} -cleanup {
+	$shp close
+	file delete {*}[glob tmp/foo.*]
+} -result {{0.0 10.0 10.0 10.0 10.0 0.0 0.0 0.0 0.0 10.0}}
+
+test coord-7.8 {
+# check that coord write rewinds backwards vertex order
+} -setup {
+	set shp [shapefile tmp/foo polygon {integer id 10 0}]
+} -body {
+	$shp coord write {{0 10  0 0  10 0  10 10  0 10}}
+	$shp coord read 0
+} -cleanup {
+	$shp close
+	file delete {*}[glob tmp/foo.*]
+} -result {{0.0 10.0 10.0 10.0 10.0 0.0 0.0 0.0 0.0 10.0}}
+
+# shapelib's vertex rewinding is smart enough to "do the right thing" in 7.9/10:
+
+test coord-7.9 {
+# write a polygon with a hole in it (hole vertices are ordered counterclockwise)
+} -setup {
+	set shp [shapefile tmp/holes polygon {integer id 10 0}]
+} -body {
+	# outer ring vertex order is clockwise;
+	# inner ring ("hole") vertex order is counter-clockwise
+	$shp coord write {{0 10  10 10  10 0  0 0  0 10}  {3 7  3 3  7 3  7 7  3 7}}
+	$shp coord read 0
+} -cleanup {
+	$shp close
+	file delete {*}[glob tmp/holes.*]
+} -result {{0.0 10.0 10.0 10.0 10.0 0.0 0.0 0.0 0.0 10.0} {3.0 7.0 3.0 3.0 7.0 3.0 7.0 7.0 3.0 7.0}}
+
+test coord-7.10 {
+# write a polygon with two outer rings (islands; both part vertices clockwise)
+} -setup {
+	set shp [shapefile tmp/islands polygon {integer id 10 0}]
+} -body {
+	$shp coord write {{0 10  10 10  10 0  0 0  0 10} {13 7  17 7  17 3  13 3  13 7}}
+	$shp coord read 0
+} -cleanup {
+	$shp close
+	file delete {*}[glob tmp/islands.*]
+} -result {{0.0 10.0 10.0 10.0 10.0 0.0 0.0 0.0 0.0 10.0} {13.0 7.0 17.0 7.0 17.0 3.0 13.0 3.0 13.0 7.0}}
 
 ::tcltest::cleanupTests
