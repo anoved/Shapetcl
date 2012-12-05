@@ -64,6 +64,11 @@ struct shapefile_data {
 	/* Read all attribute values as strings regardless of field type. Intended
 	   as an aid to debugging attribute table issues. False by default. */
 	int readRawStrings;
+	
+	/* Append a final vertex to polygon parts if provided last vertex is not
+	   identifical to first vertex OR if only 3 vertices are given. Appended
+	   vertex is a copy of the part's first vertex. False by default. */
+	int autoClosePolygons;
 };
 typedef struct shapefile_data * ShapefilePtr;
 
@@ -310,6 +315,7 @@ int Shapetcl_Init(Tcl_Interp *interp) {
 	shapefile->getAllCoords = 0;
 	shapefile->getOnlyXyCoords = 0;
 	shapefile->readRawStrings = 0;
+	shapefile->autoClosePolygons = 0;
 	shapefile->shapeType = shpType;
 	shapefile->baseType = shapefile_typeBase(shpType);
 	shapefile->dimType = shapefile_typeDimension(shpType);
@@ -594,6 +600,7 @@ int cmd_flush(
  *   getAllCoordinates (0)
  *   getOnlyXyCoordinates (0)
  *   readRawStrings (0)
+ *   autoClosePolygons (0)
  *   (See notes in ShapefilePtr struct definition for option details.)
  *
  * Result:
@@ -613,6 +620,7 @@ int cmd_config(
 			"getAllCoordinates",
 			"getOnlyXyCoordinates",
 			"readRawStrings",
+			"autoClosePolygons",
 			NULL
 	};
 	
@@ -664,6 +672,12 @@ int cmd_config(
 				shapefile->readRawStrings = optionValue;
 			}
 			Tcl_SetObjResult(interp, Tcl_NewIntObj(shapefile->readRawStrings));
+			break;
+		case 4: /* autoClosePolygons */
+			if (objc == 4) {
+				shapefile->autoClosePolygons = optionValue;
+			}
+			Tcl_SetObjResult(interp, Tcl_NewIntObj(shapefile->autoClosePolygons));
 			break;
 	}
 	
@@ -1610,7 +1624,6 @@ int cmd_coordinates_write(
 	double x, y, z, m;
 	SHPObject *shape;
 	int returnValue = TCL_OK;
-	int addClosingVertex = 0;
 	int coordinatesPerVertex;
 	
 	if (shapefile->readonly) {
@@ -1702,7 +1715,10 @@ int cmd_coordinates_write(
 			returnValue = TCL_ERROR;
 			goto cwRelease;
 		}
-		if (partVertexCount < 4 && shapefile->baseType == BASE_POLYGON) {
+		if (shapefile->baseType == BASE_POLYGON
+				&& ((partVertexCount < 3 && shapefile->autoClosePolygons)
+				|| (partVertexCount < 4 && !shapefile->autoClosePolygons))) {
+			/* 3 vertices per part is ok if autoClosePolygons is enabled */
 			Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid vertex count (%d): polygon features must have at least 4 vertices per part", partVertexCount));
 			returnValue = TCL_ERROR;
 			goto cwRelease;
@@ -1788,7 +1804,23 @@ int cmd_coordinates_write(
 			
 			vertex++;
 		}
-
+				 
+		/* polygon coordinate lists with only 3 vertices are allowed if
+		 * autoClosePolygons is enabled since we might add a fourth closing
+		 * vertex. However, if it is already closed, it is really only two
+		 * points - a line segment, which has zero area, invalid for a polygon.
+		 * Adding a copy of one endpoint as a 4th vertex won't change that. */
+		if (	(shapefile->baseType == BASE_POLYGON)
+			 && (partVertexCount == 3)
+			 && ((xCoords[partStarts[part]] == xCoords[vertex-1])
+			  && (yCoords[partStarts[part]] == yCoords[vertex-1])
+			  && (shapefile->dimType == DIM_XYZM
+					? (zCoords[partStarts[part]] == zCoords[vertex-1]) : 1))) {
+			 Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid part geometry: closed ring with only 3 vertices"));
+			 returnValue = TCL_ERROR;
+			 goto cwRelease;
+		}
+		
 		/* validate that the first and last vertex of polygon parts match */
 		/* M coordinates do not have to match, but Z coord of POLYGONZ must */
 		if ((shapefile->baseType == BASE_POLYGON)
@@ -1796,7 +1828,7 @@ int cmd_coordinates_write(
 				|| (yCoords[partStarts[part]] != yCoords[vertex-1])
 				|| (shapefile->dimType == DIM_XYZM
 				&& (zCoords[partStarts[part]] != zCoords[vertex-1])))) {
-			if (addClosingVertex) {
+			if (shapefile->autoClosePolygons) {
 				/* close the part automatically by appending the first vertex */
 				partVertexCount++;
 				vertexCount++;

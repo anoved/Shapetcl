@@ -135,6 +135,23 @@ test config-1.5 {
 1
 }
 
+test config-1.6 {
+# check autoClosePolygons default and confirm config set
+} -setup {
+	set shp [shapefile sample/xy/polygon readonly]
+} -body {
+	# expected to be 0
+	puts [$shp config autoClosePolygons]
+	
+	# set to true and confirm
+	$shp config autoClosePolygons 1
+	puts [$shp config autoClosePolygons]
+} -cleanup {
+	$shp close
+} -result {} -output {0
+1
+}
+
 test config-2.0 {
 # confirm function of allowAlternateNotation config option (exponent-1.3)
 } -setup {
@@ -203,5 +220,18 @@ test config-2.3 {
 } -result {} -output {6691831.0
 6691831.00000000000
 }
+
+test config-2.4 {
+# confirm function of autoClosePolygons config option (see coord-7.4 & 7.5)
+} -setup {
+	set shp [shapefile tmp/foo polygon {integer id 10 0}]
+} -body {
+	$shp config autoClosePolygons 1
+	$shp coord write {{0 10  10 10  10 0  0 0}}
+	$shp coord read 0
+} -cleanup {
+	$shp close
+	file delete {*}[glob tmp/foo.*]
+} -result {{0.0 10.0 10.0 10.0 10.0 0.0 0.0 0.0 0.0 10.0}}
 
 ::tcltest::cleanupTests
