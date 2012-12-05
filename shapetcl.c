@@ -566,9 +566,9 @@ int cmd_flush(
 	
 	/* If the shapefile cannot be reopened, close the command as well. */
 	if (shapefile->shp == NULL || shapefile->dbf == NULL) {
+		Tcl_SetObjResult(interp, Tcl_ObjPrintf("cannot reopen flushed shapefile \"%s\"", shapefile->path));		
 		shapefile_exit_handler(shapefile);
 		Tcl_DeleteCommand(interp, Tcl_GetString(objv[0]));
-		Tcl_SetObjResult(interp, Tcl_ObjPrintf("cannot reopen flushed shapefile \"%s\"", shapefile->path));
 		return TCL_ERROR;
 	}
 	
