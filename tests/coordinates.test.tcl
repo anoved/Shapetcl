@@ -793,6 +793,45 @@ test coord-7.3 {
 	error
 } -match glob -result "invalid part geometry: polygon rings must be closed *"
 
+test coord-7.3a {
+# attempt to write a polygonm that is unclosed only in m dimension
+} -setup {
+	set shp [shapefile tmp/foo polygonm {integer id 10 0}]
+} -body {
+	$shp coord write {{0 10 77  10 10 77  10 0 77  0 0 77  0 10 99}}
+} -cleanup {
+	$shp close
+	file delete {*}[glob tmp/foo.*]
+} -returnCodes {
+	error
+} -match glob -result "invalid part geometry: polygon rings must be closed *"
+
+test coord-7.3b {
+# attempt to write a polygonz that is unclosed only in z dimension
+} -setup {
+	set shp [shapefile tmp/foo polygonz {integer id 10 0}]
+} -body {
+	$shp coord write {{0 10 1 77  10 10 2 77  10 0 3 77  0 0 2 77  0 10 9 77}}
+} -cleanup {
+	$shp close
+	file delete {*}[glob tmp/foo.*]
+} -returnCodes {
+	error
+} -match glob -result "invalid part geometry: polygon rings must be closed *"
+
+test coord-7.3c {
+# attempt to write a polygonz that is unclosed only in m dimension
+} -setup {
+	set shp [shapefile tmp/foo polygonz {integer id 10 0}]
+} -body {
+	$shp coord write {{0 10 1 77  10 10 2 77  10 0 3 77  0 0 2 77  0 10 1 99}}
+} -cleanup {
+	$shp close
+	file delete {*}[glob tmp/foo.*]
+} -returnCodes {
+	error
+} -match glob -result "invalid part geometry: polygon rings must be closed *"
+
 test coord-7.4 {
 # use autoClosePolygon to write a polygon that is not explicitly closed
 } -setup {

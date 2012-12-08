@@ -1753,20 +1753,19 @@ int cmd_coordinates_write(
 			 && (partVertexCount == 3)
 			 && ((xCoords[partStarts[part]] == xCoords[vertex-1])
 			  && (yCoords[partStarts[part]] == yCoords[vertex-1])
-			  && (shapefile->dimType == DIM_XYZM
-					? (zCoords[partStarts[part]] == zCoords[vertex-1]) : 1))) {
+			  && (shapefile->dimType == DIM_XYZM ? (zCoords[partStarts[part]] == zCoords[vertex-1]) : 1)
+			  && ((shapefile->dimType == DIM_XYZM || shapefile->dimType == DIM_XYM) ? (mCoords[partStarts[part]] == mCoords[vertex-1]) : 1))) {
 			 Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid part geometry: closed ring with only 3 vertices"));
 			 returnValue = TCL_ERROR;
 			 goto cwRelease;
 		}
 		
 		/* validate that the first and last vertex of polygon parts match */
-		/* M coordinates do not have to match, but Z coord of POLYGONZ must */
 		if ((shapefile->baseType == BASE_POLYGON)
 				&& ((xCoords[partStarts[part]] != xCoords[vertex-1])
 				|| (yCoords[partStarts[part]] != yCoords[vertex-1])
-				|| (shapefile->dimType == DIM_XYZM
-				&& (zCoords[partStarts[part]] != zCoords[vertex-1])))) {
+				|| (shapefile->dimType == DIM_XYZM && (zCoords[partStarts[part]] != zCoords[vertex-1]))
+				|| ((shapefile->dimType == DIM_XYZM || shapefile->dimType == DIM_XYM) && (mCoords[partStarts[part]] != mCoords[vertex-1])))) {
 			if (shapefile->autoClosePolygons) {
 				/* close the part automatically by appending the first vertex */
 				partVertexCount++;
