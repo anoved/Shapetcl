@@ -15,6 +15,10 @@ These files contain tests that exercise specific Shapetcl [sub]commands. All com
 - `fields.test.tcl` tests the `fields` subcommand
 - `flush.test.tcl` tests the `flush` subcommand
 - `coordinates.test.tcl` tests the `coordinates` subcommand
+- `attributes.test.tcl` tests the `attributes` subcommand
+- `write.test.tcl` tests the `write` subcommand
+
+Note that abbreviated subcommand names are acceptable, so `coordinates` and `attributes` often appear shortened to `coord` and `attr`.
 
 ## Miscellaneous Tests
 

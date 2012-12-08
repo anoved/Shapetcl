@@ -2474,6 +2474,8 @@ int cmd_attributes_writeField(
  * to check for obvious errors before writing attribute values to disk. Intent
  * is to minimize the chance of leaving shapefile in an invalid state.
  * 
+ * An empty attribute list {} is considered valid; it represents a null record.
+ * 
  * Result:
  *   No Tcl result if the attribute value list passes validation. Otherwise,
  *   errors may be thrown.
@@ -2490,7 +2492,9 @@ int cmd_attributes_validate(
 	if (Tcl_ListObjLength(interp, attrList, &attrCount) != TCL_OK) {
 		return TCL_ERROR;
 	}
-	if (attrCount != fieldCount) {
+	if (attrCount == 0) {
+		return TCL_OK;
+	} else if (attrCount != fieldCount) {
 		Tcl_SetObjResult(interp, Tcl_ObjPrintf("attribute count (%d) does not match field count (%d)", attrCount, fieldCount));
 		return TCL_ERROR;
 	}
