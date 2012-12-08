@@ -118,6 +118,7 @@ int cmd_coordinates_read(Tcl_Interp *interp, ShapefilePtr shapefile, int feature
 
 int cmd_attributes(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]);
 int cmd_attributes_write(Tcl_Interp *interp, ShapefilePtr shapefile, int recordId, int validate, Tcl_Obj *attrList);
+int cmd_attributes_writeNull(Tcl_Interp *interp, ShapefilePtr shapefile, int recordId);
 int cmd_attributes_writeField(Tcl_Interp *interp, ShapefilePtr shapefile, int recordId, int fieldId, int validate, Tcl_Obj *attrValue);
 int cmd_attributes_validate(Tcl_Interp *interp, ShapefilePtr shapefile, Tcl_Obj *attrList);
 int cmd_attributes_validateField(Tcl_Interp *interp, ShapefilePtr shapefile, int fieldId, Tcl_Obj *attrValue);
@@ -1512,7 +1513,7 @@ int cmd_coordinates(
 			"write",
 			NULL
 	};
-		
+	
 	if (objc < 3) {
 		Tcl_WrongNumArgs(interp, 2, objv, "action ?args?");
 		return TCL_ERROR;
@@ -2272,23 +2273,20 @@ int cmd_attributes_write(
 	
 	fieldCount = DBFGetFieldCount(shapefile->dbf);
 	
-	/* as a special case, simply write null values for all fields if attrList is NULL */
+	/* write null values for all fields if attrList is NULL... */
 	if (attrList == NULL) {
-		for (fieldId = 0; fieldId < fieldCount; fieldId++) {
-			if (DBFWriteNULLAttribute(shapefile->dbf, recordId, fieldId) == 0) {
-				Tcl_SetObjResult(interp, Tcl_ObjPrintf("failed to write null attribute"));
-				return TCL_ERROR;
-			}
-		}
-		Tcl_SetObjResult(interp, Tcl_NewIntObj(recordId));
-		return TCL_OK;
+		return cmd_attributes_writeNull(interp, shapefile, recordId);
 	}
 	
 	/* verify the provided attribute value list matches field count */
 	if (Tcl_ListObjLength(interp, attrList, &attrCount) != TCL_OK) {
 		return TCL_ERROR;
 	}
-	if (attrCount != fieldCount) {
+	
+	/* ...also write a null record if an empty list is recieved */
+	if (attrCount == 0) {
+		return cmd_attributes_writeNull(interp, shapefile, recordId);
+	} else if (attrCount != fieldCount) {
 		Tcl_SetObjResult(interp, Tcl_ObjPrintf("attribute count (%d) does not match field count (%d)", attrCount, fieldCount));
 		return TCL_ERROR;
 	}
@@ -2314,6 +2312,34 @@ int cmd_attributes_write(
 		}
 	}
 		
+	Tcl_SetObjResult(interp, Tcl_NewIntObj(recordId));
+	return TCL_OK;
+}
+
+/*
+ * cmd_attributes_writeNull
+ *
+ * Write a null attribute record (null values are written to all fields).
+ *
+ * Result:
+ *   Index number of the null record that was written.
+ */
+int cmd_attributes_writeNull(
+		Tcl_Interp *interp,
+		ShapefilePtr shapefile,
+		int recordId) {
+	
+	int fieldId, fieldCount;
+	
+	fieldCount = DBFGetFieldCount(shapefile->dbf);
+	
+	for (fieldId = 0; fieldId < fieldCount; fieldId++) {
+		if (DBFWriteNULLAttribute(shapefile->dbf, recordId, fieldId) == 0) {
+			Tcl_SetObjResult(interp, Tcl_ObjPrintf("failed to write null attribute"));
+			return TCL_ERROR;
+		}
+	}
+	
 	Tcl_SetObjResult(interp, Tcl_NewIntObj(recordId));
 	return TCL_OK;
 }

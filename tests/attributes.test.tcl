@@ -347,14 +347,9 @@ test attr-3.2 {
 
 test attr-3.3 {
 # write an explicit null attribute record (with implied null shape)
-} -constraints {
-	knownBug
 } -setup {
 	set shp [shapefile tmp/foo point {integer id 10 0 double value 19 9 string label 32 0}]
 } -body {
-	# ISSUE: make attr write understand {} to mean a null record, just like coord write
-	# understands an empty coordinate list to mean a null shape. allowable as [attr write {}]
-	# as well as [attr write record {}]. [attr write record field {}] writes a null value.
 	$shp attr write {}
 	$shp attr read 0
 } -cleanup {
@@ -554,11 +549,8 @@ test attr-3.15 {
 	file delete {*}[glob tmp/foo.*]
 } -result {0 {} {Hello, world.}}
 
-# fix for 3.3 will allow this (interpret {} write arg to mean null record)
 test attr-3.16 {
 # overwrite a record with a null record
-} -constraints {
-	knownBug
 } -setup {
 	set shp [shapefile tmp/foo polygon {integer id 10 0 double value 19 9 string label 32 0}]
 	set index [$shp attr write {0 34.2 "Hello, world."}]
