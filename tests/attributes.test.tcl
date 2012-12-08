@@ -561,6 +561,33 @@ test attr-3.16 {
 	file delete {*}[glob tmp/foo.*]
 } -result {0}
 
+test attr-3.17 {
+# attempt to write a valid integer that is too big for alloted field width
+} -setup {
+	set shp [shapefile tmp/foo point {integer id 4 0}]
+} -body {
+	$shp attr write {12345}
+} -cleanup {
+	$shp close
+	file delete {*}[glob tmp/foo.*]
+} -returnCodes {
+	error
+} -match glob -result "integer value * would be truncated *"
+
+test attr-3.18 {
+# attempt to write # that's too big for Tcl to parse as a 32-bit int
+} -setup {
+	set shp [shapefile tmp/foo point {integer id 10 0}]
+} -body {
+	# ten digits, but too big for int
+	$shp attr write {4294967296}
+} -cleanup {
+	$shp close
+	file delete {*}[glob tmp/foo.*]
+} -returnCodes {
+	error
+} -result "integer value too large to represent"
+	
 # additional related tests in exponent.test.tcl
 
 ::tcltest::cleanupTests
