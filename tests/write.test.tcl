@@ -129,7 +129,7 @@ test write-1.8 {
 	file delete {*}[glob tmp/foo.*]
 } -returnCodes {
 	error
-} -match glob -result "integer value too large to represent"
+} -match glob -result "integer value too large to represent*"
 
 test write-1.9 {
 # invoke [write] with invalid coordinate geometry

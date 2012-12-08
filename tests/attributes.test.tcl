@@ -586,7 +586,7 @@ test attr-3.18 {
 	file delete {*}[glob tmp/foo.*]
 } -returnCodes {
 	error
-} -result "integer value too large to represent"
+} -match glob -result "integer value too large to represent*"
 	
 # additional related tests in exponent.test.tcl
 
