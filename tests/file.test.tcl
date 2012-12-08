@@ -91,46 +91,6 @@ test file-1.6 {
 	$shp close
 } -result {sample/xy/point}
 
-test file-1.7 {
-# confirm file path reports base path given .shp suffix
-} -setup {
-	set shp [shapefile sample/xy/point.shp readonly]
-} -body {
-	$shp file path
-} -cleanup {
-	$shp close
-} -result {sample/xy/point}
-
-test file-1.8 {
-# confirm file path reports base path given .shx suffix
-} -setup {
-	set shp [shapefile sample/xy/point.shx readonly]
-} -body {
-	$shp file path
-} -cleanup {
-	$shp close
-} -result {sample/xy/point}
-
-test file-1.9 {
-# confirm file path reports base path given .dbf suffix
-} -setup {
-	set shp [shapefile sample/xy/point.dbf readonly]
-} -body {
-	$shp file path
-} -cleanup {
-	$shp close
-} -result {sample/xy/point}
-
-test file-1.10 {
-# confirm file path reports base path given... any suffix (a shapelib "feature")
-} -setup {
-	set shp [shapefile sample/xy/point.bsg readonly]
-} -body {
-	$shp file path
-} -cleanup {
-	$shp close
-} -result {sample/xy/point}
-
 # lots of other path variations to consider, including filesystem tricks.
 
 ::tcltest::cleanupTests

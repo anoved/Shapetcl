@@ -94,7 +94,6 @@ int cmd_dispatcher(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj 
 int cmd_close(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]);
 void shapefile_exit_handler(ClientData clientData);
 void shapefile_delete_handler(ClientData clientData);
-int cmd_flush(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]);
 
 int cmd_config(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]);
 int cmd_file(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]);
@@ -179,7 +178,7 @@ int Shapetcl_Init(Tcl_Interp *interp) {
 	int readonly = 0;
 	SHPHandle shp;
 	DBFHandle dbf;
-	int shpType, i;
+	int shpType;
 	
 	if (objc < 2 || objc > 4) {
 		Tcl_WrongNumArgs(interp, 1, objv, "path ?mode?|?type fieldDefintions?");
@@ -321,19 +320,9 @@ int Shapetcl_Init(Tcl_Interp *interp) {
 	shapefile->baseType = shapefile_typeBase(shpType);
 	shapefile->dimType = shapefile_typeDimension(shpType);
 	
-	/* save the base path of the shapefile, using the same code as Shapelib.
-	   Shapelib duplicates this code at least 4 times, so what's once more? */
+	/* save the path of the shapefile */
 	shapefile->path = (char *)ckalloc(strlen(path) + 1);
     strcpy(shapefile->path, path);
-    for(i = strlen(shapefile->path) - 1; 
-			(i > 0)
-			&& (shapefile->path[i] != '.')
-			&& (shapefile->path[i] != '/')
-            && (shapefile->path[i] != '\\');
-			i--) {}
-    if(shapefile->path[i] == '.') {
-		shapefile->path[i] = '\0';
-    }
 	
 	Tcl_MutexLock(&COMMAND_COUNT_MUTEX);
 	sprintf(cmdName, "shapefile%d", COMMAND_COUNT++);
@@ -445,7 +434,6 @@ int cmd_dispatcher(
 			"fields",
 			"info",
 			"file",
-			"flush",
 			"write",
 			NULL
 	};
@@ -457,7 +445,6 @@ int cmd_dispatcher(
 			cmd_fields,
 			cmd_info,
 			cmd_file,
-			cmd_flush,
 			cmd_write
 	};
 	
@@ -533,54 +520,6 @@ void shapefile_exit_handler(ClientData clientData) {
 void shapefile_delete_handler(ClientData clientData) {
 	Tcl_DeleteExitHandler(shapefile_exit_handler, clientData);
 	ckfree((char *)clientData);
-}
-
-/*
- * cmd_flush
- * 
- * Implements the [$shp flush] command used to write changes to disk.
- * 
- * Command Syntax:
- *   [$shp flush]
- * 
- * Result:
- *   None if successful. Files are closed, flushing changes, and reopened.
- */
-int cmd_flush(
-		ClientData clientData,
-		Tcl_Interp *interp,
-		int objc,
-		Tcl_Obj *CONST objv[]) {
-
-	ShapefilePtr shapefile = (ShapefilePtr)clientData;
-	
-	if (objc != 2) {
-		Tcl_WrongNumArgs(interp, 1, objv, NULL);
-		return TCL_ERROR;
-	}
-	
-	/* no changes to flush if readonly */
-	if (shapefile->readonly) {
-		return TCL_OK;
-	}
-	
-	SHPClose(shapefile->shp);
-	DBFClose(shapefile->dbf);
-	
-	/* Trust the shapefile will not be changed this instant... */	
-	
-	shapefile->shp = SHPOpen(shapefile->path, "rb+");
-	shapefile->dbf = DBFOpen(shapefile->path, "rb+");
-	
-	/* If the shapefile cannot be reopened, close the command as well. */
-	if (shapefile->shp == NULL || shapefile->dbf == NULL) {
-		Tcl_SetObjResult(interp, Tcl_ObjPrintf("cannot reopen flushed shapefile \"%s\"", shapefile->path));		
-		shapefile_exit_handler(shapefile);
-		Tcl_DeleteCommand(interp, Tcl_GetString(objv[0]));
-		return TCL_ERROR;
-	}
-	
-	return TCL_OK;
 }
 
 /*
@@ -695,8 +634,7 @@ int cmd_config(
  *   [$shp file mode]
  *     Get shapefile access mode. Result is one of readonly or readwrite.
  *   [$shp file path]
- *     Get base path of shapefile. Not normalized; returned in same format as
- *     path argument to [shapefile], less any file extension.
+ *     Get shapefile path. Not normalized; returned as initially provided.
  *
  * Result:
  *   As described under Command Syntax.
