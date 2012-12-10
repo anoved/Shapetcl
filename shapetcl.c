@@ -87,6 +87,8 @@ TCL_DECLARE_MUTEX(COMMAND_COUNT_MUTEX);
 
 int Shapetcl_Init(Tcl_Interp *interp);
 int shapefile_cmd(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]);
+int shapefile_typeSupported(int shpType);
+int shapefile_typeCode(const char *shpTypeName);
 int shapefile_typeBase(int shpType);
 int shapefile_typeDimension(int shpType);
 int cmd_dispatcher(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]);
@@ -205,34 +207,13 @@ int Shapetcl_Init(Tcl_Interp *interp) {
 	if (objc == 4) {
 		/* create a new file; access is readwrite. */
 		
-		const char *shpTypeName = Tcl_GetString(objv[2]);
+		if ((shpType = shapefile_typeCode(Tcl_GetString(objv[2]))) == -1) {
+			Tcl_SetObjResult(interp, Tcl_ObjPrintf("unrecognized shape type"));
+			return TCL_ERROR;
+		}
 		
-		if (strcmp(shpTypeName, "point") == 0) {
-			shpType = SHPT_POINT;
-		} else if (strcmp(shpTypeName, "arc") == 0) {
-			shpType = SHPT_ARC;
-		} else if (strcmp(shpTypeName, "polygon") == 0) {
-			shpType = SHPT_POLYGON;
-		} else if (strcmp(shpTypeName, "multipoint") == 0) {
-			shpType = SHPT_MULTIPOINT;
-		} else if (strcmp(shpTypeName, "pointm") == 0) {
-			shpType = SHPT_POINTM;
-		} else if (strcmp(shpTypeName, "arcm") == 0) {
-			shpType = SHPT_ARCM;
-		} else if (strcmp(shpTypeName, "polygonm") == 0) {
-			shpType = SHPT_POLYGONM;
-		} else if (strcmp(shpTypeName, "multipointm") == 0) {
-			shpType = SHPT_MULTIPOINTM;
-		} else if (strcmp(shpTypeName, "pointz") == 0) {
-			shpType = SHPT_POINTZ;
-		} else if (strcmp(shpTypeName, "arcz") == 0) {
-			shpType = SHPT_ARCZ;
-		} else if (strcmp(shpTypeName, "polygonz") == 0) {
-			shpType = SHPT_POLYGONZ;
-		} else if (strcmp(shpTypeName, "multipointz") == 0) {
-			shpType = SHPT_MULTIPOINTZ;
-		} else {
-			Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid shape type \"%s\"", shpTypeName));
+		if (!shapefile_typeSupported(shpType)) {
+			Tcl_SetObjResult(interp, Tcl_ObjPrintf("unsupported shape type \"%d\"", shpType));
 			return TCL_ERROR;
 		}
 		
@@ -282,11 +263,8 @@ int Shapetcl_Init(Tcl_Interp *interp) {
 		
 		/* Only types we don't handle are SHPT_NULL and SHPT_MULTIPATCH */
 		SHPGetInfo(shp, &shpCount, &shpType, NULL, NULL);
-		if (shpType != SHPT_POINT && shpType != SHPT_POINTM && shpType != SHPT_POINTZ &&
-				shpType != SHPT_ARC && shpType != SHPT_ARCM && shpType != SHPT_ARCZ &&
-				shpType != SHPT_POLYGON && shpType != SHPT_POLYGONM && shpType != SHPT_POLYGONZ &&
-				shpType != SHPT_MULTIPOINT && shpType != SHPT_MULTIPOINTM && shpType != SHPT_MULTIPOINTZ) {
-			Tcl_SetObjResult(interp, Tcl_ObjPrintf("unsupported shape type (%d)", shpType));
+		if (!shapefile_typeSupported(shpType)) {
+			Tcl_SetObjResult(interp, Tcl_ObjPrintf("unsupported shape type \"%d\"", shpType));
 			DBFClose(dbf);
 			SHPClose(shp);
 			return TCL_ERROR;
@@ -339,6 +317,74 @@ int Shapetcl_Init(Tcl_Interp *interp) {
 	Tcl_SetObjResult(interp, Tcl_NewStringObj(cmdName, -1));
 	
 	return TCL_OK;
+}
+
+/*
+ * shapefile_typeSupported
+ * 
+ * Boolean check whether Shapetcl supports the specified shapefile type code. 
+ * 
+ * Result:
+ *   1 if supported (any point/arc/polygon/multipoint xy/xym/xyzm combination)
+ *   0 if unsupported (null, multipatch, or any other value)
+ */
+int shapefile_typeSupported(int shpType) {
+	if (	   shpType == SHPT_POINT
+			|| shpType == SHPT_POINTM
+			|| shpType == SHPT_POINTZ
+			|| shpType == SHPT_ARC
+			|| shpType == SHPT_ARCM
+			|| shpType == SHPT_ARCZ
+			|| shpType == SHPT_POLYGON
+			|| shpType == SHPT_POLYGONM
+			|| shpType == SHPT_POLYGONZ
+			|| shpType == SHPT_MULTIPOINT
+			|| shpType == SHPT_MULTIPOINTM
+			|| shpType == SHPT_MULTIPOINTZ) {
+		return 1;
+	}
+	return 0;
+}
+
+/*
+ * shapefile_typeCode
+ * 
+ * Look up the shapefile type code corresponding to the given type name.
+ * 
+ * Result:
+ *   One of the SHPT_ type codes defined in shapefil.h, or -1 if unrecognized.
+ */
+int shapefile_typeCode(const char *shpTypeName) {
+	if (strcmp(shpTypeName, "point") == 0) {
+		return SHPT_POINT;
+	} else if (strcmp(shpTypeName, "arc") == 0) {
+		return SHPT_ARC;
+	} else if (strcmp(shpTypeName, "polygon") == 0) {
+		return SHPT_POLYGON;
+	} else if (strcmp(shpTypeName, "multipoint") == 0) {
+		return SHPT_MULTIPOINT;
+	} else if (strcmp(shpTypeName, "pointm") == 0) {
+		return SHPT_POINTM;
+	} else if (strcmp(shpTypeName, "arcm") == 0) {
+		return SHPT_ARCM;
+	} else if (strcmp(shpTypeName, "polygonm") == 0) {
+		return SHPT_POLYGONM;
+	} else if (strcmp(shpTypeName, "multipointm") == 0) {
+		return SHPT_MULTIPOINTM;
+	} else if (strcmp(shpTypeName, "pointz") == 0) {
+		return SHPT_POINTZ;
+	} else if (strcmp(shpTypeName, "arcz") == 0) {
+		return SHPT_ARCZ;
+	} else if (strcmp(shpTypeName, "polygonz") == 0) {
+		return SHPT_POLYGONZ;
+	} else if (strcmp(shpTypeName, "multipointz") == 0) {
+		return SHPT_MULTIPOINTZ;
+	} else if (strcmp(shpTypeName, "multipatch") == 0) {
+		return SHPT_MULTIPATCH;
+	} else if (strcmp(shpTypeName, "null") == 0) {
+		return SHPT_NULL;
+	}
+	return -1;
 }
 
 /*

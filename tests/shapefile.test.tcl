@@ -141,11 +141,7 @@ test shapefile-1.9 {
 	error
 } -match glob -result {bad subcommand "*": must be *}
 
-#
-# Testing for "Success" Conditions
-#
-
-test shapefile-2.0 {
+test shapefile-1.10 {
 # Attempt to open a valid (polygon) shapefile
 } -body {
 	set shp [shapefile sample/xy/polygon]
@@ -155,7 +151,7 @@ test shapefile-2.0 {
 	ok
 } -match glob -result {shapefile*}
 
-test shapefile-2.1 {
+test shapefile-1.11 {
 # Verify that by default shapefiles are opened in readwrite mode
 } -setup {
 	set shp [shapefile sample/xy/point]
@@ -166,5 +162,22 @@ test shapefile-2.1 {
 } -returnCodes {
 	ok
 } -match exact -result {readwrite}
+
+test shapefile-1.12 {
+# attempt to create a shapefile of a valid but unsupported type
+} -body {
+	shapefile tmp/foo multipatch {integer id 10 0}
+} -returnCodes {
+	error
+} -match glob -result "unsupported shape type *"
+	
+
+test shapefile-1.12 {
+# attempt to create a shapefile of an invalid type
+} -body {
+	shapefile tmp/foo bar {integer id 10 0}
+} -returnCodes {
+	error
+} -result "unrecognized shape type"
 
 ::tcltest::cleanupTests
