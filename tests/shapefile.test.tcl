@@ -124,10 +124,12 @@ test shapefile-1.7 {
 } -match glob -result {shapefile feature count (*) does not match attribute record count (*)}
 	
 test shapefile-1.8 {
-# Attempt to open a valid shapefile of an unsupported type
-} -constraints {
-	emptyTest
-}
+# Attempt to open a valid shapefile of an as-yet unsupported type (multipatch)
+} -body {
+	shapefile sample/misc/multipatch readonly
+} -returnCodes {
+	error
+} -match glob -result "unsupported shape type*"
 
 test shapefile-1.9 {
 # Attempt to invoke an invalid subcommand
@@ -169,7 +171,7 @@ test shapefile-1.12 {
 	shapefile tmp/foo multipatch {integer id 10 0}
 } -returnCodes {
 	error
-} -match glob -result "unsupported shape type *"
+} -match glob -result "unsupported shape type*"
 	
 
 test shapefile-1.12 {
