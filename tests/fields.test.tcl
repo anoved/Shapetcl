@@ -123,7 +123,7 @@ test fields-2.5 {
 	file copy {*}[glob sample/xy/point.*] tmp
 	set shp [shapefile tmp/point]
 } -body {
-	$shp fields add {integer ThisTitleIsTooLong 64 0}
+	$shp fields add {integer ThisTitleIsTooLong 10 0}
 } -cleanup {
 	$shp close
 	file delete {*}[glob -nocomplain tmp/point.*]
@@ -131,16 +131,55 @@ test fields-2.5 {
 	error
 } -match glob -result "invalid field name *"
 
-test fields-2.5b {
+test fields-2.5.1 {
 # attempt to [fields add] with an invalid field title (too short)
 } -setup {
 	file copy {*}[glob sample/xy/point.*] tmp
 	set shp [shapefile tmp/point]
 } -body {
-	$shp fields add {integer {} 64 0}
+	$shp fields add {integer {} 10 0}
 } -cleanup {
 	$shp close
 	file delete {*}[glob -nocomplain tmp/point.*]
+} -returnCodes {
+	error
+} -match glob -result "invalid field name: *"
+
+test fields-2.5.2 {
+# attempt to [fields add] with an invalid field title (contains space)
+} -setup {
+	file copy {*}[glob sample/xy/point.*] tmp
+	set shp [shapefile tmp/point]
+} -body {
+	$shp fields add {integer {foo bar} 10 0}
+} -cleanup {
+	$shp close
+	file delete {*}[glob tmp/point.*]
+} -returnCodes {
+	error
+} -match glob -result "invalid field name: *"
+
+test fields-2.5.3 {
+# attempt to [fields add] with an valid field title containing numbers and _
+} -setup {
+	set shp [shapefile tmp/foo point {integer id 10 0}]
+} -body {
+	$shp fields add {integer Field_33 10 0}
+} -cleanup {
+	$shp close
+	file delete {*}[glob tmp/foo.*]
+} -result {1}
+
+test fields-2.5.4 {
+# attempt to [fields add] an invalid field title (doesn't start w/alphbetic)
+} -setup {
+	file copy {*}[glob sample/xy/point.*] tmp
+	set shp [shapefile tmp/point]
+} -body {
+	$shp fields add {integer 1foo 10 0}
+} -cleanup {
+	$shp close
+	file delete {*}[glob tmp/point.*]
 } -returnCodes {
 	error
 } -match glob -result "invalid field name: *"

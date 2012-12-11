@@ -108,6 +108,7 @@ int cmd_fields(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CON
 int cmd_fields_add(Tcl_Interp *interp, DBFHandle dbf, int validate, Tcl_Obj *definitions);
 int cmd_fields_validate(Tcl_Interp *interp, Tcl_Obj *definitions);
 int cmd_fields_validateField(Tcl_Interp *interp, const char *type, const char *name, int width, int precision);
+int cmd_fields_validateFieldName(Tcl_Interp *interp, const char *name);
 int cmd_fields_description(Tcl_Interp *interp, ShapefilePtr shapefile, int fieldId);
 int cmd_fields_index(Tcl_Interp *interp, ShapefilePtr shapefile, const char *fieldName);
 
@@ -1231,7 +1232,7 @@ int cmd_fields_add(
 				|| (Tcl_GetIntFromObj(interp, definitionElements[i + 3], &precision) != TCL_OK)) {
 			return TCL_ERROR;
 		}
-		
+				
 		if (strcmp(type, "integer") == 0) {
 			if ((fieldId = DBFAddField(dbf, name, FTInteger, width, 0)) == -1) {
 				Tcl_SetObjResult(interp, Tcl_ObjPrintf("failed to create integer attribute field \"%s\"", name));
@@ -1292,12 +1293,14 @@ int cmd_fields_validate(
 
 	/* validate field specifications before creating dbf */	
 	for (i = 0; i < definitionElementCount; i += 4) {
+		
 		if (((type = Tcl_GetString(definitionElements[i])) == NULL)
 				|| ((name = Tcl_GetString(definitionElements[i + 1])) == NULL)
 				|| (Tcl_GetIntFromObj(interp, definitionElements[i + 2], &width) != TCL_OK)
 				|| (Tcl_GetIntFromObj(interp, definitionElements[i + 3], &precision) != TCL_OK)) {
 			return TCL_ERROR;
-		}		
+		}
+		
 		if (cmd_fields_validateField(interp, type, name, width, precision) != TCL_OK) {
 			return TCL_ERROR;
 		}
@@ -1327,16 +1330,10 @@ int cmd_fields_validateField(
 		return TCL_ERROR;
 	}
 	
-	if (strlen(name) > 10) {
-		Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid field name \"%s\": too long (10 characters maximum)", name));
+	if (cmd_fields_validateFieldName(interp, name) != TCL_OK) {
 		return TCL_ERROR;
 	}
-	
-	if (strlen(name) < 1) {
-		Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid field name: too short (1 character minimum)"));
-		return TCL_ERROR;
-	}
-	
+		
 	if (strcmp(type, "integer") == 0 && width > 10) {
 		Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid integer field definition: maximum 32-bit integer width is 10 digits (%d is too wide)", width));
 		return TCL_ERROR;
@@ -1347,6 +1344,48 @@ int cmd_fields_validateField(
 		return TCL_ERROR;
 	}
 
+	return TCL_OK;
+}
+
+/*
+ * cmd_fields_validateFieldName
+ * 
+ * Confirm that candidate field name conforms to convention. Note that Shapelib
+ * does not impose any limits on field name format other than truncating long
+ * names, but other [older] DBF/GIS applications may have trouble reading names
+ * that do not conform, so we err on the strictness to ensure compatibility.
+ * 
+ * Result:
+ *   No Tcl result if field name is valid. Otherwise, throws error.
+ */
+int cmd_fields_validateFieldName(
+		Tcl_Interp *interp,
+		const char *name) {
+		
+	/* check for maximum name length */
+	if (strlen(name) > 10) {
+		Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid field name \"%s\": too long (10 characters maximum)", name));
+		return TCL_ERROR;
+	}
+	
+	/* check for minimum field length */
+	if (strlen(name) < 1) {
+		Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid field name: too short (1 character minimum)"));
+		return TCL_ERROR;
+	}
+	
+	/* check for legal characters */
+	if (strspn(name, "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_") != strlen(name)) {
+		Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid field name: only alphanumeric and underscore characters allowed"));
+		return TCL_ERROR;
+	}
+	
+	/* check for alphabetic starting character */
+	if (strchr("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ", name[0]) == NULL) {
+		Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid field name: first character must be alphabetic"));
+		return TCL_ERROR;
+	}
+	
 	return TCL_OK;
 }
 
