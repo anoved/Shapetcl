@@ -182,11 +182,12 @@ int Shapetcl_Init(Tcl_Interp *interp) {
 
 	ShapefilePtr shapefile;
 	const char *path;
-	char cmdName[16];
 	int readonly = 0;
 	SHPHandle shp;
 	DBFHandle dbf;
 	int shpType;
+	Tcl_Obj *cmdNameObj;
+	Tcl_Namespace *ns;
 	
 	if (objc < 2 || objc > 4) {
 		Tcl_WrongNumArgs(interp, 1, objv, "path ?mode?|?type fieldDefintions?");
@@ -308,19 +309,24 @@ int Shapetcl_Init(Tcl_Interp *interp) {
 	shapefile->path = (char *)ckalloc(strlen(path) + 1);
     strcpy(shapefile->path, path);
 	
+	ns = Tcl_GetCurrentNamespace(interp);
 	Tcl_MutexLock(&COMMAND_COUNT_MUTEX);
-	sprintf(cmdName, "shapefile%d", COMMAND_COUNT++);
+	if (ns->parentPtr == NULL) {
+		cmdNameObj = Tcl_ObjPrintf("::shapefile%d", COMMAND_COUNT++);
+	} else {
+		cmdNameObj = Tcl_ObjPrintf("%s::shapefile%d", ns->fullName, COMMAND_COUNT++);
+	}
 	Tcl_MutexUnlock(&COMMAND_COUNT_MUTEX);
-	
-	if (Tcl_CreateObjCommand(interp, cmdName, cmd_dispatcher, (ClientData)shapefile, shapefile_delete_handler) == NULL) {
-		Tcl_SetObjResult(interp, Tcl_ObjPrintf("failed to create command for %s", cmdName));
+
+	if (Tcl_CreateObjCommand(interp, Tcl_GetString(cmdNameObj), cmd_dispatcher, (ClientData)shapefile, shapefile_delete_handler) == NULL) {
+		Tcl_SetObjResult(interp, Tcl_ObjPrintf("failed to create command for %s", Tcl_GetString(cmdNameObj)));
 		DBFClose(dbf);
 		SHPClose(shp);
 		ckfree((char *)shapefile);
 		return TCL_ERROR;
 	}
 	Tcl_CreateExitHandler(shapefile_exit_handler, (ClientData)shapefile);
-	Tcl_SetObjResult(interp, Tcl_NewStringObj(cmdName, -1));
+	Tcl_SetObjResult(interp, cmdNameObj);
 	
 	return TCL_OK;
 }

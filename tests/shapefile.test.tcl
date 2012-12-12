@@ -152,7 +152,7 @@ test shapefile-1.10 {
 	$shp close
 } -returnCodes {
 	ok
-} -match glob -result {shapefile*}
+} -match glob -result {::shapefile*}
 
 test shapefile-1.11 {
 # Verify that by default shapefiles are opened in readwrite mode
