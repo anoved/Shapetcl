@@ -13,7 +13,8 @@ eval ::tcltest::configure $argv
 
 # Load the extension to test.
 lappend auto_path ..
-package require Shapetcl
+package require shapetcl
+namespace import shapetcl::shapefile
 
 test exponent-1.0 {
 # Check that double values stored in scientific notation can be read ok.

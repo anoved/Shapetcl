@@ -2,9 +2,9 @@
 
 package require Tk
 
-puts [info script]
 lappend auto_path [file dirname [file dirname [file normalize [info script]]]]
-package require Shapetcl
+package require shapetcl
+namespace import shapetcl::shapefile
 
 if {$argc != 1} {
 	puts stderr "usage: $argv0 path"

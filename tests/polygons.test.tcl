@@ -13,7 +13,8 @@ eval ::tcltest::configure $argv
 
 # Load the extension to test.
 lappend auto_path ..
-package require Shapetcl
+package require shapetcl
+namespace import shapetcl::shapefile
 
 test polygons-1.0 {
 # assert that xy polygon parts are closed (matching first and last vertices)

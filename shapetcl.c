@@ -137,18 +137,23 @@ int cmd_write(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONS
  * 
  * Result:
  *   Registers the [shapefile] command used to open or create shapefiles.
+ *   (Note: the [shapefile] command is created in the ::shapetcl namespace.)
  */
 int Shapetcl_Init(Tcl_Interp *interp) {
+	
+	Tcl_Namespace *shapetclNamespace;
 	
 	if (Tcl_InitStubs(interp, "8.1", 0) == NULL) {
 		return TCL_ERROR;
 	}
 	
-	if (Tcl_PkgProvide(interp, "Shapetcl", "0.1") != TCL_OK) {
+	if (Tcl_PkgProvide(interp, "shapetcl", "0.1") != TCL_OK) {
 		return TCL_ERROR;
 	}
 	
-	Tcl_CreateObjCommand(interp, "shapefile", shapefile_cmd, NULL, NULL);
+	Tcl_CreateObjCommand(interp, "::shapetcl::shapefile", shapefile_cmd, NULL, NULL);
+	shapetclNamespace = Tcl_FindNamespace(interp, "shapetcl", NULL, TCL_GLOBAL_ONLY);
+	Tcl_Export(interp, shapetclNamespace, "shapefile", 0);
 	
 	return TCL_OK;
 }

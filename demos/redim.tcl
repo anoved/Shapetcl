@@ -1,7 +1,8 @@
 #!/usr/bin/tclsh
 
 lappend auto_path [file dirname [file dirname [file normalize [info script]]]]
-package require Shapetcl
+package require shapetcl
+namespace import shapetcl::shapefile
 
 proc GetDimension {index format measure} {
 	global in
