@@ -171,7 +171,7 @@ test fields-2.5.3 {
 } -result {1}
 
 test fields-2.5.4 {
-# attempt to [fields add] an invalid field title (doesn't start w/alphbetic)
+# attempt to [fields add] an invalid field title (doesn't start w/alphabetic)
 } -setup {
 	file copy {*}[glob sample/xy/point.*] tmp
 	set shp [shapefile tmp/point]
@@ -183,6 +183,35 @@ test fields-2.5.4 {
 } -returnCodes {
 	error
 } -match glob -result "invalid field name: *"
+
+test fields-2.5.5 {
+# attempt to create a shapefile with duplicate field names
+} -body {
+	shapefile tmp/foo point {integer info 10 0 string info 32 0}
+} -returnCodes {
+	error
+} -match glob -result "invalid field name: duplicate names disallowed *"
+
+test fields-2.5.6 {
+# attempt to add a field with a name that is a duplicate of an existing field
+} -setup {
+	set shp [shapefile tmp/foo point {integer info 10 0}]
+} -body {
+	$shp fields add {string info 32 0}
+} -cleanup {
+	$shp close
+	file delete {*}[glob tmp/foo.*]
+} -returnCodes {
+	error
+} -match glob -result "invalid field name: duplicate names disallowed *"
+
+test fields-2.5.7 {
+# confirm that duplicate checking is case insensitive (DUPE == dupe)
+} -body {
+	shapefile tmp/foo point {integer ID 10 0 integer id 10 0}
+} -returnCodes {
+	error
+} -match glob -result "invalid field name: duplicate names disallowed *"
 
 # "invalid" numeric field definitions are those whose width/precision
 # parameters imply values that would be returned as another type (int/double)

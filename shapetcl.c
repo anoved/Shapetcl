@@ -106,7 +106,7 @@ int cmd_info_bounds(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj
 
 int cmd_fields(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]);
 int cmd_fields_add(Tcl_Interp *interp, DBFHandle dbf, int validate, Tcl_Obj *definitions);
-int cmd_fields_validate(Tcl_Interp *interp, Tcl_Obj *definitions);
+int cmd_fields_validate(Tcl_Interp *interp, Tcl_Obj *definitions, DBFHandle dbf);
 int cmd_fields_validateField(Tcl_Interp *interp, const char *type, const char *name, int width, int precision);
 int cmd_fields_validateFieldName(Tcl_Interp *interp, const char *name);
 int cmd_fields_description(Tcl_Interp *interp, ShapefilePtr shapefile, int fieldId);
@@ -219,7 +219,7 @@ int Shapetcl_Init(Tcl_Interp *interp) {
 		}
 		
 		/* verify that the attribute table field definition looks sensible */
-		if (cmd_fields_validate(interp, objv[3]) != TCL_OK) {
+		if (cmd_fields_validate(interp, objv[3], NULL /* no dbf yet */) != TCL_OK) {
 			return TCL_ERROR;
 		}
 		
@@ -1216,7 +1216,7 @@ int cmd_fields_add(
 	int fieldId = 0;
 	
 	/* check field definition list formatting if not already validated */
-	if (validate && (cmd_fields_validate(interp, definitions) != TCL_OK)) {
+	if (validate && (cmd_fields_validate(interp, definitions, dbf) != TCL_OK)) {
 		return TCL_ERROR;
 	}
 	
@@ -1263,18 +1263,21 @@ int cmd_fields_add(
  * Check that a field definitions list contains valid field definitions. Used
  * by the [$shp fields add] action in contexts where field definitions have not
  * been pre-validated, as when invoked by the [shapefile] command when creating
- * new shapefiles.
+ * new shapefiles. If dbf parameter is non-null, new field names are checked
+ * for uniqueness against extant fields in dbf as well as in definitions.
  * 
  * Result:
  *   No Tcl result if the field definitions are valid. Otherwise, throws error.
  */
 int cmd_fields_validate(
 		Tcl_Interp *interp,
-		Tcl_Obj *definitions) {
+		Tcl_Obj *definitions,
+		DBFHandle dbf) {
 			
 	Tcl_Obj **definitionElements;
-	int definitionElementCount, i;
+	int definitionElementCount, i, j;
 	const char *type, *name;
+	char *preName, dbfName[12];
 	int width, precision;
 	
 	if (Tcl_ListObjGetElements(interp, definitions, &definitionElementCount, &definitionElements) != TCL_OK) {
@@ -1294,7 +1297,7 @@ int cmd_fields_validate(
 	/* validate field specifications before creating dbf */	
 	for (i = 0; i < definitionElementCount; i += 4) {
 		
-		if (((type = Tcl_GetString(definitionElements[i])) == NULL)
+		if (       ((type = Tcl_GetString(definitionElements[i])) == NULL)
 				|| ((name = Tcl_GetString(definitionElements[i + 1])) == NULL)
 				|| (Tcl_GetIntFromObj(interp, definitionElements[i + 2], &width) != TCL_OK)
 				|| (Tcl_GetIntFromObj(interp, definitionElements[i + 3], &precision) != TCL_OK)) {
@@ -1303,6 +1306,26 @@ int cmd_fields_validate(
 		
 		if (cmd_fields_validateField(interp, type, name, width, precision) != TCL_OK) {
 			return TCL_ERROR;
+		}
+		
+		/* check that this name is not a duplicate of others given here */
+		for (j = 0; j < i; j+= 4) {
+			preName = Tcl_GetString(definitionElements[j + 1]);
+			if (strcasecmp(preName, name) == 0) {
+				Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid field name: duplicate names disallowed (%s)", name));
+				return TCL_ERROR;
+			}
+		}
+		
+		/* also check that this name is not a dupe of any existing fields */
+		if (dbf != NULL) {
+			for (j = 0; j < DBFGetFieldCount(dbf); j++) {
+				DBFGetFieldInfo(dbf, j, dbfName, NULL, NULL);
+				if (strcasecmp(dbfName, name) == 0) {
+					Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid field name: duplicate names disallowed (%s)", name));
+					return TCL_ERROR;
+				}
+			}
 		}
 	}
 	
@@ -1333,7 +1356,7 @@ int cmd_fields_validateField(
 	if (cmd_fields_validateFieldName(interp, name) != TCL_OK) {
 		return TCL_ERROR;
 	}
-		
+	
 	if (strcmp(type, "integer") == 0 && width > 10) {
 		Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid integer field definition: maximum 32-bit integer width is 10 digits (%d is too wide)", width));
 		return TCL_ERROR;
@@ -1343,7 +1366,7 @@ int cmd_fields_validateField(
 		Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid double field definition: numeric field with width <=10 digits (%d) and 0 precision is an integer", width));
 		return TCL_ERROR;
 	}
-
+	
 	return TCL_OK;
 }
 
