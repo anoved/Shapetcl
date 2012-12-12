@@ -1476,7 +1476,7 @@ int cmd_fields_description(
  * cmd_fields_index
  *
  * Implements the [$shp fields index] action used to look up a field by name.
- * Field name search is case insensitive.
+ * Field name search is case insensitive. Finds the first field of given name.
  *
  * Result:
  *   Index of named field, or error if no such field is found.

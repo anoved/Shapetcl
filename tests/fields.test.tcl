@@ -449,4 +449,19 @@ test fields-5.4 {
 	error
 } -result "missing field name"
 
+test fields-5.5 {
+# confirm that [fields index] returns the first field if multiple match
+} -setup {
+	set shp [shapefile sample/misc/fieldnames readonly]
+} -body {
+	# Both fields 0 and 1 are named {# Field}.
+	# We disallow creation of duplicate field names, but support reading them.
+	# We also disallow creation of field names w/non-alphanumeric_ characters,
+	# but support reading them. The strict output rules are a concession to
+	# compatibility with other shapefile software that may be less flexible. 
+	$shp fields index {# Field}
+} -cleanup {
+	$shp close
+} -result {0}
+
 ::tcltest::cleanupTests
