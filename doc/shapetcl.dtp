@@ -128,19 +128,79 @@ If no [arg index] is given, returns a list of [sectref {Coordinate Lists}], one 
    # process feature geometry
 }}]
 [call [arg shapefile] [method coordinates] [method write] [opt [arg index]] [arg coordinates]]
-If [arg index] is given, overwrites the specified feature geometry. If no [arg index] argument is given, appends a new feature with an attribute record populated with null values. (Use the [arg shapefile] [method write] method to append a new entity with coordinate data and attribute data at the same time.) The [arg coordinates] argument may be a [sectref {Coordinate Lists} {Coordinate List}] or an empty list [const {{}}], in which case a null feature is written. Returns the index of the written feature.
+If [arg index] is given, overwrites the specified feature geometry. If no [arg index] argument is given, appends a new feature and adds an associated attribute record populated with null values. (Use the [arg shapefile] [method write] method to append a new entity with coordinate data and attribute data at the same time.) The [arg coordinates] argument may be a [sectref {Coordinate Lists} {Coordinate List}] or an empty list [const {{}}], in which case a null feature is written. Returns the index of the written feature.
 [para]
 Overwrite the first feature of point shapefile [var shp] with new coordinates:
-[example {$shp coordinates write 0 {{0 0}}}]
+[example {$shp coordinates write 0 {{3.069799 36.786913}}}]
 Add a new feature, and subsequently fill in its attributes:
 [example {set index [$shp coordinates write {{151.523438 -79.812302}}]
 # (assuming attribute table contains a single string field)
 $shp attributes write $index {McMurdo Station}}]
 [list_end][comment {end of coordinates method subcommands}]
 
+[comment {attributes method}]
+[call [arg shapefile] [method attributes] [arg subcommand]]
+The [method attributes] method provides subcommands to read or write attribute records.
+[comment {attributes method subcommands}]
+[list_begin definitions]
+[call [arg shapefile] [method attributes] [method read] [opt [arg index]]]
+
+If no [arg index] is given, returns a list of all attribute records in [arg shapefile]. If [arg index] is given, returns the attribute record specified by [arg index]. An [sectref {Attribute Records} {Attribute Record}] is a list that contains one value for each field in the attribute table.
+
+[example {foreach record [$shp attributes read] {
+    # [llength $record] == [$shp fields count]
+}}]
+
+[call [arg shapefile] [method attributes] [method read] [arg index] [arg field]]
+
+Returns a single attribute value from record [arg index]. [arg field] specifies the index of the field to read.
+[para]
+Get the value of a field named [const ID] from the first record:
+[example {$shp attributes read 0 [$shp fields index "ID"]}]
+
+[call [arg shapefile] [method attributes] [method write] [opt [arg index]] [arg values]]
+If [arg index] is given, overwrites the specified attribute record. If no [arg index] argument is given, appends a new attribute record and adds an associated null feature. (Use the [arg shapefile] [method write] method to append a new entity with coordinate data and attribute data at the same time.) The [arg values] argument may be an [sectref {Attribute Records} {Attribute Record}] or an empty list [const {{}}], in which case the attribute record is populated with null values. Returns the index of the written record.
+
+[call [arg shapefile] [method attributes] [method write] [arg index] [arg field] [arg value]]
+Writes a single attribute [arg value] to field [arg field] of record [arg index]. Returns [arg index].
+[list_end][comment {attributes method subcommands}]
+
+[comment {write method}]
+[call [arg shapefile] [method write] [arg coordinates] [arg values]]
+Appends a new entity to [arg shapefile] and returns the index of the new entity. The [arg coordinates] argument is interpreted like the [arg coordinates] argument to [method {coordinates write}] and the [arg values] argument is interpreted like the [arg values] argument to [method {attributes write}].
+[para]
+Here an entity is added to a point shapefile with two attribute fields, an integer and a string:
+
+[example {$shp write {{-0.001475 51.477812}} {66 {Royal Observatory Greenwich}}}]
+
 [list_end][comment {end of Shapefile Methods}]
 
 [section {Config Options}]
+
+All configuration options are boolean. The possible values are [const 1] (true) and [const 0] (false).
+
+[list_begin definitions]
+[def [option allowAlternateNotation]]
+Default: [const 1]. Affects output of large floating-point attribute values. If false, values too large to fit in field width will cause [method {attributes write}] methods to throw an error. If true, values too large to fit in field width will be stored using exponential notation, given sufficient field width. This increases the range of values that can be stored in floating-point fields, but carries an important risk: [emph {significant digits may be lost}].
+[para]
+Does not affect [method {attributes read}] methods. Floating-point attribute values stored in exponential notation are read successfully regardless of this setting.
+[def [option getAllCoordinates]]
+Default: [const 0]. If false, [method {info bounds}] and [method {coordinates read}] methods return a number of coordinates appropriate to the feature type. If true, all four coordinates (X, Y, Z, and M) are always returned, regardless of feature type. The default Z and M coordinate value is [const 0].
+[para]
+If [option getAllCoordinates] is set to true, [option getOnlyXyCoordinates] is automatically set to false.
+[def [option getOnlyXyCoordinates]]
+Default: [const 0]. If false, [method {info bounds}] and [method {coordinates read}] methods return a number of coordinates appropriate to the feature type. If true, only two coordinates (X and Y) are always returned, regardless of feature type.
+[para]
+If [option getOnlyXyCoordinates] is set to true, [option getAllCoordinates] is automatically set to false.
+[def [option readRawStrings]]
+Default: [const 0]. If false, standard numeric formatting is applied to read numeric values (for example, trailing decimal zeros are omitted and values stored in exponential notation are converted to decimal notation). If true, numeric values are read as stored.
+[para]
+Field padding whitespace is never included in [method {attributes read}] results.
+[def [option autoClosePolygons]]
+Default: [const 0]. If false, polygon [sectref {Coordinate Lists}] given to [method {write}] or [method {coordinates write}] must be explicitly closed. If true, polygons that appear to be open will be automatically closed by appending a copy of the first vertex. To be considered closed, a polygon's first and last vertices must be identical in all dimensions.
+[para]
+If [option autoClosePolygons] is true, the minimum polygon vertex count is reduced to three (which must be unique), since the closing vertex will be provided automatically.
+[list_end]
 
 [section {Types}]
 
@@ -164,6 +224,8 @@ Feature types and associated numeric codes, base types, and dimensions.
 [list_end]
 
 [subsection {Definition Lists}]
+
+[subsection {Attribute Records}]
 
 [subsection {Coordinate Lists}]
 
