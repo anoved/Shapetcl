@@ -36,17 +36,21 @@ In the second form, a new shapefile is created at [arg path] and opened in [arg 
 The [arg shapefile] token returned by [cmd ::shapetcl::shapefile] acts as a command of the following form:
 
 [list_begin definitions]
-[call [cmd shapefile] [method method] [opt [arg {arg arg ...}]]]
-See the [sectref {Shapefile Methods}] section for details on the supported methods.
+[call [cmd shapefile] [method method] [opt [arg {args...}]]]
+See the [sectref {Shapefile Methods}] section for details on the supported methods. Note that any distinct abbreviation may be given for method names, such as [method coord] for [method coordinates].
 [list_end]
 
 [subsection {Shapefile Methods}]
 
 [list_begin definitions]
 
+[comment {config method}]
+[call [arg shapefile] [method config] [arg option] [opt [arg value]]]
+Returns the current value of the specified [arg option]. If a [arg value] is given, it is assigned to the specified [arg option] before the value is returned. Valid boolean values are [const 0] and [const 1]. See [sectref {Config Options}] for details.
+
 [comment {file method}]
 [call [arg shapefile] [method file] [arg subcommand]]
-The [method file] method returns information about the shapefile via the following subcommands:
+The [method file] method returns information about the shapefile.
 
 [comment {file method subcommands}]
 [list_begin definitions]
@@ -58,14 +62,14 @@ Returns the path provided as the first argument to the [cmd ::shapetcl::shapefil
 
 [comment {info method}]
 [call [arg shapefile] [method info] [arg subcommand]]
-The [method info] method returns information about the contents of the shapefile via the following subcommands:
+The [method info] method returns information about the contents of the shapefile.
 
 [comment {info method subcommands}]
 [list_begin definitions]
 [call [arg shapefile] [method info] [method count]]
 Returns the number of entities in the shapefile. [const 0] indicates an empty shapefile.
 [call [arg shapefile] [method info] [method type] [opt [arg subcommand]]]
-If no [arg option] is given, returns the [sectref {Feature Types} {Feature Type}]. The following subcommands return related information:
+If no [arg subcommand] is given, returns the [sectref {Feature Types} {Feature Type}].
 [comment {info type options}]
 [list_begin definitions]
 [call [arg shapefile] [method info] [method type] [method numeric]]
@@ -86,9 +90,36 @@ The default bounds list format for [const xy], [const xym], and [const xyzm] fea
 [list_end]
 [list_end][comment {end of info method subcommands}]
 
-[comment {config method}]
-[call [arg shapefile] [method config] [arg option] [opt [arg value]]]
-If no [arg value] argument is present, returns the current value of the specified [arg option]. If a [arg value] is given, it is assigned to the specified [arg option] and the new value is returned. Valid boolean values are [const 0] and [const 1]. See [sectref {Config Options}].
+[comment {fields method}]
+[call [arg shapefile] [method fields] [arg subcommand]]
+The [method fields] method returns information about [arg shapefile]'s attribute table fields. It is also used to add new fields to the attribute table.
+[comment {fields method subcommands}]
+[list_begin definitions]
+[call [arg shapefile] [method fields] [method count]]
+Returns the number of fields in the attribute table. Attributes tables must have a minimum of one field.
+[call [arg shapefile] [method fields] [method index] [arg name]]
+Returns index of the named field. Throws an error if the attribute table contains no field with the given [arg name].
+[call [arg shapefile] [method fields] [method list] [opt [arg index]]]
+Returns a [sectref {Definition Lists} {Definition List}] describing all the fields in [arg shapefile], or, if [arg index] is given, the single field specified by [arg index].
+[para]
+Given a [arg shapefile] variable [var shp], get the properties of the first field with:
+[example {lassign [$shp fields list 0] type name width precision}]
+Or, to process each field in turn:
+[example {foreach {type name width precision} [$shp fields list] {
+    # do something with properties of this field...
+}}]
+[call [arg shapefile] [method fields] [method add] [arg fields]]
+Add fields to [arg shapefile]'s attribute table. The [arg fields] argument must contain a [sectref {Definition Lists} {Definition List}] describing one or more fields. New fields of existing records are initialized to null values. Returns the index of the last field added.
+[para]
+Add a single string field named [const Title] with:
+[example {$shp fields add {string Title 100 0}}]
+Add a pair of floating-point numeric fields with:
+[example {$shp fields add {double Lat 19 9 double Lon 19 9}}]
+[list_end][comment {end of fields method subcommands}]
+
+[comment {coordinates method}]
+[call [arg shapefile] [method coordinates] [arg subcommand]]
+
 
 [list_end][comment {end of Shapefile Methods}]
 
