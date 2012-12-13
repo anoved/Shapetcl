@@ -119,7 +119,24 @@ Add a pair of floating-point numeric fields with:
 
 [comment {coordinates method}]
 [call [arg shapefile] [method coordinates] [arg subcommand]]
-
+The [method coordinates] method provides subcommands to read or write feature geometry.
+[comment {coordinates method subcommands}]
+[list_begin definitions]
+[call [arg shapefile] [method coordinates] [method read] [opt [arg index]]]
+If no [arg index] is given, returns a list of [sectref {Coordinate Lists}], one for each feature in [arg shapefile]. If [arg index] is given, returns a single [sectref {Coordinate Lists} {Coordinate List}] containing the coordinates of the feature specified by [arg index].
+[example {foreach feature [$shp coordinates read] {
+   # process feature geometry
+}}]
+[call [arg shapefile] [method coordinates] [method write] [opt [arg index]] [arg coordinates]]
+If [arg index] is given, overwrites the specified feature geometry. If no [arg index] argument is given, appends a new feature with an attribute record populated with null values. (Use the [arg shapefile] [method write] method to append a new entity with coordinate data and attribute data at the same time.) The [arg coordinates] argument may be a [sectref {Coordinate Lists} {Coordinate List}] or an empty list [const {{}}], in which case a null feature is written. Returns the index of the written feature.
+[para]
+Overwrite the first feature of point shapefile [var shp] with new coordinates:
+[example {$shp coordinates write 0 {{0 0}}}]
+Add a new feature, and subsequently fill in its attributes:
+[example {set index [$shp coordinates write {{151.523438 -79.812302}}]
+# (assuming attribute table contains a single string field)
+$shp attributes write $index {McMurdo Station}}]
+[list_end][comment {end of coordinates method subcommands}]
 
 [list_end][comment {end of Shapefile Methods}]
 
