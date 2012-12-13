@@ -1,0 +1,123 @@
+[manpage_begin SHAPETCL 3 0.1]
+[moddesc "Simple shapefile access for Tcl."]
+[copyright {2012 Jim DeVona}]
+[require shapetcl]
+[description]
+
+[section {Terminology}]
+
+A shapefile is comprised of [term features] and [term records]. Features consist of coordinate data (points or polygons, for example). Records consist of attribute data (labels, ID numbers, or other values associated with each feature). There is one record for every feature and one feature for every record. Together, a feature-record pair is referred to as an [term entity].
+
+[section {API}]
+
+[subsection {Package Commands}]
+
+The [package shapetcl] package exports a single command:
+
+[list_begin definitions]
+
+[call [cmd ::shapetcl::shapefile] [arg path] [opt [arg mode]]]
+[call [cmd ::shapetcl::shapefile] [arg path] [arg type] [arg fields]]
+
+Open or create a shapefile. Returns a [arg shapefile] token and an associated [sectref {Shapefile Command}].
+
+[para]
+
+In the first form, the existing shapefile at [arg path] is opened. If specified, [arg mode] may be one of [arg readwrite] or [arg readonly]. The default mode is [arg readwrite].
+
+[para]
+
+In the second form, a new shapefile is created at [arg path] and opened in [arg readwrite] mode. [arg type] must be a valid [sectref {Feature Types} {Feature Type}] and [arg fields] must be a valid [sectref {Definition Lists} {Definition List}] that defines at least one attribute field.
+
+[list_end]
+
+[subsection {Shapefile Command}]
+
+The [arg shapefile] token returned by [cmd ::shapetcl::shapefile] acts as a command of the following form:
+
+[list_begin definitions]
+[call [cmd shapefile] [method method] [opt [arg {arg arg ...}]]]
+See the [sectref {Shapefile Methods}] section for details on the supported methods.
+[list_end]
+
+[subsection {Shapefile Methods}]
+
+[list_begin definitions]
+
+[comment {file method}]
+[call [arg shapefile] [method file] [arg subcommand]]
+The [method file] method returns information about the shapefile via the following subcommands:
+
+[comment {file method subcommands}]
+[list_begin definitions]
+[call [arg shapefile] [method file] [method mode]]
+Returns one of [const readwrite] or [const readonly], indicating the access mode.
+[call [arg shapefile] [method file] [method path]]
+Returns the path provided as the first argument to the [cmd ::shapetcl::shapefile] command.
+[list_end]
+
+[comment {info method}]
+[call [arg shapefile] [method info] [arg subcommand]]
+The [method info] method returns information about the contents of the shapefile via the following subcommands:
+
+[comment {info method subcommands}]
+[list_begin definitions]
+[call [arg shapefile] [method info] [method count]]
+Returns the number of entities in the shapefile. [const 0] indicates an empty shapefile.
+[call [arg shapefile] [method info] [method type] [opt [arg subcommand]]]
+If no [arg option] is given, returns the [sectref {Feature Types} {Feature Type}]. The following subcommands return related information:
+[comment {info type options}]
+[list_begin definitions]
+[call [arg shapefile] [method info] [method type] [method numeric]]
+Returns a numeric code corresponding to the feature type. Based on shape type codes use in shapefile header.
+[call [arg shapefile] [method info] [method type] [method base]]
+Returns a string indicating the base feature type of [arg shapefile], disregarding the presence of M or Z coordinate dimensions. One of [const point], [const arc], [const polygon], or [const multipoint].
+[call [arg shapefile] [method info] [method type] [method dimension]]
+Returns a string indicating the coordinate dimension of [arg shapefile], disregarding the base feature type. One of [const xy], [const xym], or [const xyzm]. Note that all feature types with Z coordinates also have M coordinates.
+[list_end][comment {end of info type options}]
+[call [arg shapefile] [method info] [method bounds] [opt [arg index]]]
+Returns a list indicating the minimum and maximum coordinate values of the features in [arg shapefile], or, if the [arg index] argument is present, of the single feature specified by [arg index]. The number of coordinates returned depends on the coordinate dimension of [arg shapefile], unless the [arg getAllCoordinates] or [arg getOnlyXyCoordinates] [sectref {Config Options}] are set.
+[para]
+The default bounds list format for [const xy], [const xym], and [const xyzm] feature types, respectively, are as follows:
+[list_begin definitions]
+[def [const {xmin ymin xmax ymax}]]
+[def [const {xmin ymin mmin xmax ymax mmax}]]
+[def [const {xmin ymin zmin mmin xmax ymax zmax mmax}]]
+[list_end]
+[list_end][comment {end of info method subcommands}]
+
+[comment {config method}]
+[call [arg shapefile] [method config] [arg option] [opt [arg value]]]
+If no [arg value] argument is present, returns the current value of the specified [arg option]. If a [arg value] is given, it is assigned to the specified [arg option] and the new value is returned. Valid boolean values are [const 0] and [const 1]. See [sectref {Config Options}].
+
+[list_end][comment {end of Shapefile Methods}]
+
+[section {Config Options}]
+
+[section {Types}]
+
+[subsection {Feature Types}]
+
+Feature types and associated numeric codes, base types, and dimensions.
+
+[list_begin definitions]
+[def [arg {point - 1, point, xy}]]
+[def [arg {arc - 3, arc, xy}]]
+[def [arg {polygon - 5, polygon, xy}]]
+[def [arg {multipoint - 8, multipoint, xy}]]
+[def [arg {pointm - 21, point, xym}]]
+[def [arg {arcm - 23, arc, xym}]]
+[def [arg {polygonm - 25, polygon, xym}]]
+[def [arg {multipointm - 28, multipoint, xym}]]
+[def [arg {pointz - 11, point, xyzm}]]
+[def [arg {arcz - 13, arc, xyzm}]]
+[def [arg {polygonz - 15, polygon, xyzm}]]
+[def [arg {multipointz - 18, multipoint, xyzm}]]
+[list_end]
+
+[subsection {Definition Lists}]
+
+[subsection {Coordinate Lists}]
+
+
+[manpage_end]
