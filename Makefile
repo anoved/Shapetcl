@@ -23,7 +23,7 @@ CFLAGS = -g -fPIC -Wall -Werror
 CC = gcc
 TCL = tclsh
 
-.PHONY: all clean test
+.PHONY: all clean test doc
 
 all: $(SHAPETCL_LIB)
 
@@ -44,3 +44,8 @@ clean:
 
 test: $(SHAPETCL_LIB)
 	$(TCL) tests/all.tcl
+
+doc: doc/shapetcl.html
+
+doc/shapetcl.html: doc/shapetcl.dtp
+	doc/dt.tcl <doc/shapetcl.dtp >>doc/shapetcl.html

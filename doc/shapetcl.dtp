@@ -4,31 +4,24 @@
 [require shapetcl]
 [description]
 
-[section {Terminology}]
+[section Terminology]
 
 A shapefile is comprised of [term features] and [term records]. Features consist of coordinate data (points or polygons, for example). Records consist of attribute data (labels, ID numbers, or other values associated with each feature). There is one record for every feature and one feature for every record. Together, a feature-record pair is referred to as an [term entity].
 
-[section {API}]
+[section API]
 
 [subsection {Package Commands}]
 
 The [package shapetcl] package exports a single command:
 
 [list_begin definitions]
-
 [call [cmd ::shapetcl::shapefile] [arg path] [opt [arg mode]]]
 [call [cmd ::shapetcl::shapefile] [arg path] [arg type] [arg fields]]
-
 Open or create a shapefile. Returns a [arg shapefile] token and an associated [sectref {Shapefile Command}].
-
 [para]
-
 In the first form, the existing shapefile at [arg path] is opened. If specified, [arg mode] may be one of [arg readwrite] or [arg readonly]. The default mode is [arg readwrite].
-
 [para]
-
 In the second form, a new shapefile is created at [arg path] and opened in [arg readwrite] mode. [arg type] must be a valid [sectref {Feature Types} {Feature Type}] and [arg fields] must be a valid [sectref {Definition Lists} {Definition List}] that defines at least one attribute field.
-
 [list_end]
 
 [subsection {Shapefile Command}]
@@ -44,15 +37,11 @@ See the [sectref {Shapefile Methods}] section for details on the supported metho
 
 [list_begin definitions]
 
-[comment {config method}]
 [call [arg shapefile] [method config] [arg option] [opt [arg value]]]
 Returns the current value of the specified [arg option]. If a [arg value] is given, it is assigned to the specified [arg option] before the value is returned. Valid boolean values are [const 0] and [const 1]. See [sectref {Config Options}] for details.
 
-[comment {file method}]
 [call [arg shapefile] [method file] [arg subcommand]]
 The [method file] method returns information about the shapefile.
-
-[comment {file method subcommands}]
 [list_begin definitions]
 [call [arg shapefile] [method file] [method mode]]
 Returns one of [const readwrite] or [const readonly], indicating the access mode.
@@ -60,11 +49,8 @@ Returns one of [const readwrite] or [const readonly], indicating the access mode
 Returns the path provided as the first argument to the [cmd ::shapetcl::shapefile] command.
 [list_end]
 
-[comment {info method}]
 [call [arg shapefile] [method info] [arg subcommand]]
 The [method info] method returns information about the contents of the shapefile.
-
-[comment {info method subcommands}]
 [list_begin definitions]
 [call [arg shapefile] [method info] [method count]]
 Returns the number of entities in the shapefile. [const 0] indicates an empty shapefile.
@@ -78,7 +64,7 @@ Returns a numeric code corresponding to the feature type. Based on shape type co
 Returns a string indicating the base feature type of [arg shapefile], disregarding the presence of M or Z coordinate dimensions. One of [const point], [const arc], [const polygon], or [const multipoint].
 [call [arg shapefile] [method info] [method type] [method dimension]]
 Returns a string indicating the coordinate dimension of [arg shapefile], disregarding the base feature type. One of [const xy], [const xym], or [const xyzm]. Note that all feature types with Z coordinates also have M coordinates.
-[list_end][comment {end of info type options}]
+[list_end]
 [call [arg shapefile] [method info] [method bounds] [opt [arg index]]]
 Returns a list indicating the minimum and maximum coordinate values of the features in [arg shapefile], or, if the [arg index] argument is present, of the single feature specified by [arg index]. The number of coordinates returned depends on the coordinate dimension of [arg shapefile], unless the [arg getAllCoordinates] or [arg getOnlyXyCoordinates] [sectref {Config Options}] are set.
 [para]
@@ -88,17 +74,15 @@ The default bounds list format for [const xy], [const xym], and [const xyzm] fea
 [def [const {xmin ymin mmin xmax ymax mmax}]]
 [def [const {xmin ymin zmin mmin xmax ymax zmax mmax}]]
 [list_end]
-[list_end][comment {end of info method subcommands}]
+[list_end]
 
-[comment {fields method}]
 [call [arg shapefile] [method fields] [arg subcommand]]
 The [method fields] method returns information about [arg shapefile]'s attribute table fields. It is also used to add new fields to the attribute table.
-[comment {fields method subcommands}]
 [list_begin definitions]
 [call [arg shapefile] [method fields] [method count]]
 Returns the number of fields in the attribute table. Attributes tables must have a minimum of one field.
 [call [arg shapefile] [method fields] [method index] [arg name]]
-Returns index of the named field. Throws an error if the attribute table contains no field with the given [arg name].
+Returns index of the named field. Throws an error if the attribute table contains no field with the given [arg name]. If the attribute table contains multiple fields with the same name, returns the index of the first such field.
 [call [arg shapefile] [method fields] [method list] [opt [arg index]]]
 Returns a [sectref {Definition Lists} {Definition List}] describing all the fields in [arg shapefile], or, if [arg index] is given, the single field specified by [arg index].
 [para]
@@ -115,12 +99,10 @@ Add a single string field named [const Title] with:
 [example {$shp fields add {string Title 100 0}}]
 Add a pair of floating-point numeric fields with:
 [example {$shp fields add {double Lat 19 9 double Lon 19 9}}]
-[list_end][comment {end of fields method subcommands}]
+[list_end]
 
-[comment {coordinates method}]
 [call [arg shapefile] [method coordinates] [arg subcommand]]
 The [method coordinates] method provides subcommands to read or write feature geometry.
-[comment {coordinates method subcommands}]
 [list_begin definitions]
 [call [arg shapefile] [method coordinates] [method read] [opt [arg index]]]
 If no [arg index] is given, returns a list of [sectref {Coordinate Lists}], one for each feature in [arg shapefile]. If [arg index] is given, returns a single [sectref {Coordinate Lists} {Coordinate List}] containing the coordinates of the feature specified by [arg index].
@@ -136,44 +118,39 @@ Add a new feature, and subsequently fill in its attributes:
 [example {set index [$shp coordinates write {{151.523438 -79.812302}}]
 # (assuming attribute table contains a single string field)
 $shp attributes write $index {McMurdo Station}}]
-[list_end][comment {end of coordinates method subcommands}]
+[list_end]
 
-[comment {attributes method}]
 [call [arg shapefile] [method attributes] [arg subcommand]]
 The [method attributes] method provides subcommands to read or write attribute records.
-[comment {attributes method subcommands}]
 [list_begin definitions]
 [call [arg shapefile] [method attributes] [method read] [opt [arg index]]]
-
 If no [arg index] is given, returns a list of all attribute records in [arg shapefile]. If [arg index] is given, returns the attribute record specified by [arg index]. An [sectref {Attribute Records} {Attribute Record}] is a list that contains one value for each field in the attribute table.
-
 [example {foreach record [$shp attributes read] {
     # [llength $record] == [$shp fields count]
 }}]
-
 [call [arg shapefile] [method attributes] [method read] [arg index] [arg field]]
-
 Returns a single attribute value from record [arg index]. [arg field] specifies the index of the field to read.
 [para]
 Get the value of a field named [const ID] from the first record:
 [example {$shp attributes read 0 [$shp fields index "ID"]}]
-
 [call [arg shapefile] [method attributes] [method write] [opt [arg index]] [arg values]]
 If [arg index] is given, overwrites the specified attribute record. If no [arg index] argument is given, appends a new attribute record and adds an associated null feature. (Use the [arg shapefile] [method write] method to append a new entity with coordinate data and attribute data at the same time.) The [arg values] argument may be an [sectref {Attribute Records} {Attribute Record}] or an empty list [const {{}}], in which case the attribute record is populated with null values. Returns the index of the written record.
-
 [call [arg shapefile] [method attributes] [method write] [arg index] [arg field] [arg value]]
 Writes a single attribute [arg value] to field [arg field] of record [arg index]. Returns [arg index].
-[list_end][comment {attributes method subcommands}]
+[list_end]
 
-[comment {write method}]
 [call [arg shapefile] [method write] [arg coordinates] [arg values]]
 Appends a new entity to [arg shapefile] and returns the index of the new entity. The [arg coordinates] argument is interpreted like the [arg coordinates] argument to [method {coordinates write}] and the [arg values] argument is interpreted like the [arg values] argument to [method {attributes write}].
 [para]
 Here an entity is added to a point shapefile with two attribute fields, an integer and a string:
-
 [example {$shp write {{-0.001475 51.477812}} {66 {Royal Observatory Greenwich}}}]
 
-[list_end][comment {end of Shapefile Methods}]
+[call [arg shapefile] [method close]]
+Close the shapefile. Changes are not necessarily written to shapefiles until closed. (Open shapefiles are automatically closed when the interpreter exits, but it is a best practice to close them explicitly.)
+[para]
+Closing a shapefile deletes the associated [arg shapefile] command.
+
+[list_end]
 
 [section {Config Options}]
 
@@ -202,32 +179,122 @@ Default: [const 0]. If false, polygon [sectref {Coordinate Lists}] given to [met
 If [option autoClosePolygons] is true, the minimum polygon vertex count is reduced to three (which must be unique), since the closing vertex will be provided automatically.
 [list_end]
 
-[section {Types}]
+[section Types]
 
 [subsection {Feature Types}]
 
 Feature types and associated numeric codes, base types, and dimensions.
 
 [list_begin definitions]
-[def [arg {point - 1, point, xy}]]
-[def [arg {arc - 3, arc, xy}]]
-[def [arg {polygon - 5, polygon, xy}]]
-[def [arg {multipoint - 8, multipoint, xy}]]
-[def [arg {pointm - 21, point, xym}]]
-[def [arg {arcm - 23, arc, xym}]]
-[def [arg {polygonm - 25, polygon, xym}]]
-[def [arg {multipointm - 28, multipoint, xym}]]
-[def [arg {pointz - 11, point, xyzm}]]
-[def [arg {arcz - 13, arc, xyzm}]]
-[def [arg {polygonz - 15, polygon, xyzm}]]
-[def [arg {multipointz - 18, multipoint, xyzm}]]
+[def [arg point]]
+Code: [const 1], base type: [const point], dimension: [const xy].
+[def [arg arc]]
+Code: [const 3], base type: [const arc], dimension: [const xy].
+[def [arg polygon]]
+Code: [const 5], base type: [const polygon], dimension: [const xy].
+[def [arg multipoint]]
+Code: [const 8], base type: [const multipoint], dimension: [const xy].
+[def [arg pointm]]
+Code: [const 21], base type: [const point], dimension: [const xym].
+[def [arg arcm]]
+Code: [const 23], base type: [const arc], dimension: [const xym].
+[def [arg polygonm]]
+Code: [const 25], base type: [const polygon], dimension: [const xym].
+[def [arg multipointm]]
+Code: [const 28], base type: [const multipoint], dimension: [const xym].
+[def [arg pointz]]
+Code: [const 11], base type: [const point], dimension: [const xyzm].
+[def [arg arcz]]
+Code: [const 13], base type: [const arc], dimension: [const xyzm].
+[def [arg polygonz]]
+Code: [const 15], base type: [const polygon], dimension: [const xyzm].
+[def [arg multipointz]]
+Code: [const 18], base type: [const multipoint], dimension: [const xyzm].
 [list_end]
 
-[subsection {Definition Lists}]
+[subsection "Definition Lists"]
 
-[subsection {Attribute Records}]
+Definition lists describe shapefile attribute table fields. Each field is described by four properties, defined below. A valid definition list must therefore contain a multiple of four elements (four for each field it describes). At least one field must be described when defining fields with [cmd {::shapetcl::shapefile}] or [method {fields add}].
 
-[subsection {Coordinate Lists}]
+[list_begin definitions]
+[def [const type]]
+The type of data to be stored in the field. Must be one of [const integer], [const double] (floating-point numbers), or [const string]. [package Shapetcl] does not support other field types.
+[def [const name]]
+The name of the field. Must be at least one and not more than ten characters long. May contain only alphanumeric characters and underscores. Must begin with an alphabetic character. Must be unique (comparison is case insensitive).
+[para]These constraints are imposed for compatibility with other software and are applied only when defining new fields. Existing shapefiles with field names that do not comply may be opened without error.
+[def [const width]]
+The width of the field, in bytes. Attempting to write values that do not fit within the field width will trigger an error. Shapefile attribute tables are DBF files, which store values as their string representations. To avoid truncation errors, allocate sufficient width to store the maximum conceivable attribute value.
+[para]The maximum [const integer] field width is [const 10], since values with more digits cannot be stored as 32-bit integers. Use a [const double] field instead.
+[para]Multi-byte characters can be written to [const string] fields as long as the [emph byte] length of the string fits within the field width. Applications must specify the encoding themselves, for instance by writing an accompanying .cpg (code page) file containing the name of the encoding.
+[para]Note that the maximum width of numeric fields is effectively reduced by one when writing negative values, since one character is used to store the leading minus sign.
+[def [const precision]]
+The portion of the field width to reserve for digits to the right of the decimal point. Should be [const 0] for all field types other than [const double].
+[para]For example, a [const double] field with a [const width] of [const 12] and a [const precision] of [const 5] could store values that fit this format ([const N] represents a digit):
+[example {NNNNNN.NNNNN}]
+[list_end]
 
+Here is an example in which three fields (one of each supported type) are added to a shapefile:
+
+[example {$shp fields add {integer Id 10 0 double Value 19 9 string Label 30 0}}]
+
+[subsection "Attribute Records"]
+
+An attribute record is a list of attribute values. The number of values in an attribute record must match the number of fields in the attribute table (as reported by [method {fields count}]). Attribute record values are ordered the same as fields. Each value in an attribute record must conform to the associated [sectref {Definition Lists} {field definition}].
+[para]An empty list [const {{}}] may be given for any field value to write a null value. Likewise, [method {attributes read}] methods may return an empty list for any field containing a null value. In this example, two integer values and one null value are written to a shapefile which has three attribute fields:
+[example {$shp attributes write {0 100 {}}
+}]
+As a shorthand for writing a record consisting entirely of null values, you can write a single empty list [const {{}}]:
+[example {# these are equivalent, assuming shp has three fields
+$shp attributes write {{} {} {}}
+$shp attributes write {}}]
+
+[subsection "Coordinate Lists"]
+
+Coordinate lists represent feature geometry as a series of [term parts], each comprised of a series of vertex coordinates.
+[para]
+The number of coordinate values that comprise a vertex depends on the [sectref {Feature Types} {dimension}] of the shapefile. [const xy] shapefiles have two coordinates per vertex (X Y), [const xym] shapefiles have three coordinates per vertex (X Y M), and [const xyzm] shapefiles have four coordinates per vertex (X Y Z M). M coordinates represent non-spatial measures associated with each vertex. For simplicity, the remainder of this section will address [const xy] features only.
+[para]
+Each [term part] is a sub-list of the feature's coordinate list. The number of parts that may comprise a coordinate list depends on the [sectref {Feature Types} {base type}] of the shapefile. [const point] and [const multipoint] shapefiles have exactly one part per coordinate list; [const arc] and [const polygon] shapefiles may have one or more parts.
+[list_begin definitions]
+[def [const point]]
+A [const point] coordinate list consists of one part with one vertex:
+[example {$shp coordinates write {{0 0}}}]
+[def [const multipoint]]
+A [const multipoint] coordinate list consists of one part containing one or more vertices:
+[example {$shp coordinates write {{0 0  1 1  2 2  3 3}}}]
+Vertex order is not significant; a multipoint feature is a set of points with no further relationship implied.
+[def [const arc]]
+An [const arc] coordinate list consists of one or more parts, each representing a line segment. Each part consists of two or more vertices. Part vertices are connected in sequence. Part order is not significant.
+[example {
+# a very simple arc - one part with two vertices:
+$shp coordinates write {{0 0  10 0}}
+# an arc feature comprised of two simple segments:
+$shp coordinates write {{0 0  10 0} {0 2  10 2}}
+# an arc with one slightly longer part:
+$shp coordinates write {{0 0  2 1  4 2  8 3  16 4}}
+}]
+Zero-length arc parts are disallowed by the [sectref {References} {shapefile specification}]. [package Shapetcl] does not enforce this rule.
+[def [const polygon]]
+A [const polygon] coordinate list consists of one or more parts, each representing a [term ring]. Rings are sequences of four or more vertices; the last vertex must be identical to the first vertex, making the ring a [term {closed loop}]. The minimum number of [emph unique] vertices per ring is therefore three, the minimum required to define an area (a triangle).
+[para]
+Rings may be [term outer] rings, defining the exterior perimeter of a polygon, or [term inner] rings, defining the perimeter of a hole in the interior of another outer ring. Ring 
+type is indicated by vertex winding order: outer ring vertices are listed in clockwise sequence; inner ring vertices are listed in counterclockwise sequence. The first ring is conventionally an outer ring, but the sequence in which subsequent rings are defined is not significant. ([package Shapetcl] will automatically reverse the vertex order of rings that appear to be wound incorrectly, based on their spatial relationship to other rings.)
+[para]
+A polygon feature may have multiple outer rings. Outer rings may have multiple inner rings.
+[example {
+# a simple polygon with a single outer ring:
+$shp coord write {{0 10  10 0  0 0  0 10}}
+# a polygon with two outer rings ("islands"):
+$shp coord write {{0 10  10 0  0 0  0 10} {20 10  30 0  20 0  20 10}}
+# one outer ring with a hole in it (note winding orders):
+$shp coord write {{0 10  10 0  0 0  0 10} {1 9  1 1  9 1  1 9}}
+}]
+Zero-length or zero-area rings are disallowed by the [sectref References {shapefile specification}]. Polygon rings may touch at vertices but may not intersect each other. [package Shapetcl] does not enforce these rules. 
+[list_end]
+
+
+[section References]
+
+The shapefile format is specified in the [uri {http://www.esri.com/library/whitepapers/pdfs/shapefile.pdf} {ESRI Shapefile Technical Description}].
 
 [manpage_end]
