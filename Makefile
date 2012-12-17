@@ -45,7 +45,5 @@ clean:
 test: $(SHAPETCL_LIB)
 	$(TCL) tests/all.tcl
 
-doc: doc/shapetcl.html
-
-doc/shapetcl.html: doc/shapetcl.dtp
-	doc/dt.tcl <doc/shapetcl.dtp >>doc/shapetcl.html
+doc:
+	cd doc && $(TCL) FormatDocs.tcl
