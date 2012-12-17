@@ -71,16 +71,16 @@ test config-1.3 {
 } -setup {
 	set shp [shapefile sample/xy/point readonly]
 } -body {
-	# print default - expected to be 1
+	# print default - expected to be 0
 	puts [$shp config allowAlternateNotation]
 	
-	# override default and confirm value is now 0
-	$shp config allowAlternateNotation 0
+	# override default and confirm value is now 1
+	$shp config allowAlternateNotation 1
 	puts [$shp config allowAlternateNotation]
 } -cleanup {
 	$shp close
-} -result {} -output {1
-0
+} -result {} -output {0
+1
 }
 
 test config-1.4 {

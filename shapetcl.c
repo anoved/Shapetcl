@@ -295,7 +295,7 @@ int Shapetcl_Init(Tcl_Interp *interp) {
 	shapefile->shp = shp;
 	shapefile->dbf = dbf;	
 	shapefile->readonly = readonly;
-	shapefile->allowAlternateNotation = 1;
+	shapefile->allowAlternateNotation = 0;
 	shapefile->getAllCoords = 0;
 	shapefile->getOnlyXyCoords = 0;
 	shapefile->readRawStrings = 0;
@@ -469,7 +469,7 @@ int shapefile_typeDimension(int shpType) {
  * by shapefile_cmd. The clientData is a ShapefilePtr associated with identifier.
  * 
  * Command Syntax:
- *   [$shp attributes|close|config|coordinates|fields|info|mode|write ?args?]
+ *   [$shp attributes|close|configure|coordinates|fields|info|mode|write ?args?]
  *     Invokes the function handler associated with selected subcommand.
  *     Unambiguous abbreviations such as [$shp attr] or [$shp coord] are valid.
  * 
@@ -486,7 +486,7 @@ int cmd_dispatcher(
 	static const char *subcommandNames[] = {
 			"attributes",
 			"close",
-			"config",
+			"configure",
 			"coordinates",
 			"fields",
 			"info",
@@ -593,7 +593,7 @@ void shapefile_delete_handler(ClientData clientData) {
  *     side effect of setting the other to false (see get*Coordinates options).
  *
  * Options (Defaults):
- *   allowAlternateNotation (1)
+ *   allowAlternateNotation (0)
  *   getAllCoordinates (0)
  *   getOnlyXyCoordinates (0)
  *   readRawStrings (0)

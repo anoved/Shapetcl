@@ -20,6 +20,7 @@ switch $dimension {
 	xyzm {set outType "multipointz"}
 }
 set out [shapefile $outFile $outType [$in field list]]
+$out configure allowAlternateNotation 1
 
 for {set i 0} {$i < $count} {incr i} {
 	set inCoords [$in coordinates read $i]

@@ -56,6 +56,7 @@ if {$zFormat ne {}} {
 	append outType m
 }
 set out [shapefile $outFile $outType [$in fields list]]
+$out configure allowAlternateNotation 1
 
 set count [$in info count]
 for {set i 0} {$i < $count} {incr i} {

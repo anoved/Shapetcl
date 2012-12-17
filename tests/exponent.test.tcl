@@ -20,6 +20,7 @@ test exponent-1.0 {
 # Check that double values stored in scientific notation can be read ok.
 } -setup {
 	set out [shapefile tmp/exp0 point {double Value 16 6}]
+	$out configure allowAlternateNotation 1
 	# this value fits in width 16 with decimal and six decimal places:
 	$out attributes write 123456789
 	# this value does not, and will be stored in scientific notation instead:
@@ -42,6 +43,7 @@ test exponent-1.1 {
 # so it is stored as " 1.234567890e+09". The right-of-decimal digits are lost.)
 } -setup {
 	set out [shapefile tmp/exp1 point {double Value 16 6}]
+	$out configure allowAlternateNotation 1
 	$out attributes write 1234567890.123456
 	$out close
 } -body {
@@ -60,6 +62,7 @@ test exponent-1.2 {
 # Check that large values cannot be written either way to small fields (XXX.XX).
 } -setup {
 	set out [shapefile tmp/exp2 point {double WeeValue 6 2}]
+	$out configure allowAlternateNotation 1
 } -body {
 	$out attributes write 1000
 } -cleanup {
@@ -75,10 +78,11 @@ test exponent-1.3 {
 } -setup {
 	set out [shapefile tmp/exp3 point {double Value 16 6}]
 } -body {
-	# succeeds, since allowAlternateNotation is on by default
+	# succeeds, since allowAlternateNotation is on
+	$out configure allowAlternateNotation 1
 	$out attributes write 1234567890.123456
 	
-	# throws error if allowAlternateNotation is set to false
+	# throws error if allowAlternateNotation is off
 	$out config allowAlternateNotation 0
 	$out attributes write 1234567890.123456
 } -cleanup {
@@ -92,7 +96,7 @@ test exponent-1.4 {
 # Read double values and corresponding raw strings for normal and exp notation.
 } -body {
 	set shp [shapefile sample/xy/polygon readonly]
-
+	
 	# record 30 is China; record 31 is Côte d'Ivoire
 	# field 34 is pop_est (population)
 	puts [$shp attr read 30 34]

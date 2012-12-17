@@ -37,7 +37,7 @@ See the [sectref {Shapefile Methods}] section for details on the supported metho
 
 [list_begin definitions]
 
-[call [arg shapefile] [method config] [arg option] [opt [arg value]]]
+[call [arg shapefile] [method configure] [arg option] [opt [arg value]]]
 Returns the current value of the specified [arg option]. If a [arg value] is given, it is assigned to the specified [arg option] before the value is returned. Valid boolean values are [const 0] and [const 1]. See [sectref {Config Options}] for details.
 
 [call [arg shapefile] [method file] [arg subcommand]]
