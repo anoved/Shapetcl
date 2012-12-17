@@ -9,7 +9,7 @@ if {$argc != 1} {
 	exit 1
 }
 
-set shp [shapefile [lindex $argv 0]]
+set shp [shapefile [lindex $argv 0] readonly]
 set fields [$shp fields list]
 
 # print header

@@ -19,7 +19,7 @@ The [package shapetcl] package exports a single command:
 [call [cmd ::shapetcl::shapefile] [arg path] [arg type] [arg fields]]
 Open or create a shapefile. Returns a [arg shapefile] token and an associated [sectref {Shapefile Command}].
 [para]
-In the first form, the existing shapefile at [arg path] is opened. If specified, [arg mode] may be one of [arg readwrite] or [arg readonly]. The default mode is [arg readwrite].
+In the first form, the existing shapefile at [arg path] is opened. If specified, [arg mode] may be one of [arg readwrite] or [arg readonly]. The default mode is [arg readonly].
 [para]
 In the second form, a new shapefile is created at [arg path] and opened in [arg readwrite] mode. [arg type] must be a valid [sectref {Feature Types} {Feature Type}] and [arg fields] must be a valid [sectref {Definition Lists} {Definition List}] that defines at least one attribute field.
 [list_end]

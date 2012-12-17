@@ -53,14 +53,14 @@ test file-1.2 {
 } -match glob -result {bad option *}
 
 test file-1.3 {
-# confirm file mode reports default readwrite mode
+# confirm file mode reports default readonly mode
 } -setup {
 	set shp [shapefile sample/xy/point]
 } -body {
 	$shp file mode
 } -cleanup {
 	$shp close
-} -result {readwrite}
+} -result {readonly}
 
 test file-1.4 {
 # confirm file mode reports explicit readwrite mode

@@ -40,7 +40,7 @@ grid columnconfigure .f 0 -weight 1
 pack .f -fill both -expand true
 
 # load shapefile
-set shp [shapefile [lindex $argv 0]]
+set shp [shapefile [lindex $argv 0] readonly]
 set basetype [$shp info type base]
 set fcount [$shp info count]
 

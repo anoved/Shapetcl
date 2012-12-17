@@ -80,7 +80,7 @@ test fields-2.2 {
 # attempt to [fields add] with a malformed field definition
 } -setup {
 	file copy {*}[glob sample/xy/point.*] tmp
-	set shp [shapefile tmp/point]
+	set shp [shapefile tmp/point readwrite]
 } -body {
 	$shp fields add {foo bar}
 } -cleanup {
@@ -94,7 +94,7 @@ test fields-2.3 {
 # attempt to [fields add] an undefined field
 } -setup {
 	file copy {*}[glob sample/xy/point.*] tmp
-	set shp [shapefile tmp/point]
+	set shp [shapefile tmp/point readwrite]
 } -body {
 	$shp fields add {}
 } -cleanup {
@@ -108,7 +108,7 @@ test fields-2.4 {
 # attempt to [fields add] an invalid/unsupported field type
 } -setup {
 	file copy {*}[glob sample/xy/point.*] tmp
-	set shp [shapefile tmp/point]
+	set shp [shapefile tmp/point readwrite]
 } -body {
 	$shp fields add {foo Title 12 0}
 } -cleanup {
@@ -122,7 +122,7 @@ test fields-2.5 {
 # attempt to [fields add] with an invalid field title (too long)
 } -setup {
 	file copy {*}[glob sample/xy/point.*] tmp
-	set shp [shapefile tmp/point]
+	set shp [shapefile tmp/point readwrite]
 } -body {
 	$shp fields add {integer ThisTitleIsTooLong 10 0}
 } -cleanup {
@@ -136,7 +136,7 @@ test fields-2.5.1 {
 # attempt to [fields add] with an invalid field title (too short)
 } -setup {
 	file copy {*}[glob sample/xy/point.*] tmp
-	set shp [shapefile tmp/point]
+	set shp [shapefile tmp/point readwrite]
 } -body {
 	$shp fields add {integer {} 10 0}
 } -cleanup {
@@ -150,7 +150,7 @@ test fields-2.5.2 {
 # attempt to [fields add] with an invalid field title (contains space)
 } -setup {
 	file copy {*}[glob sample/xy/point.*] tmp
-	set shp [shapefile tmp/point]
+	set shp [shapefile tmp/point readwrite]
 } -body {
 	$shp fields add {integer {foo bar} 10 0}
 } -cleanup {
@@ -175,7 +175,7 @@ test fields-2.5.4 {
 # attempt to [fields add] an invalid field title (doesn't start w/alphabetic)
 } -setup {
 	file copy {*}[glob sample/xy/point.*] tmp
-	set shp [shapefile tmp/point]
+	set shp [shapefile tmp/point readwrite]
 } -body {
 	$shp fields add {integer 1foo 10 0}
 } -cleanup {
@@ -224,7 +224,7 @@ test fields-2.6 {
 # attempt to [fields add] with an invalid (too many digits) integer definition
 } -setup {
 	file copy {*}[glob sample/xy/point.*] tmp
-	set shp [shapefile tmp/point]
+	set shp [shapefile tmp/point readwrite]
 } -body {
 	$shp fields add {integer Title 20 0}
 } -cleanup {
@@ -241,7 +241,7 @@ test fields-2.7 {
 # attempt to [fields add] an invalid (integer mimic) double definition
 } -setup {
 	file copy {*}[glob sample/xy/point.*] tmp
-	set shp [shapefile tmp/point]
+	set shp [shapefile tmp/point readwrite]
 } -body {
 	$shp fields add {double Title 10 0}
 } -cleanup {
@@ -255,7 +255,7 @@ test fields-2.8 {
 # use [fields add] to successively add 3 fields (integer, double, & string)
 } -setup {
 	file copy {*}[glob sample/xy/point.*] tmp
-	set shp [shapefile tmp/point]
+	set shp [shapefile tmp/point readwrite]
 } -body {
 	set initialCount [$shp fields count]
 	$shp fields add {integer TestInt 10 0}
@@ -271,7 +271,7 @@ test fields-2.8b {
 # use [fields add] to add 3 fields at once
 } -setup {
 	file copy {*}[glob sample/xy/point.*] tmp
-	set shp [shapefile tmp/point]
+	set shp [shapefile tmp/point readwrite]
 } -body {
 	set initialCount [$shp fields count]
 	$shp fields add {integer TestInt 10 0 double TestDub 19 6 string TestStr 32 0}
@@ -285,7 +285,7 @@ test fields-2.9 {
 # check that value of new [fields add] field is null for an existing record
 } -setup {
 	file copy {*}[glob sample/xy/point.*] tmp
-	set shp [shapefile tmp/point]
+	set shp [shapefile tmp/point readwrite]
 } -body {
 	set fieldIndex [$shp fields add {integer TestInt 10 0}]
 	# read value of the new field (fieldIndex) from an existing record (0)
@@ -379,7 +379,7 @@ test fields-4.5 {
 # check that [fields list index] outputs input given to [fields add]
 } -setup {
 	file copy {*}[glob sample/xy/point.*] tmp
-	set shp [shapefile tmp/point]
+	set shp [shapefile tmp/point readwrite]
 } -body {
 	set index [$shp fields add {integer StrTheory 10 0}]
 	$shp fields list $index

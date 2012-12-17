@@ -182,7 +182,7 @@ int Shapetcl_Init(Tcl_Interp *interp) {
 
 	ShapefilePtr shapefile;
 	const char *path;
-	int readonly = 0;
+	int readonly = 1;
 	SHPHandle shp;
 	DBFHandle dbf;
 	int shpType;
@@ -201,18 +201,17 @@ int Shapetcl_Init(Tcl_Interp *interp) {
 		const char *mode = Tcl_GetString(objv[2]);
 		if (strcmp(mode, "readonly") == 0) {
 			readonly = 1;
-		}
-		else if (strcmp(mode, "readwrite") == 0) {
+		} else if (strcmp(mode, "readwrite") == 0) {
 			readonly = 0;
-		}
-		else {
+		} else {
 			Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid mode \"%s\": should be readonly or readwrite", mode));
 			return TCL_ERROR;
 		}
 	}
 	
 	if (objc == 4) {
-		/* create a new file; access is readwrite. */
+		/* create a new file; access must be readwrite. */
+		readonly = 0;
 		
 		if ((shpType = shapefile_typeCode(Tcl_GetString(objv[2]))) == -1) {
 			Tcl_SetObjResult(interp, Tcl_ObjPrintf("unrecognized shape type"));

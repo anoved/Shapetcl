@@ -155,18 +155,6 @@ test shapefile-1.10 {
 } -match glob -result {::shapefile*}
 
 test shapefile-1.11 {
-# Verify that by default shapefiles are opened in readwrite mode
-} -setup {
-	set shp [shapefile sample/xy/point]
-} -body {
-	$shp file mode
-} -cleanup {
-	$shp close
-} -returnCodes {
-	ok
-} -match exact -result {readwrite}
-
-test shapefile-1.12 {
 # attempt to create a shapefile of a valid but unsupported type
 } -body {
 	shapefile tmp/foo multipatch {integer id 10 0}
