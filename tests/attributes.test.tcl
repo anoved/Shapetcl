@@ -588,7 +588,21 @@ test attr-3.18 {
 } -returnCodes {
 	error
 } -match glob -result "integer value too large to represent*"
-	
+
+# 10 digits maximum in a 32-bit int (signed or unsigned), but the minus sign
+# with large negative ints constitutes an 11th character.
+test attr-3.19 {
+# attempt to write a negative # that should be a valid 32 bit int, but >10 chars
+} -setup {
+	set shp [shapefile tmp/foo point {integer id 11 0}]
+} -body {
+	# 11 characters, but a valid signed 32-bit int
+	$shp attr write {-2147483647}
+} -cleanup {
+	$shp close
+	file delete {*}[glob tmp/foo.*]
+} -result {0}
+
 # additional related tests in exponent.test.tcl
 
 ::tcltest::cleanupTests

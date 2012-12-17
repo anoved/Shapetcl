@@ -224,7 +224,7 @@ The name of the field. Must be at least one and not more than ten characters lon
 [para]These constraints are imposed for compatibility with other software and are applied only when defining new fields. Existing shapefiles with field names that do not comply may be opened without error.
 [def [const width]]
 The width of the field, in bytes. Attempting to write values that do not fit within the field width will trigger an error. Shapefile attribute tables are DBF files, which store values as their string representations. To avoid truncation errors, allocate sufficient width to store the maximum conceivable attribute value.
-[para]The maximum [const integer] field width is [const 10], since values with more digits cannot be stored as 32-bit integers. Use a [const double] field instead.
+[para]The maximum [const integer] field width is [const 11], since values with more than 10 digits (plus a potential 11th character, the minus sign) cannot be stored as 32-bit integers. Use a [const double] field instead.
 [para]Multi-byte characters can be written to [const string] fields as long as the [emph byte] length of the string fits within the field width. Applications must specify the encoding themselves, for instance by writing an accompanying .cpg (code page) file containing the name of the encoding.
 [para]Note that the maximum width of numeric fields is effectively reduced by one when writing negative values, since one character is used to store the leading minus sign.
 [def [const precision]]

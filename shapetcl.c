@@ -1367,13 +1367,13 @@ int cmd_fields_validateField(
 		return TCL_ERROR;
 	}
 	
-	if (strcmp(type, "integer") == 0 && width > 10) {
-		Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid integer field definition: maximum 32-bit integer width is 10 digits (%d is too wide)", width));
+	if (strcmp(type, "integer") == 0 && width > 11) {
+		Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid integer field definition: maximum signed 32-bit integer width is 11 digits (%d is too wide)", width));
 		return TCL_ERROR;
 	}
 	
-	if (strcmp(type, "double") == 0 && width <= 10 && precision == 0) {
-		Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid double field definition: numeric field with width <=10 digits (%d) and 0 precision is an integer", width));
+	if (strcmp(type, "double") == 0 && width <= 11 && precision == 0) {
+		Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid double field definition: numeric field with width <=11 digits (%d) and 0 precision is an integer", width));
 		return TCL_ERROR;
 	}
 	

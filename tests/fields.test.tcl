@@ -217,9 +217,9 @@ test fields-2.5.7 {
 # "invalid" numeric field definitions are those whose width/precision
 # parameters imply values that would be returned as another type (int/double)
 
-# for example, integers with >=11 digits won't fit in 32-bit int type.
-# shapelib would actually let us write them, but they won't necessarily be
-# readable as such (may be readable as doubles, or not). We warn instead.
+# for example, integers with >10 digits (>11 characters, counting minus sign)
+# won't fit in 32-bit integer types. shapelib would actually let us write them,
+# but they won't necessarily be readable as such (may be readable as doubles).
 test fields-2.6 {
 # attempt to [fields add] with an invalid (too many digits) integer definition
 } -setup {
