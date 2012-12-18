@@ -1,12 +1,16 @@
 [manpage_begin SHAPETCL 3 0.1]
-[moddesc "Simple shapefile access for Tcl."]
+[moddesc "Simple shapefile access."]
 [copyright {2012 Jim DeVona}]
 [require shapetcl]
 [description]
+[package Shapetcl] is a Tcl extension that provides read/write access to shapefiles, a vector GIS file format developed by Esri.
 
 [section Terminology]
-
-A shapefile is comprised of [term features] and [term records]. Features consist of coordinate data (points or polygons, for example). Records consist of attribute data (labels, ID numbers, or other values associated with each feature). There is one record for every feature and one feature for every record. Together, a feature-record pair is referred to as an [term entity].
+Conceptually, a shapefile is comprised of [term features] and [term records]. Features consist of coordinate geometry (points or polygons, for example). Records consist of attribute values (labels, ID numbers, or other data associated with each feature). There is a one-to-one relationship between features and records. Together, a feature-record pair is referred to as an [term entity].
+[para]
+Features are composed of [term parts] which are composed of [term vertices]. A vertex is a set of coordinates. Features with no coordinates are legal (albeit of limited use) and are referred to as [term {null features}]. See [sectref {Coordinate Lists}] for more detail.
+[para]
+Records are composed of [term values] corresponding to one or more [term fields]. Fields are defined to contain data of particular types. No-data values are legal and are referred to as [term {null values}]. See [sectref {Field Definition Lists}] for more detail.
 
 [section API]
 
@@ -21,7 +25,7 @@ Open or create a shapefile. Returns a [arg shapefile] token and an associated [s
 [para]
 In the first form, the existing shapefile at [arg path] is opened. If specified, [arg mode] may be one of [arg readwrite] or [arg readonly]. The default mode is [arg readonly].
 [para]
-In the second form, a new shapefile is created at [arg path] and opened in [arg readwrite] mode. [arg type] must be a valid [sectref {Feature Types} {Feature Type}] and [arg fields] must be a valid [sectref {Definition Lists} {Definition List}] that defines at least one attribute field.
+In the second form, a new shapefile is created at [arg path] and opened in [arg readwrite] mode. [arg type] must be a valid [sectref {Feature Types} {Feature Type}] and [arg fields] must be a valid [sectref {Field Definition Lists} {Field Definition List}] that defines at least one attribute field.
 [list_end]
 
 [subsection {Shapefile Command}]
@@ -29,7 +33,7 @@ In the second form, a new shapefile is created at [arg path] and opened in [arg 
 The [arg shapefile] token returned by [cmd ::shapetcl::shapefile] acts as a command of the following form:
 
 [list_begin definitions]
-[call [cmd shapefile] [method method] [opt [arg {args...}]]]
+[call [arg shapefile] [method method] [opt [arg {args...}]]]
 See the [sectref {Shapefile Methods}] section for details on the supported methods. Note that any distinct abbreviation may be given for method names, such as [method coord] for [method coordinates].
 [list_end]
 
@@ -84,7 +88,7 @@ Returns the number of fields in the attribute table. Attributes tables must have
 [call [arg shapefile] [method fields] [method index] [arg name]]
 Returns index of the named field. Throws an error if the attribute table contains no field with the given [arg name]. If the attribute table contains multiple fields with the same name, returns the index of the first such field.
 [call [arg shapefile] [method fields] [method list] [opt [arg index]]]
-Returns a [sectref {Definition Lists} {Definition List}] describing all the fields in [arg shapefile], or, if [arg index] is given, the single field specified by [arg index].
+Returns a [sectref {Field Definition Lists} {Field Definition List}] describing all the fields in [arg shapefile], or, if [arg index] is given, the single field specified by [arg index].
 [para]
 Given a [arg shapefile] variable [var shp], get the properties of the first field with:
 [example {lassign [$shp fields list 0] type name width precision}]
@@ -93,7 +97,7 @@ Or, to process each field in turn:
     # do something with properties of this field...
 }}]
 [call [arg shapefile] [method fields] [method add] [arg fields]]
-Add fields to [arg shapefile]'s attribute table. The [arg fields] argument must contain a [sectref {Definition Lists} {Definition List}] describing one or more fields. New fields of existing records are initialized to null values. Returns the index of the last field added.
+Add fields to [arg shapefile]'s attribute table. The [arg fields] argument must contain a [sectref {Field Definition Lists} {Field Definition List}] describing one or more fields. New fields of existing records are initialized to null values. Returns the index of the last field added.
 [para]
 Add a single string field named [const Title] with:
 [example {$shp fields add {string Title 100 0}}]
@@ -152,13 +156,13 @@ Closing a shapefile deletes the associated [arg shapefile] command.
 
 [list_end]
 
-[section {Config Options}]
+[subsection {Config Options}]
 
 All configuration options are boolean. The possible values are [const 1] (true) and [const 0] (false).
 
 [list_begin definitions]
 [def [option allowAlternateNotation]]
-Default: [const 1]. Affects output of large floating-point attribute values. If false, values too large to fit in field width will cause [method {attributes write}] methods to throw an error. If true, values too large to fit in field width will be stored using exponential notation, given sufficient field width. This increases the range of values that can be stored in floating-point fields, but carries an important risk: [emph {significant digits may be lost}].
+Default: [const 0]. Affects output of large floating-point attribute values. If false, values too large to fit in field width will cause [method {attributes write}] methods to throw an error. If true, values too large to fit in field width will be stored using exponential notation, given sufficient field width. This increases the range of values that can be stored in floating-point fields, but carries an important risk: [emph {significant digits may be lost}].
 [para]
 Does not affect [method {attributes read}] methods. Floating-point attribute values stored in exponential notation are read successfully regardless of this setting.
 [def [option getAllCoordinates]]
@@ -170,7 +174,7 @@ Default: [const 0]. If false, [method {info bounds}] and [method {coordinates re
 [para]
 If [option getOnlyXyCoordinates] is set to true, [option getAllCoordinates] is automatically set to false.
 [def [option readRawStrings]]
-Default: [const 0]. If false, standard numeric formatting is applied to read numeric values (for example, trailing decimal zeros are omitted and values stored in exponential notation are converted to decimal notation). If true, numeric values are read as stored.
+Default: [const 0]. If false, standard numeric formatting is applied to numeric values returned by [method {attributes read}] (for example, trailing decimal zeros are omitted and values stored in exponential notation are converted to decimal notation). If true, numeric values are read as stored.
 [para]
 Field padding whitespace is never included in [method {attributes read}] results.
 [def [option autoClosePolygons]]
@@ -179,74 +183,26 @@ Default: [const 0]. If false, polygon [sectref {Coordinate Lists}] given to [met
 If [option autoClosePolygons] is true, the minimum polygon vertex count is reduced to three (which must be unique), since the closing vertex will be provided automatically.
 [list_end]
 
-[section Types]
+[section {Data Types}]
 
 [subsection {Feature Types}]
 
-Feature types and associated numeric codes, base types, and dimensions.
+Feature type as reported by [method {info type}], numeric code as reported by [method {info type numeric}], base type as reported by [method {info type base}], and dimension as reported by [method {info type dimension}]. A valid feature type must be specified when creating a new shapefile with [cmd {::shapetcl::shapefile}]. Feature type determines [sectref {Coordinate Lists} {Coordinate List}] format.
 
-[list_begin definitions]
-[def [arg point]]
-Code: [const 1], base type: [const point], dimension: [const xy].
-[def [arg arc]]
-Code: [const 3], base type: [const arc], dimension: [const xy].
-[def [arg polygon]]
-Code: [const 5], base type: [const polygon], dimension: [const xy].
-[def [arg multipoint]]
-Code: [const 8], base type: [const multipoint], dimension: [const xy].
-[def [arg pointm]]
-Code: [const 21], base type: [const point], dimension: [const xym].
-[def [arg arcm]]
-Code: [const 23], base type: [const arc], dimension: [const xym].
-[def [arg polygonm]]
-Code: [const 25], base type: [const polygon], dimension: [const xym].
-[def [arg multipointm]]
-Code: [const 28], base type: [const multipoint], dimension: [const xym].
-[def [arg pointz]]
-Code: [const 11], base type: [const point], dimension: [const xyzm].
-[def [arg arcz]]
-Code: [const 13], base type: [const arc], dimension: [const xyzm].
-[def [arg polygonz]]
-Code: [const 15], base type: [const polygon], dimension: [const xyzm].
-[def [arg multipointz]]
-Code: [const 18], base type: [const multipoint], dimension: [const xyzm].
+[list_begin itemized]
+[item][const point], code: [const 1], base type: [const point], dimension: [const xy]
+[item][const arc], code: [const 3], base type: [const arc], dimension: [const xy]
+[item][const polygon], code: [const 5], base type: [const polygon], dimension: [const xy]
+[item][const multipoint], code: [const 8], base type: [const multipoint], dimension: [const xy]
+[item][const pointm], code: [const 21], base type: [const point], dimension: [const xym]
+[item][const arcm], code: [const 23], base type: [const arc], dimension: [const xym]
+[item][const polygonm], code: [const 25], base type: [const polygon], dimension: [const xym]
+[item][const multipointm], code: [const 28], base type: [const multipoint], dimension: [const xym]
+[item][const pointz], code: [const 11], base type: [const point], dimension: [const xyzm]
+[item][const arcz], code: [const 13], base type: [const arc], dimension: [const xyzm]
+[item][const polygonz], code: [const 15], base type: [const polygon], dimension: [const xyzm]
+[item][const multipointz], code: [const 18], base type: [const multipoint], dimension: [const xyzm]
 [list_end]
-
-[subsection "Definition Lists"]
-
-Definition lists describe shapefile attribute table fields. Each field is described by four properties, defined below. A valid definition list must therefore contain a multiple of four elements (four for each field it describes). At least one field must be described when defining fields with [cmd {::shapetcl::shapefile}] or [method {fields add}].
-
-[list_begin definitions]
-[def [const type]]
-The type of data to be stored in the field. Must be one of [const integer], [const double] (floating-point numbers), or [const string]. [package Shapetcl] does not support other field types.
-[def [const name]]
-The name of the field. Must be at least one and not more than ten characters long. May contain only alphanumeric characters and underscores. Must begin with an alphabetic character. Must be unique (comparison is case insensitive).
-[para]These constraints are imposed for compatibility with other software and are applied only when defining new fields. Existing shapefiles with field names that do not comply may be opened without error.
-[def [const width]]
-The width of the field, in bytes. Attempting to write values that do not fit within the field width will trigger an error. Shapefile attribute tables are DBF files, which store values as their string representations. To avoid truncation errors, allocate sufficient width to store the maximum conceivable attribute value.
-[para]The maximum [const integer] field width is [const 11], since values with more than 10 digits (plus a potential 11th character, the minus sign) cannot be stored as 32-bit integers. Use a [const double] field instead.
-[para]Multi-byte characters can be written to [const string] fields as long as the [emph byte] length of the string fits within the field width. Applications must specify the encoding themselves, for instance by writing an accompanying .cpg (code page) file containing the name of the encoding.
-[para]Note that the maximum width of numeric fields is effectively reduced by one when writing negative values, since one character is used to store the leading minus sign.
-[def [const precision]]
-The portion of the field width to reserve for digits to the right of the decimal point. Should be [const 0] for all field types other than [const double].
-[para]For example, a [const double] field with a [const width] of [const 12] and a [const precision] of [const 5] could store values that fit this format ([const N] represents a digit):
-[example {NNNNNN.NNNNN}]
-[list_end]
-
-Here is an example in which three fields (one of each supported type) are added to a shapefile:
-
-[example {$shp fields add {integer Id 10 0 double Value 19 9 string Label 30 0}}]
-
-[subsection "Attribute Records"]
-
-An attribute record is a list of attribute values. The number of values in an attribute record must match the number of fields in the attribute table (as reported by [method {fields count}]). Attribute record values are ordered the same as fields. Each value in an attribute record must conform to the associated [sectref {Definition Lists} {field definition}].
-[para]An empty list [const {{}}] may be given for any field value to write a null value. Likewise, [method {attributes read}] methods may return an empty list for any field containing a null value. In this example, two integer values and one null value are written to a shapefile which has three attribute fields:
-[example {$shp attributes write {0 100 {}}
-}]
-As a shorthand for writing a record consisting entirely of null values, you can write a single empty list [const {{}}]:
-[example {# these are equivalent, assuming shp has three fields
-$shp attributes write {{} {} {}}
-$shp attributes write {}}]
 
 [subsection "Coordinate Lists"]
 
@@ -293,8 +249,70 @@ Zero-length or zero-area rings are disallowed by the [sectref References {shapef
 [list_end]
 
 
-[section References]
+[subsection "Field Definition Lists"]
 
-The shapefile format is specified in the [uri {http://www.esri.com/library/whitepapers/pdfs/shapefile.pdf} {ESRI Shapefile Technical Description}].
+Field definition lists describe shapefile attribute table fields. Each field is described by four properties, defined below. A valid field definition list therefore contains a multiple of four elements (four for each field it describes). At least one field must be described when defining fields with [cmd {::shapetcl::shapefile}] or [method {fields add}].
+
+[list_begin definitions]
+[def [const type]]
+The type of data to be stored in the field. Must be one of [const integer], [const double] (floating-point numbers), or [const string]. [package Shapetcl] does not support other field types.
+[def [const name]]
+The name of the field. Must be at least one and not more than ten characters long. May contain only alphanumeric characters and underscores. Must begin with an alphabetic character. Must be unique (comparison is case insensitive).
+[para]These constraints are imposed for compatibility with other software and are applied only when defining new fields. Existing shapefiles with field names that do not comply may be opened without error.
+[def [const width]]
+The width of the field, in bytes. Attempting to write values that do not fit within the field width will trigger an error. Shapefile attribute tables are DBF files, which store values as their string representations. To avoid truncation errors, allocate sufficient width to store the maximum conceivable attribute value.
+[para]The maximum [const integer] field width is [const 11], since values with more than 10 digits (plus a potential 11th character, the minus sign) cannot be stored as 32-bit integers. Use a [const double] field instead.
+[para]Multi-byte characters can be written to [const string] fields as long as the [emph byte] length of the string fits within the field width. Applications must specify the encoding themselves, for instance by writing an accompanying .cpg (code page) file containing the name of the encoding.
+[para]Note that the maximum width of numeric fields is effectively reduced by one when writing negative values, since one character is used to store the leading minus sign.
+[def [const precision]]
+The portion of the field width to reserve for digits to the right of the decimal point. Should be [const 0] for all field types other than [const double].
+[para]For example, a [const double] field with a [const width] of [const 12] and a [const precision] of [const 5] could store values that fit this format ([const N] represents a digit):
+[example {NNNNNN.NNNNN}]
+[list_end]
+
+Here is an example in which three fields (one of each supported type) are added to a shapefile:
+
+[example {$shp fields add {integer Id 10 0 double Value 19 9 string Label 30 0}}]
+
+[subsection "Attribute Records"]
+
+An attribute record is a list of attribute values. The number of values in an attribute record must match the number of fields in the attribute table (as reported by [method {fields count}]). Attribute record values are ordered the same as fields. Each value in an attribute record must conform to the associated [sectref {Field Definition Lists} {field definition}].
+[para]An empty list [const {{}}] may be given for any field value to write a null value. Likewise, [method {attributes read}] methods may return an empty list for any field containing a null value. In this example, two integer values and one null value are written to a shapefile which has three attribute fields:
+[example {$shp attributes write {0 100 {}}
+}]
+As a shorthand for writing a record consisting entirely of null values, you can write a single empty list [const {{}}]:
+[example {# these are equivalent, assuming shp has three fields
+$shp attributes write {{} {} {}}
+$shp attributes write {}}]
+
+[section {Limitations}]
+
+[list_begin itemized]
+[item][package Shapetcl] does not know about coordinate reference systems or projections. It is your application's reponsibility to manage metadata about the format of coordinates stored in shapefiles.
+[item]Multipatch features are not supported.
+[item]Only string, integer, and double attribute field types are supported.
+[item]Entities may be added or modified but not deleted.
+[item]Attribute fields may be added but fields may not be deleted nor may field definitions be changed.
+[item]Feature geometry is not rigorously validated. It is your application's responsibility to ensure that [sectref {Coordinate Lists}] comply with shapefile specification rules regarding self-intersecting features, zero-length parts, and so on.
+[item]Field definitions and attribute values are validated according to rules which may be inconsistent with those applied by other applications.
+[list_end]
+
+[section {Credits and References}]
+
+[package Shapetcl] is based on the [uri {http://shapelib.maptools.org/} {Shapefile C Library}].
+[para]
+The [uri {http://www.esri.com/library/whitepapers/pdfs/shapefile.pdf} {ESRI Shapefile Technical Description}] (PDF) is the authoritative specification of the shapefile format.
+[para]
+A number of fine Tcl alternatives for working with shapefiles are available:
+[list_begin itemized]
+[item][uri {http://code.google.com/p/tcl-map/} tcl-map] by Alexandros Stergiakis.
+[item][uri {http://geology.usgs.gov/tools/metadata/tclshp/} tclshp] and [uri {http://geology.usgs.gov/tools/metadata/tcldbf/} tcldbf] by Peter N. Schweitzer.
+[item][uri {http://gpsmanshp.sourceforge.net/} gpsmanshp] by Miguel Filgueiras.
+[item][uri {https://sourceforge.net/projects/tclshp/} Tclshp] by Devin J. Eyre.
+[list_end]
+
+[section "Bugs, Ideas, Feedback"]
+
+Bug reports, feature requests, and general feedback are welcome at [uri https://github.com/anoved/Shapetcl/issues].
 
 [manpage_end]
