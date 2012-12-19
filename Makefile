@@ -19,7 +19,7 @@ SHAPELIB_OBJS = $(SHAPELIB_PREFIX)/shpopen.o \
 				$(SHAPELIB_PREFIX)/dbfopen.o \
 				$(SHAPELIB_PREFIX)/safileio.o
 
-CFLAGS = -g -fPIC -Wall -Werror
+CFLAGS = -g -fPIC -Wall -Werror -DUSE_TCL_STUBS
 CC = gcc
 TCL = tclsh
 
@@ -36,7 +36,7 @@ $(SHAPETCL_LIB): shapetcl.o $(SHAPELIB_OBJS)
 	$(CC) -shared \
 			-o $(SHAPETCL_LIB) \
 			shapetcl.o $(SHAPELIB_OBJS) \
-			-L$(TCL_LIBRARY_DIR) -ltcl8.5
+			-L$(TCL_LIBRARY_DIR) -ltclstub8.5
 	echo "pkg_mkIndex . " $(SHAPETCL_LIB) | $(TCL)
 
 clean:
