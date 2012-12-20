@@ -1,6 +1,7 @@
-# Path to Shapelib distribution directory.
-# Tested with Shapelib 1.3.0, made with no modifications.
-SHAPELIB_PREFIX = shapelib
+# Edit TCL_INCLUDE_DIR, TCL_LIBRARY_DIR, and SHAPETCL_LIB to suit your platform.
+
+# Tcl's pkg_mkIndex will only process files named with the current platform's
+# [info sharedlibextension], hence the platform-dependent SHAPETCL_LIB value.
 
 ifeq ($(TARGET), linux)
 	# invoked with eg "make TARGET=linux"
@@ -14,36 +15,35 @@ else
 	TCL_LIBRARY_DIR = /usr/lib
 endif
 
-# default build rules are sufficient to build these
-SHAPELIB_OBJS = $(SHAPELIB_PREFIX)/shpopen.o \
-				$(SHAPELIB_PREFIX)/dbfopen.o \
-				$(SHAPELIB_PREFIX)/safileio.o
+# Tools
+CC = /usr/bin/gcc
+TCL = /usr/bin/tclsh
+
+# Shapelib: implicit default build rules are sufficient to build needed files.
+SHAPELIB_PREFIX = shapelib
+SHAPELIB_OBJS = $(SHAPELIB_PREFIX)/shpopen.o $(SHAPELIB_PREFIX)/dbfopen.o $(SHAPELIB_PREFIX)/safileio.o
 
 CFLAGS = -g -fPIC -Wall -Werror -DUSE_TCL_STUBS
-CC = gcc
-TCL = tclsh
 
 .PHONY: all clean test doc
 
 all: $(SHAPETCL_LIB)
 
 shapetcl.o: shapetcl.c
-	$(CC) $(CFLAGS) -c shapetcl.c \
-			-I$(SHAPELIB_PREFIX) \
-			-I$(TCL_INCLUDE_DIR)
+	$(CC) $(CFLAGS) -c shapetcl.c -I$(SHAPELIB_PREFIX) -I$(TCL_INCLUDE_DIR)
 
 $(SHAPETCL_LIB): shapetcl.o $(SHAPELIB_OBJS)
-	$(CC) -shared \
-			-o $(SHAPETCL_LIB) \
-			shapetcl.o $(SHAPELIB_OBJS) \
-			-L$(TCL_LIBRARY_DIR) -ltclstub8.5
-	echo "pkg_mkIndex . " $(SHAPETCL_LIB) | $(TCL)
+	$(CC) -o $(SHAPETCL_LIB) shapetcl.o $(SHAPELIB_OBJS) -shared -L$(TCL_LIBRARY_DIR) -ltclstub8.5
+	@echo "pkg_mkIndex . " $(SHAPETCL_LIB) | $(TCL)
 
+# clean: Remove library and object files.
 clean:
 	rm -f $(SHAPETCL_LIB) shapetcl.o $(SHAPELIB_OBJS)
 
+# test: Run all scripts in the test suite.
 test: $(SHAPETCL_LIB)
 	$(TCL) tests/all.tcl
 
+# doc: Convert documentation into various formats.
 doc:
 	cd doc && $(TCL) FormatDocs.tcl
