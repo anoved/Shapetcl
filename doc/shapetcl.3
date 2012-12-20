@@ -1,0 +1,717 @@
+'\"
+'\" Generated from file '' by tcllib/doctools with format 'nroff'
+'\" Copyright (c) 2012 Jim DeVona
+'\"
+'\" The definitions below are for supplemental macros used in Tcl/Tk
+'\" manual entries.
+'\"
+'\" .AP type name in/out ?indent?
+'\"	Start paragraph describing an argument to a library procedure.
+'\"	type is type of argument (int, etc.), in/out is either "in", "out",
+'\"	or "in/out" to describe whether procedure reads or modifies arg,
+'\"	and indent is equivalent to second arg of .IP (shouldn't ever be
+'\"	needed;  use .AS below instead)
+'\"
+'\" .AS ?type? ?name?
+'\"	Give maximum sizes of arguments for setting tab stops.  Type and
+'\"	name are examples of largest possible arguments that will be passed
+'\"	to .AP later.  If args are omitted, default tab stops are used.
+'\"
+'\" .BS
+'\"	Start box enclosure.  From here until next .BE, everything will be
+'\"	enclosed in one large box.
+'\"
+'\" .BE
+'\"	End of box enclosure.
+'\"
+'\" .CS
+'\"	Begin code excerpt.
+'\"
+'\" .CE
+'\"	End code excerpt.
+'\"
+'\" .VS ?version? ?br?
+'\"	Begin vertical sidebar, for use in marking newly-changed parts
+'\"	of man pages.  The first argument is ignored and used for recording
+'\"	the version when the .VS was added, so that the sidebars can be
+'\"	found and removed when they reach a certain age.  If another argument
+'\"	is present, then a line break is forced before starting the sidebar.
+'\"
+'\" .VE
+'\"	End of vertical sidebar.
+'\"
+'\" .DS
+'\"	Begin an indented unfilled display.
+'\"
+'\" .DE
+'\"	End of indented unfilled display.
+'\"
+'\" .SO
+'\"	Start of list of standard options for a Tk widget.  The
+'\"	options follow on successive lines, in four columns separated
+'\"	by tabs.
+'\"
+'\" .SE
+'\"	End of list of standard options for a Tk widget.
+'\"
+'\" .OP cmdName dbName dbClass
+'\"	Start of description of a specific option.  cmdName gives the
+'\"	option's name as specified in the class command, dbName gives
+'\"	the option's name in the option database, and dbClass gives
+'\"	the option's class in the option database.
+'\"
+'\" .UL arg1 arg2
+'\"	Print arg1 underlined, then print arg2 normally.
+'\"
+'\" RCS: @(#) $Id: man.macros,v 1.1 2009/01/30 04:56:47 andreas_kupries Exp $
+'\"
+'\"	# Set up traps and other miscellaneous stuff for Tcl/Tk man pages.
+.if t .wh -1.3i ^B
+.nr ^l \n(.l
+.ad b
+'\"	# Start an argument description
+.de AP
+.ie !"\\$4"" .TP \\$4
+.el \{\
+.   ie !"\\$2"" .TP \\n()Cu
+.   el          .TP 15
+.\}
+.ta \\n()Au \\n()Bu
+.ie !"\\$3"" \{\
+\&\\$1	\\fI\\$2\\fP	(\\$3)
+.\".b
+.\}
+.el \{\
+.br
+.ie !"\\$2"" \{\
+\&\\$1	\\fI\\$2\\fP
+.\}
+.el \{\
+\&\\fI\\$1\\fP
+.\}
+.\}
+..
+'\"	# define tabbing values for .AP
+.de AS
+.nr )A 10n
+.if !"\\$1"" .nr )A \\w'\\$1'u+3n
+.nr )B \\n()Au+15n
+.\"
+.if !"\\$2"" .nr )B \\w'\\$2'u+\\n()Au+3n
+.nr )C \\n()Bu+\\w'(in/out)'u+2n
+..
+.AS Tcl_Interp Tcl_CreateInterp in/out
+'\"	# BS - start boxed text
+'\"	# ^y = starting y location
+'\"	# ^b = 1
+.de BS
+.br
+.mk ^y
+.nr ^b 1u
+.if n .nf
+.if n .ti 0
+.if n \l'\\n(.lu\(ul'
+.if n .fi
+..
+'\"	# BE - end boxed text (draw box now)
+.de BE
+.nf
+.ti 0
+.mk ^t
+.ie n \l'\\n(^lu\(ul'
+.el \{\
+.\"	Draw four-sided box normally, but don't draw top of
+.\"	box if the box started on an earlier page.
+.ie !\\n(^b-1 \{\
+\h'-1.5n'\L'|\\n(^yu-1v'\l'\\n(^lu+3n\(ul'\L'\\n(^tu+1v-\\n(^yu'\l'|0u-1.5n\(ul'
+.\}
+.el \}\
+\h'-1.5n'\L'|\\n(^yu-1v'\h'\\n(^lu+3n'\L'\\n(^tu+1v-\\n(^yu'\l'|0u-1.5n\(ul'
+.\}
+.\}
+.fi
+.br
+.nr ^b 0
+..
+'\"	# VS - start vertical sidebar
+'\"	# ^Y = starting y location
+'\"	# ^v = 1 (for troff;  for nroff this doesn't matter)
+.de VS
+.if !"\\$2"" .br
+.mk ^Y
+.ie n 'mc \s12\(br\s0
+.el .nr ^v 1u
+..
+'\"	# VE - end of vertical sidebar
+.de VE
+.ie n 'mc
+.el \{\
+.ev 2
+.nf
+.ti 0
+.mk ^t
+\h'|\\n(^lu+3n'\L'|\\n(^Yu-1v\(bv'\v'\\n(^tu+1v-\\n(^Yu'\h'-|\\n(^lu+3n'
+.sp -1
+.fi
+.ev
+.\}
+.nr ^v 0
+..
+'\"	# Special macro to handle page bottom:  finish off current
+'\"	# box/sidebar if in box/sidebar mode, then invoked standard
+'\"	# page bottom macro.
+.de ^B
+.ev 2
+'ti 0
+'nf
+.mk ^t
+.if \\n(^b \{\
+.\"	Draw three-sided box if this is the box's first page,
+.\"	draw two sides but no top otherwise.
+.ie !\\n(^b-1 \h'-1.5n'\L'|\\n(^yu-1v'\l'\\n(^lu+3n\(ul'\L'\\n(^tu+1v-\\n(^yu'\h'|0u'\c
+.el \h'-1.5n'\L'|\\n(^yu-1v'\h'\\n(^lu+3n'\L'\\n(^tu+1v-\\n(^yu'\h'|0u'\c
+.\}
+.if \\n(^v \{\
+.nr ^x \\n(^tu+1v-\\n(^Yu
+\kx\h'-\\nxu'\h'|\\n(^lu+3n'\ky\L'-\\n(^xu'\v'\\n(^xu'\h'|0u'\c
+.\}
+.bp
+'fi
+.ev
+.if \\n(^b \{\
+.mk ^y
+.nr ^b 2
+.\}
+.if \\n(^v \{\
+.mk ^Y
+.\}
+..
+'\"	# DS - begin display
+.de DS
+.RS
+.nf
+.sp
+..
+'\"	# DE - end display
+.de DE
+.fi
+.RE
+.sp
+..
+'\"	# SO - start of list of standard options
+.de SO
+.SH "STANDARD OPTIONS"
+.LP
+.nf
+.ta 4c 8c 12c
+.ft B
+..
+'\"	# SE - end of list of standard options
+.de SE
+.fi
+.ft R
+.LP
+See the \\fBoptions\\fR manual entry for details on the standard options.
+..
+'\"	# OP - start of full description for a single option
+.de OP
+.LP
+.nf
+.ta 4c
+Command-Line Name:	\\fB\\$1\\fR
+Database Name:	\\fB\\$2\\fR
+Database Class:	\\fB\\$3\\fR
+.fi
+.IP
+..
+'\"	# CS - begin code excerpt
+.de CS
+.RS
+.nf
+.ta .25i .5i .75i 1i
+..
+'\"	# CE - end code excerpt
+.de CE
+.fi
+.RE
+..
+.de UL
+\\$1\l'|0\(ul'\\$2
+..
+.TH "SHAPETCL" 3 0.1  "Simple shapefile access."
+.BS
+.SH NAME
+SHAPETCL \- Simple shapefile access.
+.SH SYNOPSIS
+package require \fBshapetcl \fR
+.sp
+\fB::shapetcl::shapefile\fR \fIpath\fR ?\fImode\fR?
+.sp
+\fB::shapetcl::shapefile\fR \fIpath\fR \fItype\fR \fIfields\fR
+.sp
+\fIshapefile\fR \fBmethod\fR ?\fIargs...\fR?
+.sp
+\fIshapefile\fR \fBconfigure\fR \fIoption\fR ?\fIvalue\fR?
+.sp
+\fIshapefile\fR \fBfile\fR \fIsubcommand\fR
+.sp
+\fIshapefile\fR \fBfile\fR \fBmode\fR
+.sp
+\fIshapefile\fR \fBfile\fR \fBpath\fR
+.sp
+\fIshapefile\fR \fBinfo\fR \fIsubcommand\fR
+.sp
+\fIshapefile\fR \fBinfo\fR \fBcount\fR
+.sp
+\fIshapefile\fR \fBinfo\fR \fBtype\fR ?\fIsubcommand\fR?
+.sp
+\fIshapefile\fR \fBinfo\fR \fBtype\fR \fBnumeric\fR
+.sp
+\fIshapefile\fR \fBinfo\fR \fBtype\fR \fBbase\fR
+.sp
+\fIshapefile\fR \fBinfo\fR \fBtype\fR \fBdimension\fR
+.sp
+\fIshapefile\fR \fBinfo\fR \fBbounds\fR ?\fIindex\fR?
+.sp
+\fIshapefile\fR \fBfields\fR \fIsubcommand\fR
+.sp
+\fIshapefile\fR \fBfields\fR \fBcount\fR
+.sp
+\fIshapefile\fR \fBfields\fR \fBindex\fR \fIname\fR
+.sp
+\fIshapefile\fR \fBfields\fR \fBlist\fR ?\fIindex\fR?
+.sp
+\fIshapefile\fR \fBfields\fR \fBadd\fR \fIfields\fR
+.sp
+\fIshapefile\fR \fBcoordinates\fR \fIsubcommand\fR
+.sp
+\fIshapefile\fR \fBcoordinates\fR \fBread\fR ?\fIindex\fR?
+.sp
+\fIshapefile\fR \fBcoordinates\fR \fBwrite\fR ?\fIindex\fR? \fIcoordinates\fR
+.sp
+\fIshapefile\fR \fBattributes\fR \fIsubcommand\fR
+.sp
+\fIshapefile\fR \fBattributes\fR \fBread\fR ?\fIindex\fR?
+.sp
+\fIshapefile\fR \fBattributes\fR \fBread\fR \fIindex\fR \fIfield\fR
+.sp
+\fIshapefile\fR \fBattributes\fR \fBwrite\fR ?\fIindex\fR? \fIvalues\fR
+.sp
+\fIshapefile\fR \fBattributes\fR \fBwrite\fR \fIindex\fR \fIfield\fR \fIvalue\fR
+.sp
+\fIshapefile\fR \fBwrite\fR \fIcoordinates\fR \fIvalues\fR
+.sp
+\fIshapefile\fR \fBclose\fR
+.sp
+.BE
+.SH DESCRIPTION
+\fBShapetcl\fR is a Tcl extension that provides read/write access to shapefiles, a vector GIS file format developed by Esri.
+.SH "BUILDING AND INSTALLING"
+To build \fBShapetcl\fR, first edit "\fIMakefile\fR" to ensure the \fBTCL_INCLUDE_DIR\fR and \fBTCL_LIBRARY_DIR\fR variables point to appropriate directories. (Or, define them as environment variables.) Then run:
+.CS
+
+make
+.CE
+This will produce "\fIshapetcl.so\fR", the \fBShapetcl\fR shared library. Install it somewhere in your \fI\fBauto_path\fR\fR [http://www.tcl.tk/man/tcl8.5/TclCmd/library.htm#M24].
+To use \fBShapetcl\fR:
+.CS
+
+package require shapetcl
+.CE
+.SH TERMINOLOGY
+Conceptually, a shapefile is comprised of \fIfeatures\fR and \fIrecords\fR. Features consist of coordinate geometry (points or polygons, for example). Records consist of attribute values (labels, ID numbers, or other data associated with each feature). There is a one-to-one relationship between features and records. Together, a feature-record pair is referred to as an \fIentity\fR.
+.PP
+Features are composed of \fIparts\fR which are composed of \fIvertices\fR. A vertex is a set of coordinates. Features with no coordinates are legal (albeit of limited use) and are referred to as \fInull features\fR. See \fBCoordinate Lists\fR for more detail.
+.PP
+Records are composed of \fIvalues\fR corresponding to one or more \fIfields\fR. Fields are defined to contain data of particular types. No-data values are legal and are referred to as \fInull values\fR. See \fBField Definition Lists\fR for more detail.
+.SH API
+.SS "PACKAGE COMMANDS"
+The \fBshapetcl\fR package exports a single command:
+.TP
+\fB::shapetcl::shapefile\fR \fIpath\fR ?\fImode\fR?
+.TP
+\fB::shapetcl::shapefile\fR \fIpath\fR \fItype\fR \fIfields\fR
+Open or create a shapefile. Returns a \fIshapefile\fR token and an associated \fBShapefile Command\fR.
+.sp
+In the first form, the existing shapefile at \fIpath\fR is opened. If specified, \fImode\fR may be one of \fIreadwrite\fR or \fIreadonly\fR. The default mode is \fIreadonly\fR.
+.sp
+In the second form, a new shapefile is created at \fIpath\fR and opened in \fIreadwrite\fR mode. \fItype\fR must be a valid \fBFeature Type\fR and \fIfields\fR must be a valid \fBField Definition List\fR that defines at least one attribute field.
+.PP
+.SS "SHAPEFILE COMMAND"
+The \fIshapefile\fR token returned by \fB::shapetcl::shapefile\fR acts as a command of the following form:
+.TP
+\fIshapefile\fR \fBmethod\fR ?\fIargs...\fR?
+See the \fBShapefile Methods\fR section for details on the supported methods. Note that any distinct abbreviation may be given for method names, such as \fBcoord\fR for \fBcoordinates\fR.
+.PP
+.SS "SHAPEFILE METHODS"
+.TP
+\fIshapefile\fR \fBconfigure\fR \fIoption\fR ?\fIvalue\fR?
+Returns the current value of the specified \fIoption\fR. If a \fIvalue\fR is given, it is assigned to the specified \fIoption\fR before the value is returned. Valid boolean values are \fB0\fR and \fB1\fR. See \fBConfig Options\fR for details.
+.TP
+\fIshapefile\fR \fBfile\fR \fIsubcommand\fR
+The \fBfile\fR method returns information about the shapefile.
+.RS
+.TP
+\fIshapefile\fR \fBfile\fR \fBmode\fR
+Returns one of \fBreadwrite\fR or \fBreadonly\fR, indicating the access mode.
+.TP
+\fIshapefile\fR \fBfile\fR \fBpath\fR
+Returns the path provided as the first argument to the \fB::shapetcl::shapefile\fR command.
+.RE
+.TP
+\fIshapefile\fR \fBinfo\fR \fIsubcommand\fR
+The \fBinfo\fR method returns information about the contents of the shapefile.
+.RS
+.TP
+\fIshapefile\fR \fBinfo\fR \fBcount\fR
+Returns the number of entities in the shapefile. \fB0\fR indicates an empty shapefile.
+.TP
+\fIshapefile\fR \fBinfo\fR \fBtype\fR ?\fIsubcommand\fR?
+If no \fIsubcommand\fR is given, returns the \fBFeature Type\fR.
+.RS
+.TP
+\fIshapefile\fR \fBinfo\fR \fBtype\fR \fBnumeric\fR
+Returns a numeric code corresponding to the feature type. Based on shape type codes use in shapefile header.
+.TP
+\fIshapefile\fR \fBinfo\fR \fBtype\fR \fBbase\fR
+Returns a string indicating the base feature type of \fIshapefile\fR, disregarding the presence of M or Z coordinate dimensions. One of \fBpoint\fR, \fBarc\fR, \fBpolygon\fR, or \fBmultipoint\fR.
+.TP
+\fIshapefile\fR \fBinfo\fR \fBtype\fR \fBdimension\fR
+Returns a string indicating the coordinate dimension of \fIshapefile\fR, disregarding the base feature type. One of \fBxy\fR, \fBxym\fR, or \fBxyzm\fR. Note that all feature types with Z coordinates also have M coordinates.
+.RE
+.TP
+\fIshapefile\fR \fBinfo\fR \fBbounds\fR ?\fIindex\fR?
+Returns a list indicating the minimum and maximum coordinate values of the features in \fIshapefile\fR, or, if the \fIindex\fR argument is present, of the single feature specified by \fIindex\fR. The number of coordinates returned depends on the coordinate dimension of \fIshapefile\fR, unless the \fIgetAllCoordinates\fR or \fIgetOnlyXyCoordinates\fR \fBConfig Options\fR are set.
+.sp
+The default bounds list format for \fBxy\fR, \fBxym\fR, and \fBxyzm\fR feature types, respectively, are as follows:
+.RS
+.TP
+\fBxmin ymin xmax ymax\fR
+.TP
+\fBxmin ymin mmin xmax ymax mmax\fR
+.TP
+\fBxmin ymin zmin mmin xmax ymax zmax mmax\fR
+.RE
+.RE
+.TP
+\fIshapefile\fR \fBfields\fR \fIsubcommand\fR
+The \fBfields\fR method returns information about \fIshapefile\fR's attribute table fields. It is also used to add new fields to the attribute table.
+.RS
+.TP
+\fIshapefile\fR \fBfields\fR \fBcount\fR
+Returns the number of fields in the attribute table. Attributes tables must have a minimum of one field.
+.TP
+\fIshapefile\fR \fBfields\fR \fBindex\fR \fIname\fR
+Returns index of the named field. Throws an error if the attribute table contains no field with the given \fIname\fR. If the attribute table contains multiple fields with the same name, returns the index of the first such field.
+.TP
+\fIshapefile\fR \fBfields\fR \fBlist\fR ?\fIindex\fR?
+Returns a \fBField Definition List\fR describing all the fields in \fIshapefile\fR, or, if \fIindex\fR is given, the single field specified by \fIindex\fR.
+.sp
+Given a \fIshapefile\fR variable \fBshp\fR, get the properties of the first field with:
+.CS
+
+lassign [$shp fields list 0] type name width precision
+.CE
+.IP
+Or, to process each field in turn:
+.CS
+
+foreach {type name width precision} [$shp fields list] {
+    # do something with properties of this field...
+}
+.CE
+.TP
+\fIshapefile\fR \fBfields\fR \fBadd\fR \fIfields\fR
+Add fields to \fIshapefile\fR's attribute table. The \fIfields\fR argument must contain a \fBField Definition List\fR describing one or more fields. New fields of existing records are initialized to null values. Returns the index of the last field added.
+.sp
+Add a single string field named \fBTitle\fR with:
+.CS
+
+$shp fields add {string Title 100 0}
+.CE
+.IP
+Add a pair of floating-point numeric fields with:
+.CS
+
+$shp fields add {double Lat 19 9 double Lon 19 9}
+.CE
+.RE
+.TP
+\fIshapefile\fR \fBcoordinates\fR \fIsubcommand\fR
+The \fBcoordinates\fR method provides subcommands to read or write feature geometry.
+.RS
+.TP
+\fIshapefile\fR \fBcoordinates\fR \fBread\fR ?\fIindex\fR?
+If no \fIindex\fR is given, returns a list of \fBCoordinate Lists\fR, one for each feature in \fIshapefile\fR. If \fIindex\fR is given, returns a single \fBCoordinate List\fR containing the coordinates of the feature specified by \fIindex\fR.
+.CS
+
+foreach feature [$shp coordinates read] {
+   # process feature geometry
+}
+.CE
+.TP
+\fIshapefile\fR \fBcoordinates\fR \fBwrite\fR ?\fIindex\fR? \fIcoordinates\fR
+If \fIindex\fR is given, overwrites the specified feature geometry. If no \fIindex\fR argument is given, appends a new feature and adds an associated attribute record populated with null values. (Use the \fIshapefile\fR \fBwrite\fR method to append a new entity with coordinate data and attribute data at the same time.) The \fIcoordinates\fR argument may be a \fBCoordinate List\fR or an empty list \fB{}\fR, in which case a null feature is written. Returns the index of the written feature.
+.sp
+Overwrite the first feature of point shapefile \fBshp\fR with new coordinates:
+.CS
+
+$shp coordinates write 0 {{3.069799 36.786913}}
+.CE
+.IP
+Add a new feature, and subsequently fill in its attributes:
+.CS
+
+set index [$shp coordinates write {{151.523438 -79.812302}}]
+# (assuming attribute table contains a single string field)
+$shp attributes write $index {McMurdo Station}
+.CE
+.RE
+.TP
+\fIshapefile\fR \fBattributes\fR \fIsubcommand\fR
+The \fBattributes\fR method provides subcommands to read or write attribute records.
+.RS
+.TP
+\fIshapefile\fR \fBattributes\fR \fBread\fR ?\fIindex\fR?
+If no \fIindex\fR is given, returns a list of all attribute records in \fIshapefile\fR. If \fIindex\fR is given, returns the attribute record specified by \fIindex\fR. An \fBAttribute Record\fR is a list that contains one value for each field in the attribute table.
+.CS
+
+foreach record [$shp attributes read] {
+    # [llength $record] == [$shp fields count]
+}
+.CE
+.TP
+\fIshapefile\fR \fBattributes\fR \fBread\fR \fIindex\fR \fIfield\fR
+Returns a single attribute value from record \fIindex\fR. \fIfield\fR specifies the index of the field to read.
+.sp
+Get the value of a field named \fBID\fR from the first record:
+.CS
+
+$shp attributes read 0 [$shp fields index "ID"]
+.CE
+.TP
+\fIshapefile\fR \fBattributes\fR \fBwrite\fR ?\fIindex\fR? \fIvalues\fR
+If \fIindex\fR is given, overwrites the specified attribute record. If no \fIindex\fR argument is given, appends a new attribute record and adds an associated null feature. (Use the \fIshapefile\fR \fBwrite\fR method to append a new entity with coordinate data and attribute data at the same time.) The \fIvalues\fR argument may be an \fBAttribute Record\fR or an empty list \fB{}\fR, in which case the attribute record is populated with null values. Returns the index of the written record.
+.TP
+\fIshapefile\fR \fBattributes\fR \fBwrite\fR \fIindex\fR \fIfield\fR \fIvalue\fR
+Writes a single attribute \fIvalue\fR to field \fIfield\fR of record \fIindex\fR. Returns \fIindex\fR.
+.RE
+.TP
+\fIshapefile\fR \fBwrite\fR \fIcoordinates\fR \fIvalues\fR
+Appends a new entity to \fIshapefile\fR and returns the index of the new entity. The \fIcoordinates\fR argument is interpreted like the \fIcoordinates\fR argument to \fBcoordinates write\fR and the \fIvalues\fR argument is interpreted like the \fIvalues\fR argument to \fBattributes write\fR.
+.sp
+Here an entity is added to a point shapefile with two attribute fields, an integer and a string:
+.CS
+
+$shp write {{-0.001475 51.477812}} {66 {Royal Observatory Greenwich}}
+.CE
+.TP
+\fIshapefile\fR \fBclose\fR
+Close the shapefile. Changes are not necessarily written to shapefiles until closed. (Open shapefiles are automatically closed when the interpreter exits, but it is a best practice to close them explicitly.)
+.sp
+Closing a shapefile deletes the associated \fIshapefile\fR command.
+.PP
+.SS "CONFIG OPTIONS"
+All configuration options are boolean. The possible values are \fB1\fR (true) and \fB0\fR (false).
+.TP
+\fBallowAlternateNotation\fR
+Default: \fB0\fR. Affects output of large floating-point attribute values. If false, values too large to fit in field width will cause \fBattributes write\fR methods to throw an error. If true, values too large to fit in field width will be stored using exponential notation, given sufficient field width. This increases the range of values that can be stored in floating-point fields, but carries an important risk: \fIsignificant digits may be lost\fR.
+.sp
+Does not affect \fBattributes read\fR methods. Floating-point attribute values stored in exponential notation are read successfully regardless of this setting.
+.TP
+\fBgetAllCoordinates\fR
+Default: \fB0\fR. If false, \fBinfo bounds\fR and \fBcoordinates read\fR methods return a number of coordinates appropriate to the feature type. If true, all four coordinates (X, Y, Z, and M) are always returned, regardless of feature type. The default Z and M coordinate value is \fB0\fR.
+.sp
+If \fBgetAllCoordinates\fR is set to true, \fBgetOnlyXyCoordinates\fR is automatically set to false.
+.TP
+\fBgetOnlyXyCoordinates\fR
+Default: \fB0\fR. If false, \fBinfo bounds\fR and \fBcoordinates read\fR methods return a number of coordinates appropriate to the feature type. If true, only two coordinates (X and Y) are always returned, regardless of feature type.
+.sp
+If \fBgetOnlyXyCoordinates\fR is set to true, \fBgetAllCoordinates\fR is automatically set to false.
+.TP
+\fBreadRawStrings\fR
+Default: \fB0\fR. If false, standard numeric formatting is applied to numeric values returned by \fBattributes read\fR (for example, trailing decimal zeros are omitted and values stored in exponential notation are converted to decimal notation). If true, numeric values are read as stored.
+.sp
+Field padding whitespace is never included in \fBattributes read\fR results.
+.TP
+\fBautoClosePolygons\fR
+Default: \fB0\fR. If false, polygon \fBCoordinate Lists\fR given to \fBwrite\fR or \fBcoordinates write\fR must be explicitly closed. If true, polygons that appear to be open will be automatically closed by appending a copy of the first vertex. To be considered closed, a polygon's first and last vertices must be identical in all dimensions.
+.sp
+If \fBautoClosePolygons\fR is true, the minimum polygon vertex count is reduced to three (which must be unique), since the closing vertex will be provided automatically.
+.PP
+.SH "DATA TYPES"
+.SS "FEATURE TYPES"
+Feature type as reported by \fBinfo type\fR, numeric code as reported by \fBinfo type numeric\fR, base type as reported by \fBinfo type base\fR, and dimension as reported by \fBinfo type dimension\fR. A valid feature type must be specified when creating a new shapefile with \fB::shapetcl::shapefile\fR. Feature type determines \fBCoordinate List\fR format.
+.IP \(bu
+\fBpoint\fR, code: \fB1\fR, base type: \fBpoint\fR, dimension: \fBxy\fR
+.IP \(bu
+\fBarc\fR, code: \fB3\fR, base type: \fBarc\fR, dimension: \fBxy\fR
+.IP \(bu
+\fBpolygon\fR, code: \fB5\fR, base type: \fBpolygon\fR, dimension: \fBxy\fR
+.IP \(bu
+\fBmultipoint\fR, code: \fB8\fR, base type: \fBmultipoint\fR, dimension: \fBxy\fR
+.IP \(bu
+\fBpointm\fR, code: \fB21\fR, base type: \fBpoint\fR, dimension: \fBxym\fR
+.IP \(bu
+\fBarcm\fR, code: \fB23\fR, base type: \fBarc\fR, dimension: \fBxym\fR
+.IP \(bu
+\fBpolygonm\fR, code: \fB25\fR, base type: \fBpolygon\fR, dimension: \fBxym\fR
+.IP \(bu
+\fBmultipointm\fR, code: \fB28\fR, base type: \fBmultipoint\fR, dimension: \fBxym\fR
+.IP \(bu
+\fBpointz\fR, code: \fB11\fR, base type: \fBpoint\fR, dimension: \fBxyzm\fR
+.IP \(bu
+\fBarcz\fR, code: \fB13\fR, base type: \fBarc\fR, dimension: \fBxyzm\fR
+.IP \(bu
+\fBpolygonz\fR, code: \fB15\fR, base type: \fBpolygon\fR, dimension: \fBxyzm\fR
+.IP \(bu
+\fBmultipointz\fR, code: \fB18\fR, base type: \fBmultipoint\fR, dimension: \fBxyzm\fR
+.PP
+.SS "COORDINATE LISTS"
+Coordinate lists represent feature geometry as a series of \fIparts\fR, each comprised of a series of vertex coordinates.
+.PP
+The number of coordinate values that comprise a vertex depends on the \fBdimension\fR of the shapefile. \fBxy\fR shapefiles have two coordinates per vertex (X Y), \fBxym\fR shapefiles have three coordinates per vertex (X Y M), and \fBxyzm\fR shapefiles have four coordinates per vertex (X Y Z M). M coordinates represent non-spatial measures associated with each vertex. For simplicity, the remainder of this section will address \fBxy\fR features only.
+.PP
+Each \fIpart\fR is a sub-list of the feature's coordinate list. The number of parts that may comprise a coordinate list depends on the \fBbase type\fR of the shapefile. \fBpoint\fR and \fBmultipoint\fR shapefiles have exactly one part per coordinate list; \fBarc\fR and \fBpolygon\fR shapefiles may have one or more parts.
+.TP
+\fBpoint\fR
+A \fBpoint\fR coordinate list consists of one part with one vertex:
+.CS
+
+$shp coordinates write {{0 0}}
+.CE
+.TP
+\fBmultipoint\fR
+A \fBmultipoint\fR coordinate list consists of one part containing one or more vertices:
+.CS
+
+$shp coordinates write {{0 0  1 1  2 2  3 3}}
+.CE
+.IP
+Vertex order is not significant; a multipoint feature is a set of points with no further relationship implied.
+.TP
+\fBarc\fR
+An \fBarc\fR coordinate list consists of one or more parts, each representing a line segment. Each part consists of two or more vertices. Part vertices are connected in sequence. Part order is not significant.
+.CS
+
+
+# a very simple arc - one part with two vertices:
+$shp coordinates write {{0 0  10 0}}
+# an arc feature comprised of two simple segments:
+$shp coordinates write {{0 0  10 0} {0 2  10 2}}
+# an arc with one slightly longer part:
+$shp coordinates write {{0 0  2 1  4 2  8 3  16 4}}
+
+.CE
+.IP
+Zero-length arc parts are disallowed by the \fBshapefile specification\fR. \fBShapetcl\fR does not enforce this rule.
+.TP
+\fBpolygon\fR
+A \fBpolygon\fR coordinate list consists of one or more parts, each representing a \fIring\fR. Rings are sequences of four or more vertices; the last vertex must be identical to the first vertex, making the ring a \fIclosed loop\fR. The minimum number of \fIunique\fR vertices per ring is therefore three, the minimum required to define an area (a triangle).
+.sp
+Rings may be \fIouter\fR rings, defining the exterior perimeter of a polygon, or \fIinner\fR rings, defining the perimeter of a hole in the interior of another outer ring. Ring
+type is indicated by vertex winding order: outer ring vertices are listed in clockwise sequence; inner ring vertices are listed in counterclockwise sequence. The first ring is conventionally an outer ring, but the sequence in which subsequent rings are defined is not significant. (\fBShapetcl\fR will automatically reverse the vertex order of rings that appear to be wound incorrectly, based on their spatial relationship to other rings.)
+.sp
+A polygon feature may have multiple outer rings. Outer rings may have multiple inner rings.
+.CS
+
+
+# a simple polygon with a single outer ring:
+$shp coord write {{0 10  10 0  0 0  0 10}}
+# a polygon with two outer rings ("islands"):
+$shp coord write {{0 10  10 0  0 0  0 10} {20 10  30 0  20 0  20 10}}
+# one outer ring with a hole in it (note winding orders):
+$shp coord write {{0 10  10 0  0 0  0 10} {1 9  1 1  9 1  1 9}}
+
+.CE
+.IP
+Zero-length or zero-area rings are disallowed by the \fBshapefile specification\fR. Polygon rings may touch at vertices but may not intersect each other. \fBShapetcl\fR does not enforce these rules.
+.PP
+.SS "FIELD DEFINITION LISTS"
+Field definition lists describe shapefile attribute table fields. Each field is described by four properties, defined below. A valid field definition list therefore contains a multiple of four elements (four for each field it describes). At least one field must be described when defining fields with \fB::shapetcl::shapefile\fR or \fBfields add\fR.
+.TP
+\fBtype\fR
+The type of data to be stored in the field. Must be one of \fBinteger\fR, \fBdouble\fR (floating-point numbers), or \fBstring\fR. \fBShapetcl\fR does not support other field types.
+.TP
+\fBname\fR
+The name of the field. Must be at least one and not more than ten characters long. May contain only alphanumeric characters and underscores. Must begin with an alphabetic character. Must be unique (comparison is case insensitive).
+.sp
+These constraints are imposed for compatibility with other software and are applied only when defining new fields. Existing shapefiles with field names that do not comply may be opened without error.
+.TP
+\fBwidth\fR
+The width of the field, in bytes. Attempting to write values that do not fit within the field width will trigger an error. Shapefile attribute tables are DBF files, which store values as their string representations. To avoid truncation errors, allocate sufficient width to store the maximum conceivable attribute value.
+.sp
+The maximum \fBinteger\fR field width is \fB11\fR, since values with more than 10 digits (plus a potential 11th character, the minus sign) cannot be stored as 32-bit integers. Use a \fBdouble\fR field instead.
+.sp
+Multi-byte characters can be written to \fBstring\fR fields as long as the \fIbyte\fR length of the string fits within the field width. Applications must specify the encoding themselves, for instance by writing an accompanying .cpg (code page) file containing the name of the encoding.
+.sp
+Note that the maximum width of numeric fields is effectively reduced by one when writing negative values, since one character is used to store the leading minus sign.
+.TP
+\fBprecision\fR
+The portion of the field width to reserve for digits to the right of the decimal point. Should be \fB0\fR for all field types other than \fBdouble\fR.
+.sp
+For example, a \fBdouble\fR field with a \fBwidth\fR of \fB12\fR and a \fBprecision\fR of \fB5\fR could store values that fit this format (\fBN\fR represents a digit):
+.CS
+
+NNNNNN.NNNNN
+.CE
+.PP
+Here is an example in which three fields (one of each supported type) are added to a shapefile:
+.CS
+
+$shp fields add {integer Id 10 0 double Value 19 9 string Label 30 0}
+.CE
+.SS "ATTRIBUTE RECORDS"
+An attribute record is a list of attribute values. The number of values in an attribute record must match the number of fields in the attribute table (as reported by \fBfields count\fR). Attribute record values are ordered the same as fields. Each value in an attribute record must conform to the associated \fBfield definition\fR.
+.PP
+An empty list \fB{}\fR may be given for any field value to write a null value. Likewise, \fBattributes read\fR methods may return an empty list for any field containing a null value. In this example, two integer values and one null value are written to a shapefile which has three attribute fields:
+.CS
+
+$shp attributes write {0 100 {}}
+
+.CE
+As a shorthand for writing a record consisting entirely of null values, you can write a single empty list \fB{}\fR:
+.CS
+
+# these are equivalent, assuming shp has three fields
+$shp attributes write {{} {} {}}
+$shp attributes write {}
+.CE
+.SH LIMITATIONS
+.IP \(bu
+\fBShapetcl\fR does not know about coordinate reference systems or projections. It is your application's reponsibility to manage metadata about the format of coordinates stored in shapefiles.
+.IP \(bu
+Multipatch features are not supported.
+.IP \(bu
+Only string, integer, and double attribute field types are supported.
+.IP \(bu
+Entities may be added or modified but not deleted.
+.IP \(bu
+Attribute fields may be added but fields may not be deleted nor may field definitions be changed.
+.IP \(bu
+Feature geometry is not rigorously validated. It is your application's responsibility to ensure that \fBCoordinate Lists\fR comply with shapefile specification rules regarding self-intersecting features, zero-length parts, and so on.
+.IP \(bu
+Field definitions and attribute values are validated according to rules which may be inconsistent with those applied by other applications.
+.PP
+.SH "CREDITS AND REFERENCES"
+\fBShapetcl\fR is based on the \fIShapefile C Library\fR [http://shapelib.maptools.org/].
+.PP
+The \fIESRI Shapefile Technical Description\fR [http://www.esri.com/library/whitepapers/pdfs/shapefile.pdf] (PDF) is the authoritative specification of the shapefile format.
+.PP
+A number of fine Tcl alternatives for working with shapefiles are available:
+.IP \(bu
+\fItcl-map\fR [http://code.google.com/p/tcl-map/] by Alexandros Stergiakis.
+.IP \(bu
+\fItclshp\fR [http://geology.usgs.gov/tools/metadata/tclshp/] and \fItcldbf\fR [http://geology.usgs.gov/tools/metadata/tcldbf/] by Peter N. Schweitzer.
+.IP \(bu
+\fIgpsmanshp\fR [http://gpsmanshp.sourceforge.net/] by Miguel Filgueiras.
+.IP \(bu
+\fITclshp\fR [https://sourceforge.net/projects/tclshp/] by Devin J. Eyre.
+.PP
+.SH "BUGS, IDEAS, FEEDBACK"
+Bug reports, feature requests, and general feedback are welcome at \fIhttps://github.com/anoved/Shapetcl/issues\fR.
+.SH COPYRIGHT
+.nf
+Copyright (c) 2012 Jim DeVona
+
+.fi

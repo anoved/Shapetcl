@@ -1,0 +1,458 @@
+<html><head>
+<title>SHAPETCL - Simple shapefile access.</title>
+<style type="text/css"><!--
+    HTML {
+	background: 	#FFFFFF;
+	color: 		black;
+    }
+    BODY {
+	background: 	#FFFFFF;
+	color:	 	black;
+    }
+    DIV.doctools {
+	margin-left:	10%;
+	margin-right:	10%;
+    }
+    DIV.doctools H1,DIV.doctools H2 {
+	margin-left:	-5%;
+    }
+    H1, H2, H3, H4 {
+	margin-top: 	1em;
+	font-family:	sans-serif;
+	font-size:	large;
+	color:		#005A9C;
+	background: 	transparent;
+	text-align:		left;
+    }
+    H1.title {
+	text-align: center;
+    }
+    UL,OL {
+	margin-right: 0em;
+	margin-top: 3pt;
+	margin-bottom: 3pt;
+    }
+    UL LI {
+	list-style: disc;
+    }
+    OL LI {
+	list-style: decimal;
+    }
+    DT {
+	padding-top: 	1ex;
+    }
+    UL.toc,UL.toc UL, UL.toc UL UL {
+	font:		normal 12pt/14pt sans-serif;
+	list-style:	none;
+    }
+    LI.section, LI.subsection {
+	list-style: 	none;
+	margin-left: 	0em;
+	text-indent:	0em;
+	padding: 	0em;
+    }
+    PRE {
+	display: 	block;
+	font-family:	monospace;
+	white-space:	pre;
+	margin:		0%;
+	padding-top:	0.5ex;
+	padding-bottom:	0.5ex;
+	padding-left:	1ex;
+	padding-right:	1ex;
+	width:		100%;
+    }
+    PRE.example {
+	color: 		black;
+	background: 	#f5dcb3;
+	border:		1px solid black;
+    }
+    UL.requirements LI, UL.syntax LI {
+	list-style: 	none;
+	margin-left: 	0em;
+	text-indent:	0em;
+	padding:	0em;
+    }
+    DIV.synopsis {
+	color: 		black;
+	background: 	#80ffff;
+	border:		1px solid black;
+	font-family:	serif;
+	margin-top: 	1em;
+	margin-bottom: 	1em;
+    }
+    UL.syntax {
+	margin-top: 	1em;
+	border-top:	1px solid black;
+    }
+    UL.requirements {
+	margin-bottom: 	1em;
+	border-bottom:	1px solid black;
+    }
+--></style>
+</head>
+<! -- Generated from file '' by tcllib/doctools with format 'html'
+   -->
+<! -- Copyright &copy; 2012 Jim DeVona
+   -->
+<! -- CVS: $Id$ SHAPETCL.3
+   -->
+<body><div class="doctools">
+<h1 class="title">SHAPETCL(3) 0.1  &quot;Simple shapefile access.&quot;</h1>
+<div id="name" class="section"><h2><a name="name">Name</a></h2>
+<p>SHAPETCL - Simple shapefile access.</p>
+</div>
+<div id="toc" class="section"><h2><a name="toc">Table Of Contents</a></h2>
+<ul class="toc">
+<li class="section"><a href="#toc">Table Of Contents</a></li>
+<li class="section"><a href="#synopsis">Synopsis</a></li>
+<li class="section"><a href="#section1">Description</a></li>
+<li class="section"><a href="#section2">Building and Installing</a></li>
+<li class="section"><a href="#section3">Terminology</a></li>
+<li class="section"><a href="#section4">API</a>
+<ul>
+<li class="subsection"><a href="#subsection1">Package Commands</a></li>
+<li class="subsection"><a href="#subsection2">Shapefile Command</a></li>
+<li class="subsection"><a href="#subsection3">Shapefile Methods</a></li>
+<li class="subsection"><a href="#subsection4">Config Options</a></li>
+</ul>
+</li>
+<li class="section"><a href="#section5">Data Types</a>
+<ul>
+<li class="subsection"><a href="#subsection5">Feature Types</a></li>
+<li class="subsection"><a href="#subsection6">Coordinate Lists</a></li>
+<li class="subsection"><a href="#subsection7">Field Definition Lists</a></li>
+<li class="subsection"><a href="#subsection8">Attribute Records</a></li>
+</ul>
+</li>
+<li class="section"><a href="#section6">Limitations</a></li>
+<li class="section"><a href="#section7">Credits and References</a></li>
+<li class="section"><a href="#section8">Bugs, Ideas, Feedback</a></li>
+<li class="section"><a href="#copyright">Copyright</a></li>
+</ul>
+</div>
+<div id="synopsis" class="section"><h2><a name="synopsis">Synopsis</a></h2>
+<div class="synopsis">
+<ul class="requirements">
+<li>package require <b class="pkgname">shapetcl</b></li>
+</ul>
+<ul class="syntax">
+<li><a href="#1"><b class="cmd">::shapetcl::shapefile</b> <i class="arg">path</i> <span class="opt">?<i class="arg">mode</i>?</span></a></li>
+<li><a href="#2"><b class="cmd">::shapetcl::shapefile</b> <i class="arg">path</i> <i class="arg">type</i> <i class="arg">fields</i></a></li>
+<li><a href="#3"><i class="arg">shapefile</i> <b class="method">method</b> <span class="opt">?<i class="arg">args...</i>?</span></a></li>
+<li><a href="#4"><i class="arg">shapefile</i> <b class="method">configure</b> <i class="arg">option</i> <span class="opt">?<i class="arg">value</i>?</span></a></li>
+<li><a href="#5"><i class="arg">shapefile</i> <b class="method">file</b> <i class="arg">subcommand</i></a></li>
+<li><a href="#6"><i class="arg">shapefile</i> <b class="method">file</b> <b class="method">mode</b></a></li>
+<li><a href="#7"><i class="arg">shapefile</i> <b class="method">file</b> <b class="method">path</b></a></li>
+<li><a href="#8"><i class="arg">shapefile</i> <b class="method">info</b> <i class="arg">subcommand</i></a></li>
+<li><a href="#9"><i class="arg">shapefile</i> <b class="method">info</b> <b class="method">count</b></a></li>
+<li><a href="#10"><i class="arg">shapefile</i> <b class="method">info</b> <b class="method">type</b> <span class="opt">?<i class="arg">subcommand</i>?</span></a></li>
+<li><a href="#11"><i class="arg">shapefile</i> <b class="method">info</b> <b class="method">type</b> <b class="method">numeric</b></a></li>
+<li><a href="#12"><i class="arg">shapefile</i> <b class="method">info</b> <b class="method">type</b> <b class="method">base</b></a></li>
+<li><a href="#13"><i class="arg">shapefile</i> <b class="method">info</b> <b class="method">type</b> <b class="method">dimension</b></a></li>
+<li><a href="#14"><i class="arg">shapefile</i> <b class="method">info</b> <b class="method">bounds</b> <span class="opt">?<i class="arg">index</i>?</span></a></li>
+<li><a href="#15"><i class="arg">shapefile</i> <b class="method">fields</b> <i class="arg">subcommand</i></a></li>
+<li><a href="#16"><i class="arg">shapefile</i> <b class="method">fields</b> <b class="method">count</b></a></li>
+<li><a href="#17"><i class="arg">shapefile</i> <b class="method">fields</b> <b class="method">index</b> <i class="arg">name</i></a></li>
+<li><a href="#18"><i class="arg">shapefile</i> <b class="method">fields</b> <b class="method">list</b> <span class="opt">?<i class="arg">index</i>?</span></a></li>
+<li><a href="#19"><i class="arg">shapefile</i> <b class="method">fields</b> <b class="method">add</b> <i class="arg">fields</i></a></li>
+<li><a href="#20"><i class="arg">shapefile</i> <b class="method">coordinates</b> <i class="arg">subcommand</i></a></li>
+<li><a href="#21"><i class="arg">shapefile</i> <b class="method">coordinates</b> <b class="method">read</b> <span class="opt">?<i class="arg">index</i>?</span></a></li>
+<li><a href="#22"><i class="arg">shapefile</i> <b class="method">coordinates</b> <b class="method">write</b> <span class="opt">?<i class="arg">index</i>?</span> <i class="arg">coordinates</i></a></li>
+<li><a href="#23"><i class="arg">shapefile</i> <b class="method">attributes</b> <i class="arg">subcommand</i></a></li>
+<li><a href="#24"><i class="arg">shapefile</i> <b class="method">attributes</b> <b class="method">read</b> <span class="opt">?<i class="arg">index</i>?</span></a></li>
+<li><a href="#25"><i class="arg">shapefile</i> <b class="method">attributes</b> <b class="method">read</b> <i class="arg">index</i> <i class="arg">field</i></a></li>
+<li><a href="#26"><i class="arg">shapefile</i> <b class="method">attributes</b> <b class="method">write</b> <span class="opt">?<i class="arg">index</i>?</span> <i class="arg">values</i></a></li>
+<li><a href="#27"><i class="arg">shapefile</i> <b class="method">attributes</b> <b class="method">write</b> <i class="arg">index</i> <i class="arg">field</i> <i class="arg">value</i></a></li>
+<li><a href="#28"><i class="arg">shapefile</i> <b class="method">write</b> <i class="arg">coordinates</i> <i class="arg">values</i></a></li>
+<li><a href="#29"><i class="arg">shapefile</i> <b class="method">close</b></a></li>
+</ul>
+</div>
+</div>
+<div id="section1" class="section"><h2><a name="section1">Description</a></h2>
+<p><b class="package">Shapetcl</b> is a Tcl extension that provides read/write access to shapefiles, a vector GIS file format developed by Esri.</p>
+</div>
+<div id="section2" class="section"><h2><a name="section2">Building and Installing</a></h2>
+<p>To build <b class="package">Shapetcl</b>, first edit &quot;<b class="file">Makefile</b>&quot; to ensure the <b class="variable">TCL_INCLUDE_DIR</b> and <b class="variable">TCL_LIBRARY_DIR</b> variables point to appropriate directories. (Or, define them as environment variables.) Then run:</p>
+<pre class="example">make</pre>
+<p>This will produce &quot;<b class="file">shapetcl.so</b>&quot;, the <b class="package">Shapetcl</b> shared library. Install it somewhere in your <a href="http://www.tcl.tk/man/tcl8.5/TclCmd/library.htm#M24"><b class="variable">auto_path</b></a>.
+To use <b class="package">Shapetcl</b>:</p>
+<pre class="example">package require shapetcl</pre>
+</div>
+<div id="section3" class="section"><h2><a name="section3">Terminology</a></h2>
+<p>Conceptually, a shapefile is comprised of <i class="term">features</i> and <i class="term">records</i>. Features consist of coordinate geometry (points or polygons, for example). Records consist of attribute values (labels, ID numbers, or other data associated with each feature). There is a one-to-one relationship between features and records. Together, a feature-record pair is referred to as an <i class="term">entity</i>.</p>
+<p>Features are composed of <i class="term">parts</i> which are composed of <i class="term">vertices</i>. A vertex is a set of coordinates. Features with no coordinates are legal (albeit of limited use) and are referred to as <i class="term">null features</i>. See <span class="sectref"><a href="#subsection6">Coordinate Lists</a></span> for more detail.</p>
+<p>Records are composed of <i class="term">values</i> corresponding to one or more <i class="term">fields</i>. Fields are defined to contain data of particular types. No-data values are legal and are referred to as <i class="term">null values</i>. See <span class="sectref"><a href="#subsection7">Field Definition Lists</a></span> for more detail.</p>
+</div>
+<div id="section4" class="section"><h2><a name="section4">API</a></h2>
+<div id="subsection1" class="subsection"><h3><a name="subsection1">Package Commands</a></h3>
+<p>The <b class="package">shapetcl</b> package exports a single command:</p>
+<dl class="definitions">
+<dt><a name="1"><b class="cmd">::shapetcl::shapefile</b> <i class="arg">path</i> <span class="opt">?<i class="arg">mode</i>?</span></a></dt>
+<dd></dd>
+<dt><a name="2"><b class="cmd">::shapetcl::shapefile</b> <i class="arg">path</i> <i class="arg">type</i> <i class="arg">fields</i></a></dt>
+<dd><p>Open or create a shapefile. Returns a <i class="arg">shapefile</i> token and an associated <span class="sectref"><a href="#subsection2">Shapefile Command</a></span>.</p>
+<p>In the first form, the existing shapefile at <i class="arg">path</i> is opened. If specified, <i class="arg">mode</i> may be one of <i class="arg">readwrite</i> or <i class="arg">readonly</i>. The default mode is <i class="arg">readonly</i>.</p>
+<p>In the second form, a new shapefile is created at <i class="arg">path</i> and opened in <i class="arg">readwrite</i> mode. <i class="arg">type</i> must be a valid <span class="sectref"><a href="#subsection5">Feature Type</a></span> and <i class="arg">fields</i> must be a valid <span class="sectref"><a href="#subsection7">Field Definition List</a></span> that defines at least one attribute field.</p></dd>
+</dl>
+</div>
+<div id="subsection2" class="subsection"><h3><a name="subsection2">Shapefile Command</a></h3>
+<p>The <i class="arg">shapefile</i> token returned by <b class="cmd">::shapetcl::shapefile</b> acts as a command of the following form:</p>
+<dl class="definitions">
+<dt><a name="3"><i class="arg">shapefile</i> <b class="method">method</b> <span class="opt">?<i class="arg">args...</i>?</span></a></dt>
+<dd><p>See the <span class="sectref"><a href="#subsection3">Shapefile Methods</a></span> section for details on the supported methods. Note that any distinct abbreviation may be given for method names, such as <b class="method">coord</b> for <b class="method">coordinates</b>.</p></dd>
+</dl>
+</div>
+<div id="subsection3" class="subsection"><h3><a name="subsection3">Shapefile Methods</a></h3>
+<dl class="definitions">
+<dt><a name="4"><i class="arg">shapefile</i> <b class="method">configure</b> <i class="arg">option</i> <span class="opt">?<i class="arg">value</i>?</span></a></dt>
+<dd><p>Returns the current value of the specified <i class="arg">option</i>. If a <i class="arg">value</i> is given, it is assigned to the specified <i class="arg">option</i> before the value is returned. Valid boolean values are <b class="const">0</b> and <b class="const">1</b>. See <span class="sectref"><a href="#subsection4">Config Options</a></span> for details.</p></dd>
+<dt><a name="5"><i class="arg">shapefile</i> <b class="method">file</b> <i class="arg">subcommand</i></a></dt>
+<dd><p>The <b class="method">file</b> method returns information about the shapefile.</p>
+<dl class="definitions">
+<dt><a name="6"><i class="arg">shapefile</i> <b class="method">file</b> <b class="method">mode</b></a></dt>
+<dd><p>Returns one of <b class="const">readwrite</b> or <b class="const">readonly</b>, indicating the access mode.</p></dd>
+<dt><a name="7"><i class="arg">shapefile</i> <b class="method">file</b> <b class="method">path</b></a></dt>
+<dd><p>Returns the path provided as the first argument to the <b class="cmd">::shapetcl::shapefile</b> command.</p></dd>
+</dl></dd>
+<dt><a name="8"><i class="arg">shapefile</i> <b class="method">info</b> <i class="arg">subcommand</i></a></dt>
+<dd><p>The <b class="method">info</b> method returns information about the contents of the shapefile.</p>
+<dl class="definitions">
+<dt><a name="9"><i class="arg">shapefile</i> <b class="method">info</b> <b class="method">count</b></a></dt>
+<dd><p>Returns the number of entities in the shapefile. <b class="const">0</b> indicates an empty shapefile.</p></dd>
+<dt><a name="10"><i class="arg">shapefile</i> <b class="method">info</b> <b class="method">type</b> <span class="opt">?<i class="arg">subcommand</i>?</span></a></dt>
+<dd><p>If no <i class="arg">subcommand</i> is given, returns the <span class="sectref"><a href="#subsection5">Feature Type</a></span>.</p>
+<dl class="definitions">
+<dt><a name="11"><i class="arg">shapefile</i> <b class="method">info</b> <b class="method">type</b> <b class="method">numeric</b></a></dt>
+<dd><p>Returns a numeric code corresponding to the feature type. Based on shape type codes use in shapefile header.</p></dd>
+<dt><a name="12"><i class="arg">shapefile</i> <b class="method">info</b> <b class="method">type</b> <b class="method">base</b></a></dt>
+<dd><p>Returns a string indicating the base feature type of <i class="arg">shapefile</i>, disregarding the presence of M or Z coordinate dimensions. One of <b class="const">point</b>, <b class="const">arc</b>, <b class="const">polygon</b>, or <b class="const">multipoint</b>.</p></dd>
+<dt><a name="13"><i class="arg">shapefile</i> <b class="method">info</b> <b class="method">type</b> <b class="method">dimension</b></a></dt>
+<dd><p>Returns a string indicating the coordinate dimension of <i class="arg">shapefile</i>, disregarding the base feature type. One of <b class="const">xy</b>, <b class="const">xym</b>, or <b class="const">xyzm</b>. Note that all feature types with Z coordinates also have M coordinates.</p></dd>
+</dl></dd>
+<dt><a name="14"><i class="arg">shapefile</i> <b class="method">info</b> <b class="method">bounds</b> <span class="opt">?<i class="arg">index</i>?</span></a></dt>
+<dd><p>Returns a list indicating the minimum and maximum coordinate values of the features in <i class="arg">shapefile</i>, or, if the <i class="arg">index</i> argument is present, of the single feature specified by <i class="arg">index</i>. The number of coordinates returned depends on the coordinate dimension of <i class="arg">shapefile</i>, unless the <i class="arg">getAllCoordinates</i> or <i class="arg">getOnlyXyCoordinates</i> <span class="sectref"><a href="#subsection4">Config Options</a></span> are set.</p>
+<p>The default bounds list format for <b class="const">xy</b>, <b class="const">xym</b>, and <b class="const">xyzm</b> feature types, respectively, are as follows:</p>
+<dl class="definitions">
+<dt><b class="const">xmin ymin xmax ymax</b></dt>
+<dd></dd>
+<dt><b class="const">xmin ymin mmin xmax ymax mmax</b></dt>
+<dd></dd>
+<dt><b class="const">xmin ymin zmin mmin xmax ymax zmax mmax</b></dt>
+<dd></dd>
+</dl></dd>
+</dl></dd>
+<dt><a name="15"><i class="arg">shapefile</i> <b class="method">fields</b> <i class="arg">subcommand</i></a></dt>
+<dd><p>The <b class="method">fields</b> method returns information about <i class="arg">shapefile</i>'s attribute table fields. It is also used to add new fields to the attribute table.</p>
+<dl class="definitions">
+<dt><a name="16"><i class="arg">shapefile</i> <b class="method">fields</b> <b class="method">count</b></a></dt>
+<dd><p>Returns the number of fields in the attribute table. Attributes tables must have a minimum of one field.</p></dd>
+<dt><a name="17"><i class="arg">shapefile</i> <b class="method">fields</b> <b class="method">index</b> <i class="arg">name</i></a></dt>
+<dd><p>Returns index of the named field. Throws an error if the attribute table contains no field with the given <i class="arg">name</i>. If the attribute table contains multiple fields with the same name, returns the index of the first such field.</p></dd>
+<dt><a name="18"><i class="arg">shapefile</i> <b class="method">fields</b> <b class="method">list</b> <span class="opt">?<i class="arg">index</i>?</span></a></dt>
+<dd><p>Returns a <span class="sectref"><a href="#subsection7">Field Definition List</a></span> describing all the fields in <i class="arg">shapefile</i>, or, if <i class="arg">index</i> is given, the single field specified by <i class="arg">index</i>.</p>
+<p>Given a <i class="arg">shapefile</i> variable <b class="variable">shp</b>, get the properties of the first field with:</p>
+<pre class="example">lassign [$shp fields list 0] type name width precision</pre>
+<p>Or, to process each field in turn:</p>
+<pre class="example">foreach {type name width precision} [$shp fields list] {
+    # do something with properties of this field...
+}</pre>
+</dd>
+<dt><a name="19"><i class="arg">shapefile</i> <b class="method">fields</b> <b class="method">add</b> <i class="arg">fields</i></a></dt>
+<dd><p>Add fields to <i class="arg">shapefile</i>'s attribute table. The <i class="arg">fields</i> argument must contain a <span class="sectref"><a href="#subsection7">Field Definition List</a></span> describing one or more fields. New fields of existing records are initialized to null values. Returns the index of the last field added.</p>
+<p>Add a single string field named <b class="const">Title</b> with:</p>
+<pre class="example">$shp fields add {string Title 100 0}</pre>
+<p>Add a pair of floating-point numeric fields with:</p>
+<pre class="example">$shp fields add {double Lat 19 9 double Lon 19 9}</pre>
+</dd>
+</dl></dd>
+<dt><a name="20"><i class="arg">shapefile</i> <b class="method">coordinates</b> <i class="arg">subcommand</i></a></dt>
+<dd><p>The <b class="method">coordinates</b> method provides subcommands to read or write feature geometry.</p>
+<dl class="definitions">
+<dt><a name="21"><i class="arg">shapefile</i> <b class="method">coordinates</b> <b class="method">read</b> <span class="opt">?<i class="arg">index</i>?</span></a></dt>
+<dd><p>If no <i class="arg">index</i> is given, returns a list of <span class="sectref"><a href="#subsection6">Coordinate Lists</a></span>, one for each feature in <i class="arg">shapefile</i>. If <i class="arg">index</i> is given, returns a single <span class="sectref"><a href="#subsection6">Coordinate List</a></span> containing the coordinates of the feature specified by <i class="arg">index</i>.</p>
+<pre class="example">foreach feature [$shp coordinates read] {
+   # process feature geometry
+}</pre>
+</dd>
+<dt><a name="22"><i class="arg">shapefile</i> <b class="method">coordinates</b> <b class="method">write</b> <span class="opt">?<i class="arg">index</i>?</span> <i class="arg">coordinates</i></a></dt>
+<dd><p>If <i class="arg">index</i> is given, overwrites the specified feature geometry. If no <i class="arg">index</i> argument is given, appends a new feature and adds an associated attribute record populated with null values. (Use the <i class="arg">shapefile</i> <b class="method">write</b> method to append a new entity with coordinate data and attribute data at the same time.) The <i class="arg">coordinates</i> argument may be a <span class="sectref"><a href="#subsection6">Coordinate List</a></span> or an empty list <b class="const">{}</b>, in which case a null feature is written. Returns the index of the written feature.</p>
+<p>Overwrite the first feature of point shapefile <b class="variable">shp</b> with new coordinates:</p>
+<pre class="example">$shp coordinates write 0 {{3.069799 36.786913}}</pre>
+<p>Add a new feature, and subsequently fill in its attributes:</p>
+<pre class="example">set index [$shp coordinates write {{151.523438 -79.812302}}]
+# (assuming attribute table contains a single string field)
+$shp attributes write $index {McMurdo Station}</pre>
+</dd>
+</dl></dd>
+<dt><a name="23"><i class="arg">shapefile</i> <b class="method">attributes</b> <i class="arg">subcommand</i></a></dt>
+<dd><p>The <b class="method">attributes</b> method provides subcommands to read or write attribute records.</p>
+<dl class="definitions">
+<dt><a name="24"><i class="arg">shapefile</i> <b class="method">attributes</b> <b class="method">read</b> <span class="opt">?<i class="arg">index</i>?</span></a></dt>
+<dd><p>If no <i class="arg">index</i> is given, returns a list of all attribute records in <i class="arg">shapefile</i>. If <i class="arg">index</i> is given, returns the attribute record specified by <i class="arg">index</i>. An <span class="sectref"><a href="#subsection8">Attribute Record</a></span> is a list that contains one value for each field in the attribute table.</p>
+<pre class="example">foreach record [$shp attributes read] {
+    # [llength $record] == [$shp fields count]
+}</pre>
+</dd>
+<dt><a name="25"><i class="arg">shapefile</i> <b class="method">attributes</b> <b class="method">read</b> <i class="arg">index</i> <i class="arg">field</i></a></dt>
+<dd><p>Returns a single attribute value from record <i class="arg">index</i>. <i class="arg">field</i> specifies the index of the field to read.</p>
+<p>Get the value of a field named <b class="const">ID</b> from the first record:</p>
+<pre class="example">$shp attributes read 0 [$shp fields index &quot;ID&quot;]</pre>
+</dd>
+<dt><a name="26"><i class="arg">shapefile</i> <b class="method">attributes</b> <b class="method">write</b> <span class="opt">?<i class="arg">index</i>?</span> <i class="arg">values</i></a></dt>
+<dd><p>If <i class="arg">index</i> is given, overwrites the specified attribute record. If no <i class="arg">index</i> argument is given, appends a new attribute record and adds an associated null feature. (Use the <i class="arg">shapefile</i> <b class="method">write</b> method to append a new entity with coordinate data and attribute data at the same time.) The <i class="arg">values</i> argument may be an <span class="sectref"><a href="#subsection8">Attribute Record</a></span> or an empty list <b class="const">{}</b>, in which case the attribute record is populated with null values. Returns the index of the written record.</p></dd>
+<dt><a name="27"><i class="arg">shapefile</i> <b class="method">attributes</b> <b class="method">write</b> <i class="arg">index</i> <i class="arg">field</i> <i class="arg">value</i></a></dt>
+<dd><p>Writes a single attribute <i class="arg">value</i> to field <i class="arg">field</i> of record <i class="arg">index</i>. Returns <i class="arg">index</i>.</p></dd>
+</dl></dd>
+<dt><a name="28"><i class="arg">shapefile</i> <b class="method">write</b> <i class="arg">coordinates</i> <i class="arg">values</i></a></dt>
+<dd><p>Appends a new entity to <i class="arg">shapefile</i> and returns the index of the new entity. The <i class="arg">coordinates</i> argument is interpreted like the <i class="arg">coordinates</i> argument to <b class="method">coordinates write</b> and the <i class="arg">values</i> argument is interpreted like the <i class="arg">values</i> argument to <b class="method">attributes write</b>.</p>
+<p>Here an entity is added to a point shapefile with two attribute fields, an integer and a string:</p>
+<pre class="example">$shp write {{-0.001475 51.477812}} {66 {Royal Observatory Greenwich}}</pre>
+</dd>
+<dt><a name="29"><i class="arg">shapefile</i> <b class="method">close</b></a></dt>
+<dd><p>Close the shapefile. Changes are not necessarily written to shapefiles until closed. (Open shapefiles are automatically closed when the interpreter exits, but it is a best practice to close them explicitly.)</p>
+<p>Closing a shapefile deletes the associated <i class="arg">shapefile</i> command.</p></dd>
+</dl>
+</div>
+<div id="subsection4" class="subsection"><h3><a name="subsection4">Config Options</a></h3>
+<p>All configuration options are boolean. The possible values are <b class="const">1</b> (true) and <b class="const">0</b> (false).</p>
+<dl class="definitions">
+<dt><b class="option">allowAlternateNotation</b></dt>
+<dd><p>Default: <b class="const">0</b>. Affects output of large floating-point attribute values. If false, values too large to fit in field width will cause <b class="method">attributes write</b> methods to throw an error. If true, values too large to fit in field width will be stored using exponential notation, given sufficient field width. This increases the range of values that can be stored in floating-point fields, but carries an important risk: <em>significant digits may be lost</em>.</p>
+<p>Does not affect <b class="method">attributes read</b> methods. Floating-point attribute values stored in exponential notation are read successfully regardless of this setting.</p></dd>
+<dt><b class="option">getAllCoordinates</b></dt>
+<dd><p>Default: <b class="const">0</b>. If false, <b class="method">info bounds</b> and <b class="method">coordinates read</b> methods return a number of coordinates appropriate to the feature type. If true, all four coordinates (X, Y, Z, and M) are always returned, regardless of feature type. The default Z and M coordinate value is <b class="const">0</b>.</p>
+<p>If <b class="option">getAllCoordinates</b> is set to true, <b class="option">getOnlyXyCoordinates</b> is automatically set to false.</p></dd>
+<dt><b class="option">getOnlyXyCoordinates</b></dt>
+<dd><p>Default: <b class="const">0</b>. If false, <b class="method">info bounds</b> and <b class="method">coordinates read</b> methods return a number of coordinates appropriate to the feature type. If true, only two coordinates (X and Y) are always returned, regardless of feature type.</p>
+<p>If <b class="option">getOnlyXyCoordinates</b> is set to true, <b class="option">getAllCoordinates</b> is automatically set to false.</p></dd>
+<dt><b class="option">readRawStrings</b></dt>
+<dd><p>Default: <b class="const">0</b>. If false, standard numeric formatting is applied to numeric values returned by <b class="method">attributes read</b> (for example, trailing decimal zeros are omitted and values stored in exponential notation are converted to decimal notation). If true, numeric values are read as stored.</p>
+<p>Field padding whitespace is never included in <b class="method">attributes read</b> results.</p></dd>
+<dt><b class="option">autoClosePolygons</b></dt>
+<dd><p>Default: <b class="const">0</b>. If false, polygon <span class="sectref"><a href="#subsection6">Coordinate Lists</a></span> given to <b class="method">write</b> or <b class="method">coordinates write</b> must be explicitly closed. If true, polygons that appear to be open will be automatically closed by appending a copy of the first vertex. To be considered closed, a polygon's first and last vertices must be identical in all dimensions.</p>
+<p>If <b class="option">autoClosePolygons</b> is true, the minimum polygon vertex count is reduced to three (which must be unique), since the closing vertex will be provided automatically.</p></dd>
+</dl>
+</div>
+</div>
+<div id="section5" class="section"><h2><a name="section5">Data Types</a></h2>
+<div id="subsection5" class="subsection"><h3><a name="subsection5">Feature Types</a></h3>
+<p>Feature type as reported by <b class="method">info type</b>, numeric code as reported by <b class="method">info type numeric</b>, base type as reported by <b class="method">info type base</b>, and dimension as reported by <b class="method">info type dimension</b>. A valid feature type must be specified when creating a new shapefile with <b class="cmd">::shapetcl::shapefile</b>. Feature type determines <span class="sectref"><a href="#subsection6">Coordinate List</a></span> format.</p>
+<ul class="itemized">
+<li><p><b class="const">point</b>, code: <b class="const">1</b>, base type: <b class="const">point</b>, dimension: <b class="const">xy</b></p></li>
+<li><p><b class="const">arc</b>, code: <b class="const">3</b>, base type: <b class="const">arc</b>, dimension: <b class="const">xy</b></p></li>
+<li><p><b class="const">polygon</b>, code: <b class="const">5</b>, base type: <b class="const">polygon</b>, dimension: <b class="const">xy</b></p></li>
+<li><p><b class="const">multipoint</b>, code: <b class="const">8</b>, base type: <b class="const">multipoint</b>, dimension: <b class="const">xy</b></p></li>
+<li><p><b class="const">pointm</b>, code: <b class="const">21</b>, base type: <b class="const">point</b>, dimension: <b class="const">xym</b></p></li>
+<li><p><b class="const">arcm</b>, code: <b class="const">23</b>, base type: <b class="const">arc</b>, dimension: <b class="const">xym</b></p></li>
+<li><p><b class="const">polygonm</b>, code: <b class="const">25</b>, base type: <b class="const">polygon</b>, dimension: <b class="const">xym</b></p></li>
+<li><p><b class="const">multipointm</b>, code: <b class="const">28</b>, base type: <b class="const">multipoint</b>, dimension: <b class="const">xym</b></p></li>
+<li><p><b class="const">pointz</b>, code: <b class="const">11</b>, base type: <b class="const">point</b>, dimension: <b class="const">xyzm</b></p></li>
+<li><p><b class="const">arcz</b>, code: <b class="const">13</b>, base type: <b class="const">arc</b>, dimension: <b class="const">xyzm</b></p></li>
+<li><p><b class="const">polygonz</b>, code: <b class="const">15</b>, base type: <b class="const">polygon</b>, dimension: <b class="const">xyzm</b></p></li>
+<li><p><b class="const">multipointz</b>, code: <b class="const">18</b>, base type: <b class="const">multipoint</b>, dimension: <b class="const">xyzm</b></p></li>
+</ul>
+</div>
+<div id="subsection6" class="subsection"><h3><a name="subsection6">Coordinate Lists</a></h3>
+<p>Coordinate lists represent feature geometry as a series of <i class="term">parts</i>, each comprised of a series of vertex coordinates.</p>
+<p>The number of coordinate values that comprise a vertex depends on the <span class="sectref"><a href="#subsection5">dimension</a></span> of the shapefile. <b class="const">xy</b> shapefiles have two coordinates per vertex (X Y), <b class="const">xym</b> shapefiles have three coordinates per vertex (X Y M), and <b class="const">xyzm</b> shapefiles have four coordinates per vertex (X Y Z M). M coordinates represent non-spatial measures associated with each vertex. For simplicity, the remainder of this section will address <b class="const">xy</b> features only.</p>
+<p>Each <i class="term">part</i> is a sub-list of the feature's coordinate list. The number of parts that may comprise a coordinate list depends on the <span class="sectref"><a href="#subsection5">base type</a></span> of the shapefile. <b class="const">point</b> and <b class="const">multipoint</b> shapefiles have exactly one part per coordinate list; <b class="const">arc</b> and <b class="const">polygon</b> shapefiles may have one or more parts.</p>
+<dl class="definitions">
+<dt><b class="const">point</b></dt>
+<dd><p>A <b class="const">point</b> coordinate list consists of one part with one vertex:</p>
+<pre class="example">$shp coordinates write {{0 0}}</pre>
+</dd>
+<dt><b class="const">multipoint</b></dt>
+<dd><p>A <b class="const">multipoint</b> coordinate list consists of one part containing one or more vertices:</p>
+<pre class="example">$shp coordinates write {{0 0  1 1  2 2  3 3}}</pre>
+<p>Vertex order is not significant; a multipoint feature is a set of points with no further relationship implied.</p></dd>
+<dt><b class="const">arc</b></dt>
+<dd><p>An <b class="const">arc</b> coordinate list consists of one or more parts, each representing a line segment. Each part consists of two or more vertices. Part vertices are connected in sequence. Part order is not significant.</p>
+<pre class="example">
+# a very simple arc - one part with two vertices:
+$shp coordinates write {{0 0  10 0}}
+# an arc feature comprised of two simple segments:
+$shp coordinates write {{0 0  10 0} {0 2  10 2}}
+# an arc with one slightly longer part:
+$shp coordinates write {{0 0  2 1  4 2  8 3  16 4}}
+</pre>
+<p>Zero-length arc parts are disallowed by the <b class="sectref">shapefile specification</b>. <b class="package">Shapetcl</b> does not enforce this rule.</p></dd>
+<dt><b class="const">polygon</b></dt>
+<dd><p>A <b class="const">polygon</b> coordinate list consists of one or more parts, each representing a <i class="term">ring</i>. Rings are sequences of four or more vertices; the last vertex must be identical to the first vertex, making the ring a <i class="term">closed loop</i>. The minimum number of <em>unique</em> vertices per ring is therefore three, the minimum required to define an area (a triangle).</p>
+<p>Rings may be <i class="term">outer</i> rings, defining the exterior perimeter of a polygon, or <i class="term">inner</i> rings, defining the perimeter of a hole in the interior of another outer ring. Ring 
+type is indicated by vertex winding order: outer ring vertices are listed in clockwise sequence; inner ring vertices are listed in counterclockwise sequence. The first ring is conventionally an outer ring, but the sequence in which subsequent rings are defined is not significant. (<b class="package">Shapetcl</b> will automatically reverse the vertex order of rings that appear to be wound incorrectly, based on their spatial relationship to other rings.)</p>
+<p>A polygon feature may have multiple outer rings. Outer rings may have multiple inner rings.</p>
+<pre class="example">
+# a simple polygon with a single outer ring:
+$shp coord write {{0 10  10 0  0 0  0 10}}
+# a polygon with two outer rings (&quot;islands&quot;):
+$shp coord write {{0 10  10 0  0 0  0 10} {20 10  30 0  20 0  20 10}}
+# one outer ring with a hole in it (note winding orders):
+$shp coord write {{0 10  10 0  0 0  0 10} {1 9  1 1  9 1  1 9}}
+</pre>
+<p>Zero-length or zero-area rings are disallowed by the <b class="sectref">shapefile specification</b>. Polygon rings may touch at vertices but may not intersect each other. <b class="package">Shapetcl</b> does not enforce these rules.</p></dd>
+</dl>
+</div>
+<div id="subsection7" class="subsection"><h3><a name="subsection7">Field Definition Lists</a></h3>
+<p>Field definition lists describe shapefile attribute table fields. Each field is described by four properties, defined below. A valid field definition list therefore contains a multiple of four elements (four for each field it describes). At least one field must be described when defining fields with <b class="cmd">::shapetcl::shapefile</b> or <b class="method">fields add</b>.</p>
+<dl class="definitions">
+<dt><b class="const">type</b></dt>
+<dd><p>The type of data to be stored in the field. Must be one of <b class="const">integer</b>, <b class="const">double</b> (floating-point numbers), or <b class="const">string</b>. <b class="package">Shapetcl</b> does not support other field types.</p></dd>
+<dt><b class="const">name</b></dt>
+<dd><p>The name of the field. Must be at least one and not more than ten characters long. May contain only alphanumeric characters and underscores. Must begin with an alphabetic character. Must be unique (comparison is case insensitive).</p>
+<p>These constraints are imposed for compatibility with other software and are applied only when defining new fields. Existing shapefiles with field names that do not comply may be opened without error.</p></dd>
+<dt><b class="const">width</b></dt>
+<dd><p>The width of the field, in bytes. Attempting to write values that do not fit within the field width will trigger an error. Shapefile attribute tables are DBF files, which store values as their string representations. To avoid truncation errors, allocate sufficient width to store the maximum conceivable attribute value.</p>
+<p>The maximum <b class="const">integer</b> field width is <b class="const">11</b>, since values with more than 10 digits (plus a potential 11th character, the minus sign) cannot be stored as 32-bit integers. Use a <b class="const">double</b> field instead.</p>
+<p>Multi-byte characters can be written to <b class="const">string</b> fields as long as the <em>byte</em> length of the string fits within the field width. Applications must specify the encoding themselves, for instance by writing an accompanying .cpg (code page) file containing the name of the encoding.</p>
+<p>Note that the maximum width of numeric fields is effectively reduced by one when writing negative values, since one character is used to store the leading minus sign.</p></dd>
+<dt><b class="const">precision</b></dt>
+<dd><p>The portion of the field width to reserve for digits to the right of the decimal point. Should be <b class="const">0</b> for all field types other than <b class="const">double</b>.</p>
+<p>For example, a <b class="const">double</b> field with a <b class="const">width</b> of <b class="const">12</b> and a <b class="const">precision</b> of <b class="const">5</b> could store values that fit this format (<b class="const">N</b> represents a digit):</p>
+<pre class="example">NNNNNN.NNNNN</pre>
+</dd>
+</dl>
+<p>Here is an example in which three fields (one of each supported type) are added to a shapefile:</p>
+<pre class="example">$shp fields add {integer Id 10 0 double Value 19 9 string Label 30 0}</pre>
+</div>
+<div id="subsection8" class="subsection"><h3><a name="subsection8">Attribute Records</a></h3>
+<p>An attribute record is a list of attribute values. The number of values in an attribute record must match the number of fields in the attribute table (as reported by <b class="method">fields count</b>). Attribute record values are ordered the same as fields. Each value in an attribute record must conform to the associated <span class="sectref"><a href="#subsection7">field definition</a></span>.</p>
+<p>An empty list <b class="const">{}</b> may be given for any field value to write a null value. Likewise, <b class="method">attributes read</b> methods may return an empty list for any field containing a null value. In this example, two integer values and one null value are written to a shapefile which has three attribute fields:</p>
+<pre class="example">$shp attributes write {0 100 {}}
+</pre>
+<p>As a shorthand for writing a record consisting entirely of null values, you can write a single empty list <b class="const">{}</b>:</p>
+<pre class="example"># these are equivalent, assuming shp has three fields
+$shp attributes write {{} {} {}}
+$shp attributes write {}</pre>
+</div>
+</div>
+<div id="section6" class="section"><h2><a name="section6">Limitations</a></h2>
+<ul class="itemized">
+<li><p><b class="package">Shapetcl</b> does not know about coordinate reference systems or projections. It is your application's reponsibility to manage metadata about the format of coordinates stored in shapefiles.</p></li>
+<li><p>Multipatch features are not supported.</p></li>
+<li><p>Only string, integer, and double attribute field types are supported.</p></li>
+<li><p>Entities may be added or modified but not deleted.</p></li>
+<li><p>Attribute fields may be added but fields may not be deleted nor may field definitions be changed.</p></li>
+<li><p>Feature geometry is not rigorously validated. It is your application's responsibility to ensure that <span class="sectref"><a href="#subsection6">Coordinate Lists</a></span> comply with shapefile specification rules regarding self-intersecting features, zero-length parts, and so on.</p></li>
+<li><p>Field definitions and attribute values are validated according to rules which may be inconsistent with those applied by other applications.</p></li>
+</ul>
+</div>
+<div id="section7" class="section"><h2><a name="section7">Credits and References</a></h2>
+<p><b class="package">Shapetcl</b> is based on the <a href="http://shapelib.maptools.org/">Shapefile C Library</a>.</p>
+<p>The <a href="http://www.esri.com/library/whitepapers/pdfs/shapefile.pdf">ESRI Shapefile Technical Description</a> (PDF) is the authoritative specification of the shapefile format.</p>
+<p>A number of fine Tcl alternatives for working with shapefiles are available:</p>
+<ul class="itemized">
+<li><p><a href="http://code.google.com/p/tcl-map/">tcl-map</a> by Alexandros Stergiakis.</p></li>
+<li><p><a href="http://geology.usgs.gov/tools/metadata/tclshp/">tclshp</a> and <a href="http://geology.usgs.gov/tools/metadata/tcldbf/">tcldbf</a> by Peter N. Schweitzer.</p></li>
+<li><p><a href="http://gpsmanshp.sourceforge.net/">gpsmanshp</a> by Miguel Filgueiras.</p></li>
+<li><p><a href="https://sourceforge.net/projects/tclshp/">Tclshp</a> by Devin J. Eyre.</p></li>
+</ul>
+</div>
+<div id="section8" class="section"><h2><a name="section8">Bugs, Ideas, Feedback</a></h2>
+<p>Bug reports, feature requests, and general feedback are welcome at <a href="https://github.com/anoved/Shapetcl/issues">https://github.com/anoved/Shapetcl/issues</a>.</p>
+</div>
+<div id="copyright" class="section"><h2><a name="copyright">Copyright</a></h2>
+<p>Copyright &copy; 2012 Jim DeVona</p>
+</div>
+</div></body></html>
+
