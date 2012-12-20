@@ -5,6 +5,14 @@
 [description]
 [package Shapetcl] is a Tcl extension that provides read/write access to shapefiles, a vector GIS file format developed by Esri.
 
+[section {Building and Installing}]
+
+To build [package Shapetcl], first edit [file Makefile] to ensure the [var TCL_INCLUDE_DIR] and [var TCL_LIBRARY_DIR] variables point to appropriate directories. (Or, define them as environment variables.) Then run:
+[example {make}]
+This will produce [file shapetcl.so], the [package Shapetcl] shared library. Install it somewhere in your [uri {http://www.tcl.tk/man/tcl8.5/TclCmd/library.htm#M24} [var auto_path]].
+To use [package Shapetcl]:
+[example {package require shapetcl}]
+
 [section Terminology]
 Conceptually, a shapefile is comprised of [term features] and [term records]. Features consist of coordinate geometry (points or polygons, for example). Records consist of attribute values (labels, ID numbers, or other data associated with each feature). There is a one-to-one relationship between features and records. Together, a feature-record pair is referred to as an [term entity].
 [para]
