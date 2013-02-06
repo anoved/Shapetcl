@@ -36,4 +36,5 @@ test: shapetcl.so
 
 # doc: Convert documentation into various formats.
 doc:
-	cd doc && $(TCL) FormatDocs.tcl && /usr/bin/html2markdown <shapetcl.html >shapetcl.md
+	cd doc && $(TCL) FormatDocs.tcl
+	cd doc && /usr/bin/html2markdown --body-width=0 <shapetcl.html >shapetcl.md
