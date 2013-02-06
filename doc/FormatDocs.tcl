@@ -19,3 +19,9 @@ doc configure -format nroff
 set f [open shapetcl.3 w]
 puts $f [doc format $dt]
 close $f
+
+# generate plain text format
+doc configure -format text
+set f [open shapetcl.txt w]
+puts $f [doc format $dt]
+close $f

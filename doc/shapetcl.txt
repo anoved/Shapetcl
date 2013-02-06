@@ -1,0 +1,660 @@
+
+SHAPETCL - Simple shapefile access.
+Generated from file '' by tcllib/doctools with format 'text'
+SHAPETCL(3) 0.1  "Simple shapefile access."
+
+NAME
+====
+
+SHAPETCL - Simple shapefile access.
+
+SYNOPSIS
+========
+
+package require shapetcl
+
+::shapetcl::shapefile path ?mode?
+::shapetcl::shapefile path type fields
+shapefile method ?args...?
+shapefile configure option ?value?
+shapefile file subcommand
+shapefile file mode
+shapefile file path
+shapefile info subcommand
+shapefile info count
+shapefile info type ?subcommand?
+shapefile info type numeric
+shapefile info type base
+shapefile info type dimension
+shapefile info bounds ?index?
+shapefile fields subcommand
+shapefile fields count
+shapefile fields index name
+shapefile fields list ?index?
+shapefile fields add fields
+shapefile coordinates subcommand
+shapefile coordinates read ?index?
+shapefile coordinates write ?index? coordinates
+shapefile attributes subcommand
+shapefile attributes read ?index?
+shapefile attributes read index field
+shapefile attributes write ?index? values
+shapefile attributes write index field value
+shapefile write coordinates values
+shapefile close
+
+DESCRIPTION
+===========
+
+*Shapetcl* is a Tcl extension that provides read/write access to shapefiles, a
+vector GIS file format developed by Esri.
+
+Building and Installing
+=======================
+
+To build *Shapetcl*, first edit "Makefile" to ensure the *TCL_INCLUDE_DIR* and
+*TCL_LIBRARY_DIR* variables point to appropriate directories. (Or, define them
+as environment variables.) Then run:
+
+| make
+
+This will produce "shapetcl.so", the *Shapetcl* shared library. Install it
+somewhere in your _*auto_path*_
+<URL:http://www.tcl.tk/man/tcl8.5/TclCmd/library.htm#M24>. To use *Shapetcl*:
+
+| package require shapetcl
+
+Terminology
+===========
+
+Conceptually, a shapefile is comprised of _features_ and _records_. Features
+consist of coordinate geometry (points or polygons, for example). Records
+consist of attribute values (labels, ID numbers, or other data associated with
+each feature). There is a one-to-one relationship between features and records.
+Together, a feature-record pair is referred to as an _entity_.
+
+Features are composed of _parts_ which are composed of _vertices_. A vertex is a
+set of coordinates. Features with no coordinates are legal (albeit of limited
+use) and are referred to as _null features_. See -> Coordinate Lists for more
+detail.
+
+Records are composed of _values_ corresponding to one or more _fields_. Fields
+are defined to contain data of particular types. No-data values are legal and
+are referred to as _null values_. See -> Field Definition Lists for more detail.
+
+API
+===
+
+Package Commands
+----------------
+
+The *shapetcl* package exports a single command:
+
+    ::shapetcl::shapefile path ?mode?
+
+    ::shapetcl::shapefile path type fields
+
+        Open or create a shapefile. Returns a shapefile token and an associated
+        -> Shapefile Command.
+
+        In the first form, the existing shapefile at path is opened. If
+        specified, mode may be one of readwrite or readonly. The default mode is
+        readonly.
+
+        In the second form, a new shapefile is created at path and opened in
+        readwrite mode. type must be a valid -> Feature Type and fields must be
+        a valid -> Field Definition List that defines at least one attribute
+        field.
+
+Shapefile Command
+-----------------
+
+The shapefile token returned by ::shapetcl::shapefile acts as a command of the
+following form:
+
+    shapefile method ?args...?
+
+        See the -> Shapefile Methods section for details on the supported
+        methods. Note that any distinct abbreviation may be given for method
+        names, such as coord for coordinates.
+
+Shapefile Methods
+-----------------
+
+    shapefile configure option ?value?
+
+        Returns the current value of the specified option. If a value is given,
+        it is assigned to the specified option before the value is returned.
+        Valid boolean values are *0* and *1*. See -> Config Options for details.
+
+    shapefile file subcommand
+
+        The file method returns information about the shapefile.
+
+        shapefile file mode
+
+            Returns one of *readwrite* or *readonly*, indicating the access
+            mode.
+
+        shapefile file path
+
+            Returns the path provided as the first argument to the
+            ::shapetcl::shapefile command.
+
+    shapefile info subcommand
+
+        The info method returns information about the contents of the shapefile.
+
+        shapefile info count
+
+            Returns the number of entities in the shapefile. *0* indicates an
+            empty shapefile.
+
+        shapefile info type ?subcommand?
+
+            If no subcommand is given, returns the -> Feature Type.
+
+            shapefile info type numeric
+
+                Returns a numeric code corresponding to the feature type. Based
+                on shape type codes use in shapefile header.
+
+            shapefile info type base
+
+                Returns a string indicating the base feature type of shapefile,
+                disregarding the presence of M or Z coordinate dimensions. One
+                of *point*, *arc*, *polygon*, or *multipoint*.
+
+            shapefile info type dimension
+
+                Returns a string indicating the coordinate dimension of
+                shapefile, disregarding the base feature type. One of *xy*,
+                *xym*, or *xyzm*. Note that all feature types with Z coordinates
+                also have M coordinates.
+
+        shapefile info bounds ?index?
+
+            Returns a list indicating the minimum and maximum coordinate values
+            of the features in shapefile, or, if the index argument is present,
+            of the single feature specified by index. The number of coordinates
+            returned depends on the coordinate dimension of shapefile, unless
+            the getAllCoordinates or getOnlyXyCoordinates -> Config Options are
+            set.
+
+            The default bounds list format for *xy*, *xym*, and *xyzm* feature
+            types, respectively, are as follows:
+
+            *xmin ymin xmax ymax*
+
+            *xmin ymin mmin xmax ymax mmax*
+
+            *xmin ymin zmin mmin xmax ymax zmax mmax*
+
+    shapefile fields subcommand
+
+        The fields method returns information about shapefile's attribute table
+        fields. It is also used to add new fields to the attribute table.
+
+        shapefile fields count
+
+            Returns the number of fields in the attribute table. Attributes
+            tables must have a minimum of one field.
+
+        shapefile fields index name
+
+            Returns index of the named field. Throws an error if the attribute
+            table contains no field with the given name. If the attribute table
+            contains multiple fields with the same name, returns the index of
+            the first such field.
+
+        shapefile fields list ?index?
+
+            Returns a -> Field Definition List describing all the fields in
+            shapefile, or, if index is given, the single field specified by
+            index.
+
+            Given a shapefile variable *shp*, get the properties of the first
+            field with:
+
+| lassign [$shp fields list 0] type name width precision
+
+            Or, to process each field in turn:
+
+| foreach {type name width precision} [$shp fields list] {
+|     # do something with properties of this field...
+| }
+
+        shapefile fields add fields
+
+            Add fields to shapefile's attribute table. The fields argument must
+            contain a -> Field Definition List describing one or more fields.
+            New fields of existing records are initialized to null values.
+            Returns the index of the last field added.
+
+            Add a single string field named *Title* with:
+
+| $shp fields add {string Title 100 0}
+
+            Add a pair of floating-point numeric fields with:
+
+| $shp fields add {double Lat 19 9 double Lon 19 9}
+
+    shapefile coordinates subcommand
+
+        The coordinates method provides subcommands to read or write feature
+        geometry.
+
+        shapefile coordinates read ?index?
+
+            If no index is given, returns a list of -> Coordinate Lists, one for
+            each feature in shapefile. If index is given, returns a single ->
+            Coordinate List containing the coordinates of the feature specified
+            by index.
+
+| foreach feature [$shp coordinates read] {
+|    # process feature geometry
+| }
+
+        shapefile coordinates write ?index? coordinates
+
+            If index is given, overwrites the specified feature geometry. If no
+            index argument is given, appends a new feature and adds an
+            associated attribute record populated with null values. (Use the
+            shapefile write method to append a new entity with coordinate data
+            and attribute data at the same time.) The coordinates argument may
+            be a -> Coordinate List or an empty list *{}*, in which case a null
+            feature is written. Returns the index of the written feature.
+
+            Overwrite the first feature of point shapefile *shp* with new
+            coordinates:
+
+| $shp coordinates write 0 {{3.069799 36.786913}}
+
+            Add a new feature, and subsequently fill in its attributes:
+
+| set index [$shp coordinates write {{151.523438 -79.812302}}]
+| # (assuming attribute table contains a single string field)
+| $shp attributes write $index {McMurdo Station}
+
+    shapefile attributes subcommand
+
+        The attributes method provides subcommands to read or write attribute
+        records.
+
+        shapefile attributes read ?index?
+
+            If no index is given, returns a list of all attribute records in
+            shapefile. If index is given, returns the attribute record specified
+            by index. An -> Attribute Record is a list that contains one value
+            for each field in the attribute table.
+
+| foreach record [$shp attributes read] {
+|     # [llength $record] == [$shp fields count]
+| }
+
+        shapefile attributes read index field
+
+            Returns a single attribute value from record index. field specifies
+            the index of the field to read.
+
+            Get the value of a field named *ID* from the first record:
+
+| $shp attributes read 0 [$shp fields index "ID"]
+
+        shapefile attributes write ?index? values
+
+            If index is given, overwrites the specified attribute record. If no
+            index argument is given, appends a new attribute record and adds an
+            associated null feature. (Use the shapefile write method to append a
+            new entity with coordinate data and attribute data at the same
+            time.) The values argument may be an -> Attribute Record or an empty
+            list *{}*, in which case the attribute record is populated with null
+            values. Returns the index of the written record.
+
+        shapefile attributes write index field value
+
+            Writes a single attribute value to field field of record index.
+            Returns index.
+
+    shapefile write coordinates values
+
+        Appends a new entity to shapefile and returns the index of the new
+        entity. The coordinates argument is interpreted like the coordinates
+        argument to coordinates write and the values argument is interpreted
+        like the values argument to attributes write.
+
+        Here an entity is added to a point shapefile with two attribute fields,
+        an integer and a string:
+
+| $shp write {{-0.001475 51.477812}} {66 {Royal Observatory Greenwich}}
+
+    shapefile close
+
+        Close the shapefile. Changes are not necessarily written to shapefiles
+        until closed. (Open shapefiles are automatically closed when the
+        interpreter exits, but it is a best practice to close them explicitly.)
+
+        Closing a shapefile deletes the associated shapefile command.
+
+Config Options
+--------------
+
+All configuration options are boolean. The possible values are *1* (true) and
+*0* (false).
+
+    allowAlternateNotation
+
+        Default: *0*. Affects output of large floating-point attribute values.
+        If false, values too large to fit in field width will cause attributes
+        write methods to throw an error. If true, values too large to fit in
+        field width will be stored using exponential notation, given sufficient
+        field width. This increases the range of values that can be stored in
+        floating-point fields, but carries an important risk: _significant
+        digits may be lost_.
+
+        Does not affect attributes read methods. Floating-point attribute values
+        stored in exponential notation are read successfully regardless of this
+        setting.
+
+    getAllCoordinates
+
+        Default: *0*. If false, info bounds and coordinates read methods return
+        a number of coordinates appropriate to the feature type. If true, all
+        four coordinates (X, Y, Z, and M) are always returned, regardless of
+        feature type. The default Z and M coordinate value is *0*.
+
+        If getAllCoordinates is set to true, getOnlyXyCoordinates is
+        automatically set to false.
+
+    getOnlyXyCoordinates
+
+        Default: *0*. If false, info bounds and coordinates read methods return
+        a number of coordinates appropriate to the feature type. If true, only
+        two coordinates (X and Y) are always returned, regardless of feature
+        type.
+
+        If getOnlyXyCoordinates is set to true, getAllCoordinates is
+        automatically set to false.
+
+    readRawStrings
+
+        Default: *0*. If false, standard numeric formatting is applied to
+        numeric values returned by attributes read (for example, trailing
+        decimal zeros are omitted and values stored in exponential notation are
+        converted to decimal notation). If true, numeric values are read as
+        stored.
+
+        Field padding whitespace is never included in attributes read results.
+
+    autoClosePolygons
+
+        Default: *0*. If false, polygon -> Coordinate Lists given to write or
+        coordinates write must be explicitly closed. If true, polygons that
+        appear to be open will be automatically closed by appending a copy of
+        the first vertex. To be considered closed, a polygon's first and last
+        vertices must be identical in all dimensions.
+
+        If autoClosePolygons is true, the minimum polygon vertex count is
+        reduced to three (which must be unique), since the closing vertex will
+        be provided automatically.
+
+Data Types
+==========
+
+Feature Types
+-------------
+
+Feature type as reported by info type, numeric code as reported by info type
+numeric, base type as reported by info type base, and dimension as reported by
+info type dimension. A valid feature type must be specified when creating a new
+shapefile with ::shapetcl::shapefile. Feature type determines -> Coordinate List
+format.
+
+    *   *point*, code: *1*, base type: *point*, dimension: *xy*
+
+    *   *arc*, code: *3*, base type: *arc*, dimension: *xy*
+
+    *   *polygon*, code: *5*, base type: *polygon*, dimension: *xy*
+
+    *   *multipoint*, code: *8*, base type: *multipoint*, dimension: *xy*
+
+    *   *pointm*, code: *21*, base type: *point*, dimension: *xym*
+
+    *   *arcm*, code: *23*, base type: *arc*, dimension: *xym*
+
+    *   *polygonm*, code: *25*, base type: *polygon*, dimension: *xym*
+
+    *   *multipointm*, code: *28*, base type: *multipoint*, dimension: *xym*
+
+    *   *pointz*, code: *11*, base type: *point*, dimension: *xyzm*
+
+    *   *arcz*, code: *13*, base type: *arc*, dimension: *xyzm*
+
+    *   *polygonz*, code: *15*, base type: *polygon*, dimension: *xyzm*
+
+    *   *multipointz*, code: *18*, base type: *multipoint*, dimension: *xyzm*
+
+Coordinate Lists
+----------------
+
+Coordinate lists represent feature geometry as a series of _parts_, each
+comprised of a series of vertex coordinates.
+
+The number of coordinate values that comprise a vertex depends on the ->
+dimension of the shapefile. *xy* shapefiles have two coordinates per vertex (X
+Y), *xym* shapefiles have three coordinates per vertex (X Y M), and *xyzm*
+shapefiles have four coordinates per vertex (X Y Z M). M coordinates represent
+non-spatial measures associated with each vertex. For simplicity, the remainder
+of this section will address *xy* features only.
+
+Each _part_ is a sub-list of the feature's coordinate list. The number of parts
+that may comprise a coordinate list depends on the -> base type of the
+shapefile. *point* and *multipoint* shapefiles have exactly one part per
+coordinate list; *arc* and *polygon* shapefiles may have one or more parts.
+
+    *point*
+
+        A *point* coordinate list consists of one part with one vertex:
+
+| $shp coordinates write {{0 0}}
+
+    *multipoint*
+
+        A *multipoint* coordinate list consists of one part containing one or
+        more vertices:
+
+| $shp coordinates write {{0 0  1 1  2 2  3 3}}
+
+        Vertex order is not significant; a multipoint feature is a set of points
+        with no further relationship implied.
+
+    *arc*
+
+        An *arc* coordinate list consists of one or more parts, each
+        representing a line segment. Each part consists of two or more vertices.
+        Part vertices are connected in sequence. Part order is not significant.
+
+
+| # a very simple arc - one part with two vertices:
+| $shp coordinates write {{0 0  10 0}}
+| # an arc feature comprised of two simple segments:
+| $shp coordinates write {{0 0  10 0} {0 2  10 2}}
+| # an arc with one slightly longer part:
+| $shp coordinates write {{0 0  2 1  4 2  8 3  16 4}}
+
+        Zero-length arc parts are disallowed by the -> shapefile specification.
+        *Shapetcl* does not enforce this rule.
+
+    *polygon*
+
+        A *polygon* coordinate list consists of one or more parts, each
+        representing a _ring_. Rings are sequences of four or more vertices; the
+        last vertex must be identical to the first vertex, making the ring a
+        _closed loop_. The minimum number of _unique_ vertices per ring is
+        therefore three, the minimum required to define an area (a triangle).
+
+        Rings may be _outer_ rings, defining the exterior perimeter of a
+        polygon, or _inner_ rings, defining the perimeter of a hole in the
+        interior of another outer ring. Ring type is indicated by vertex winding
+        order: outer ring vertices are listed in clockwise sequence; inner ring
+        vertices are listed in counterclockwise sequence. The first ring is
+        conventionally an outer ring, but the sequence in which subsequent rings
+        are defined is not significant. (*Shapetcl* will automatically reverse
+        the vertex order of rings that appear to be wound incorrectly, based on
+        their spatial relationship to other rings.)
+
+        A polygon feature may have multiple outer rings. Outer rings may have
+        multiple inner rings.
+
+
+| # a simple polygon with a single outer ring:
+| $shp coord write {{0 10  10 0  0 0  0 10}}
+| # a polygon with two outer rings ("islands"):
+| $shp coord write {{0 10  10 0  0 0  0 10} {20 10  30 0  20 0  20 10}}
+| # one outer ring with a hole in it (note winding orders):
+| $shp coord write {{0 10  10 0  0 0  0 10} {1 9  1 1  9 1  1 9}}
+
+        Zero-length or zero-area rings are disallowed by the -> shapefile
+        specification. Polygon rings may touch at vertices but may not intersect
+        each other. *Shapetcl* does not enforce these rules.
+
+Field Definition Lists
+----------------------
+
+Field definition lists describe shapefile attribute table fields. Each field is
+described by four properties, defined below. A valid field definition list
+therefore contains a multiple of four elements (four for each field it
+describes). At least one field must be described when defining fields with
+::shapetcl::shapefile or fields add.
+
+    *type*
+
+        The type of data to be stored in the field. Must be one of *integer*,
+        *double* (floating-point numbers), or *string*. *Shapetcl* does not
+        support other field types.
+
+    *name*
+
+        The name of the field. Must be at least one and not more than ten
+        characters long. May contain only alphanumeric characters and
+        underscores. Must begin with an alphabetic character. Must be unique
+        (comparison is case insensitive).
+
+        These constraints are imposed for compatibility with other software and
+        are applied only when defining new fields. Existing shapefiles with
+        field names that do not comply may be opened without error.
+
+    *width*
+
+        The width of the field, in bytes. Attempting to write values that do not
+        fit within the field width will trigger an error. Shapefile attribute
+        tables are DBF files, which store values as their string
+        representations. To avoid truncation errors, allocate sufficient width
+        to store the maximum conceivable attribute value.
+
+        The maximum *integer* field width is *11*, since values with more than
+        10 digits (plus a potential 11th character, the minus sign) cannot be
+        stored as 32-bit integers. Use a *double* field instead.
+
+        Multi-byte characters can be written to *string* fields as long as the
+        _byte_ length of the string fits within the field width. Applications
+        must specify the encoding themselves, for instance by writing an
+        accompanying .cpg (code page) file containing the name of the encoding.
+
+        Note that the maximum width of numeric fields is effectively reduced by
+        one when writing negative values, since one character is used to store
+        the leading minus sign.
+
+    *precision*
+
+        The portion of the field width to reserve for digits to the right of the
+        decimal point. Should be *0* for all field types other than *double*.
+
+        For example, a *double* field with a *width* of *12* and a *precision*
+        of *5* could store values that fit this format (*N* represents a digit):
+
+| NNNNNN.NNNNN
+
+Here is an example in which three fields (one of each supported type) are added
+to a shapefile:
+
+| $shp fields add {integer Id 10 0 double Value 19 9 string Label 30 0}
+
+Attribute Records
+-----------------
+
+An attribute record is a list of attribute values. The number of values in an
+attribute record must match the number of fields in the attribute table (as
+reported by fields count). Attribute record values are ordered the same as
+fields. Each value in an attribute record must conform to the associated ->
+field definition.
+
+An empty list *{}* may be given for any field value to write a null value.
+Likewise, attributes read methods may return an empty list for any field
+containing a null value. In this example, two integer values and one null value
+are written to a shapefile which has three attribute fields:
+
+| $shp attributes write {0 100 {}}
+
+As a shorthand for writing a record consisting entirely of null values, you can
+write a single empty list *{}*:
+
+| # these are equivalent, assuming shp has three fields
+| $shp attributes write {{} {} {}}
+| $shp attributes write {}
+
+Limitations
+===========
+
+    *   *Shapetcl* does not know about coordinate reference systems or projections.
+        It is your application's reponsibility to manage metadata about the format
+        of coordinates stored in shapefiles.
+
+    *   Multipatch features are not supported.
+
+    *   Only string, integer, and double attribute field types are supported.
+
+    *   Entities may be added or modified but not deleted.
+
+    *   Attribute fields may be added but fields may not be deleted nor may field
+        definitions be changed.
+
+    *   Feature geometry is not rigorously validated. It is your application's
+        responsibility to ensure that -> Coordinate Lists comply with shapefile
+        specification rules regarding self-intersecting features, zero-length parts,
+        and so on.
+
+    *   Field definitions and attribute values are validated according to rules
+        which may be inconsistent with those applied by other applications.
+
+Credits and References
+======================
+
+*Shapetcl* is based on the _Shapefile C Library_
+<URL:http://shapelib.maptools.org/>.
+
+The _ESRI Shapefile Technical Description_
+<URL:http://www.esri.com/library/whitepapers/pdfs/shapefile.pdf> (PDF) is the
+authoritative specification of the shapefile format.
+
+A number of fine Tcl alternatives for working with shapefiles are available:
+
+    *   _tcl-map_ <URL:http://code.google.com/p/tcl-map/> by Alexandros Stergiakis.
+
+    *   _tclshp_ <URL:http://geology.usgs.gov/tools/metadata/tclshp/> and _tcldbf_
+        <URL:http://geology.usgs.gov/tools/metadata/tcldbf/> by Peter N. Schweitzer.
+
+    *   _gpsmanshp_ <URL:http://gpsmanshp.sourceforge.net/> by Miguel Filgueiras.
+
+    *   _Tclshp_ <URL:https://sourceforge.net/projects/tclshp/> by Devin J. Eyre.
+
+Bugs, Ideas, Feedback
+=====================
+
+Bug reports, feature requests, and general feedback are welcome at
+<URL:https://github.com/anoved/Shapetcl/issues>.
+
+COPYRIGHT
+=========
+
+Copyright (c) 2012 Jim DeVona
