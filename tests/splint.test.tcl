@@ -12,10 +12,14 @@ namespace import ::tcltest::test ::tcltest::makeFile ::tcltest::removeFile
 eval ::tcltest::configure $argv
 
 # This file contains tests that check the Shapetcl source code (shapetcl.c)
-# for problems reported by Secure Programming Lint (http://www.splint.org/)
+# for problems reported by Secure Programming Lint (http://www.splint.org/).
+
+::tcltest::testConstraint splintAvailable [file exists /usr/local/bin/splint]
 
 test splint-1.0 {
 # Check that Splint reports no issues (-weak mode).
+} -constraints {
+	splintAvailable
 } -body {
 	# +unix-lib allows splint to see strcasecmp, unlike default ansi-lib
 	# +quiet suppresses "herald" line and error count (simplifies success case)

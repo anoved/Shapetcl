@@ -13,8 +13,14 @@ eval ::tcltest::configure $argv
 
 package require platform
 
+::tcltest::testConstraint libutilsAvailable \
+		[expr {([string match macosx-* [::platform::generic]] && [file exists /usr/bin/otool])
+		|| [file exists /usr/bin/ldd]}]
+
 test stubs-1.0 {
 # confirm that the Shapetcl library appears to be stubs-compatible
+} -constraints {
+	libutilsAvailable
 } -body {
 	if {[string match macosx-* [::platform::generic]]} {
 		# use otool to list shared libraries on Mac OS X
