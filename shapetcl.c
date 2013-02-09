@@ -151,7 +151,7 @@ int Shapetcl_Init(Tcl_Interp *interp) {
 		return TCL_ERROR;
 	}
 	
-	Tcl_CreateObjCommand(interp, "::shapetcl::shapefile", shapefile_cmd, NULL, NULL);
+	(void)Tcl_CreateObjCommand(interp, "::shapetcl::shapefile", (Tcl_ObjCmdProc *)shapefile_cmd, NULL, NULL);
 	shapetclNamespace = Tcl_FindNamespace(interp, "shapetcl", NULL, TCL_GLOBAL_ONLY);
 	Tcl_Export(interp, shapetclNamespace, "shapefile", 0);
 	
@@ -286,7 +286,7 @@ int Shapetcl_Init(Tcl_Interp *interp) {
 		}
 	}
 	
-	if ((shapefile = (ShapefilePtr)ckalloc(sizeof(struct shapefile_data))) == NULL) {
+	if ((shapefile = (ShapefilePtr)ckalloc((unsigned int)sizeof(struct shapefile_data))) == NULL) {
 		Tcl_SetObjResult(interp, Tcl_ObjPrintf("failed to allocate shapefile command data"));;
 		DBFClose(dbf);
 		SHPClose(shp);
@@ -305,7 +305,7 @@ int Shapetcl_Init(Tcl_Interp *interp) {
 	shapefile->dimType = shapefile_typeDimension(shpType);
 	
 	/* save the path of the shapefile */
-	shapefile->path = (char *)ckalloc(strlen(path) + 1);
+	shapefile->path = (char *)ckalloc((unsigned int)(strlen(path) + 1));
     strcpy(shapefile->path, path);
 	
 	ns = Tcl_GetCurrentNamespace(interp);
@@ -317,14 +317,14 @@ int Shapetcl_Init(Tcl_Interp *interp) {
 	}
 	Tcl_MutexUnlock(&COMMAND_COUNT_MUTEX);
 
-	if (Tcl_CreateObjCommand(interp, Tcl_GetString(cmdNameObj), cmd_dispatcher, (ClientData)shapefile, shapefile_delete_handler) == NULL) {
+	if (Tcl_CreateObjCommand(interp, Tcl_GetString(cmdNameObj), (Tcl_ObjCmdProc *)cmd_dispatcher, (ClientData)shapefile, (Tcl_CmdDeleteProc *)shapefile_delete_handler) == NULL) {
 		Tcl_SetObjResult(interp, Tcl_ObjPrintf("failed to create command for %s", Tcl_GetString(cmdNameObj)));
 		DBFClose(dbf);
 		SHPClose(shp);
 		ckfree((char *)shapefile);
 		return TCL_ERROR;
 	}
-	Tcl_CreateExitHandler(shapefile_exit_handler, (ClientData)shapefile);
+	Tcl_CreateExitHandler((Tcl_ExitProc *)shapefile_exit_handler, (ClientData)shapefile);
 	Tcl_SetObjResult(interp, cmdNameObj);
 	
 	return TCL_OK;
@@ -494,16 +494,7 @@ int cmd_dispatcher(
 			"write",
 			NULL
 	};
-	Tcl_ObjCmdProc *subcommands[] = {
-			cmd_attributes,
-			cmd_close,
-			cmd_config,
-			cmd_coordinates,
-			cmd_fields,
-			cmd_info,
-			cmd_file,
-			cmd_write
-	};
+	int result;
 	
 	if (objc < 2) {
 		Tcl_WrongNumArgs(interp, 1, objv, "subcommand ?args?");
@@ -515,9 +506,19 @@ int cmd_dispatcher(
 			0 /* not TCL_EXACT */, &subcommandIndex) != TCL_OK) {
 		return TCL_ERROR;
 	}
-		
-	/* invoke the requested subcommand directly, passing on all arguments */
-	return subcommands[subcommandIndex](clientData, interp, objc, objv);
+	
+	switch (subcommandIndex) {
+		case 0: result = cmd_attributes (clientData, interp, objc, objv); break;
+		case 1: result = cmd_close      (clientData, interp, objc, objv); break;
+		case 2: result = cmd_config     (clientData, interp, objc, objv); break;
+		case 3: result = cmd_coordinates(clientData, interp, objc, objv); break;
+		case 4: result = cmd_fields     (clientData, interp, objc, objv); break;
+		case 5: result = cmd_info       (clientData, interp, objc, objv); break;
+		case 6: result = cmd_file       (clientData, interp, objc, objv); break;
+		case 7: result = cmd_write      (clientData, interp, objc, objv); break;
+	}
+	
+	return result;
 }
 
 /*
@@ -575,7 +576,7 @@ void shapefile_exit_handler(ClientData clientData) {
  * handler when [$shp close] command deletes the associated shapefile command.
  */
 void shapefile_delete_handler(ClientData clientData) {
-	Tcl_DeleteExitHandler(shapefile_exit_handler, clientData);
+	Tcl_DeleteExitHandler((Tcl_ExitProc *)shapefile_exit_handler, clientData);
 	ckfree((char *)clientData);
 }
 
@@ -1330,7 +1331,7 @@ int cmd_fields_validate(
 		/* also check that this name is not a dupe of any existing fields */
 		if (dbf != NULL) {
 			for (j = 0; j < DBFGetFieldCount(dbf); j++) {
-				DBFGetFieldInfo(dbf, j, dbfName, NULL, NULL);
+				(void)DBFGetFieldInfo(dbf, j, dbfName, NULL, NULL);
 				if (strcasecmp(dbfName, name) == 0) {
 					Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid field name: duplicate names disallowed (%s)", name));
 					return TCL_ERROR;
@@ -1726,7 +1727,7 @@ int cmd_coordinates_write(
 		coordinatesPerVertex = 2;
 	}
 		
-	if ((partStarts = (int *)ckalloc(sizeof(int) * partCount)) == NULL) {
+	if ((partStarts = (int *)ckalloc((unsigned int)(sizeof(int) * partCount))) == NULL) {
 		Tcl_SetObjResult(interp, Tcl_ObjPrintf("failed to allocate coordinate part index array"));
 		return TCL_ERROR;
 	}
@@ -1783,13 +1784,13 @@ int cmd_coordinates_write(
 				
 		/* add space for this part's vertices */
 		vertexCount += partVertexCount;
-		xCoords = (double *)ckrealloc((char *)xCoords, sizeof(double) * vertexCount);
-		yCoords = (double *)ckrealloc((char *)yCoords, sizeof(double) * vertexCount);
+		xCoords = (double *)ckrealloc((char *)xCoords, (unsigned int)(sizeof(double) * vertexCount));
+		yCoords = (double *)ckrealloc((char *)yCoords, (unsigned int)(sizeof(double) * vertexCount));
 		if (shapefile->dimType == DIM_XYZM) {
-			zCoords = (double *)ckrealloc((char *)zCoords, sizeof(double) * vertexCount);
+			zCoords = (double *)ckrealloc((char *)zCoords, (unsigned int)(sizeof(double) * vertexCount));
 		}
 		if (shapefile->dimType == DIM_XYZM || shapefile->dimType == DIM_XYM) {	
-			mCoords = (double *)ckrealloc((char *)mCoords, sizeof(double) * vertexCount);
+			mCoords = (double *)ckrealloc((char *)mCoords, (unsigned int)(sizeof(double) * vertexCount));
 		}
 		if (xCoords == NULL || yCoords == NULL ||
 				(shapefile->dimType == DIM_XYZM && zCoords == NULL) ||
@@ -1888,13 +1889,13 @@ int cmd_coordinates_write(
 				/* close the part automatically by appending the first vertex */
 				partVertexCount++;
 				vertexCount++;
-				xCoords = (double *)ckrealloc((char *)xCoords, sizeof(double) * vertexCount);
-				yCoords = (double *)ckrealloc((char *)yCoords, sizeof(double) * vertexCount);
+				xCoords = (double *)ckrealloc((char *)xCoords, (unsigned int)(sizeof(double) * vertexCount));
+				yCoords = (double *)ckrealloc((char *)yCoords, (unsigned int)(sizeof(double) * vertexCount));
 				if (shapefile->dimType == DIM_XYZM) {
-					zCoords = (double *)ckrealloc((char *)zCoords, sizeof(double) * vertexCount);
+					zCoords = (double *)ckrealloc((char *)zCoords, (unsigned int)(sizeof(double) * vertexCount));
 				}
 				if (shapefile->dimType == DIM_XYZM || shapefile->dimType == DIM_XYM) {
-					mCoords = (double *)ckrealloc((char *)mCoords, sizeof(double) * vertexCount);
+					mCoords = (double *)ckrealloc((char *)mCoords, (unsigned int)(sizeof(double) * vertexCount));
 				}
 				if (xCoords == NULL || yCoords == NULL ||
 						(shapefile->dimType == DIM_XYZM && zCoords == NULL) ||
@@ -2478,7 +2479,7 @@ int cmd_attributes_writeField(
 				return TCL_ERROR;
 			}
 			
-			if ((strlen(buffer) > width) && shapefile->allowAlternateNotation) {
+			if (((int)strlen(buffer) > width) && shapefile->allowAlternateNotation) {
 				reserved = 7 + (doubleValue < 0 ? 1 : 0);
 				if (reserved > width) {
 					Tcl_SetObjResult(interp, Tcl_ObjPrintf("field too narrow (%d) for fixed or scientific notation representation of value \"%s\"", width, buffer));
@@ -2617,7 +2618,7 @@ int cmd_attributes_validateField(
 				Tcl_SetObjResult(interp, Tcl_ObjPrintf("integer value too big for buffer"));
 				return TCL_ERROR;
 			}
-			if (strlen(buffer) > width) {
+			if ((int)strlen(buffer) > width) {
 				Tcl_SetObjResult(interp, Tcl_ObjPrintf("integer value (%s) would be truncated to field width (%d)", buffer, width));
 				return TCL_ERROR;
 			}
@@ -2642,7 +2643,7 @@ int cmd_attributes_validateField(
 			}
 			
 			/* does this string fit within the field width? */
-			if (strlen(stringValue) > width) {
+			if ((int)strlen(stringValue) > width) {
 				Tcl_SetObjResult(interp, Tcl_ObjPrintf("string value (%s) would be truncated to field width (%d)", stringValue, width));
 				return TCL_ERROR;
 			}
