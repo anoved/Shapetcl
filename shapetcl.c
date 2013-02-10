@@ -516,6 +516,10 @@ int cmd_dispatcher(
 		case 5: result = cmd_info       (clientData, interp, objc, objv); break;
 		case 6: result = cmd_file       (clientData, interp, objc, objv); break;
 		case 7: result = cmd_write      (clientData, interp, objc, objv); break;
+		default:
+			Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid subcommand index (%d)", subcommandIndex));
+			result = TCL_ERROR;
+			break;
 	}
 	
 	return result;
