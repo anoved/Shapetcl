@@ -69,6 +69,12 @@ struct shapefile_data {
 	   identifical to first vertex OR if only 3 vertices are given. Appended
 	   vertex is a copy of the part's first vertex. False by default. */
 	int autoClosePolygons;
+	
+	/* Allow attribute values that exceed the allocated field width to be
+	   truncated when written, rather than generating an error. If both
+	   allowTruncation and allowAlternateNotation are true, alternate notation
+	   will be attempted before truncating large double values. */
+	int allowTruncation;
 };
 typedef struct shapefile_data * ShapefilePtr;
 
@@ -300,6 +306,7 @@ int Shapetcl_Init(Tcl_Interp *interp) {
 	shapefile->getOnlyXyCoords = 0;
 	shapefile->readRawStrings = 0;
 	shapefile->autoClosePolygons = 0;
+	shapefile->allowTruncation = 0;
 	shapefile->shapeType = shpType;
 	shapefile->baseType = shapefile_typeBase(shpType);
 	shapefile->dimType = shapefile_typeDimension(shpType);
@@ -603,6 +610,7 @@ void shapefile_delete_handler(ClientData clientData) {
  *   getOnlyXyCoordinates (0)
  *   readRawStrings (0)
  *   autoClosePolygons (0)
+ *   allowTruncation (0)
  *   (See notes in ShapefilePtr struct definition for option details.)
  *
  * Result:
@@ -623,6 +631,7 @@ int cmd_config(
 			"getOnlyXyCoordinates",
 			"readRawStrings",
 			"autoClosePolygons",
+			"allowTruncation",
 			NULL
 	};
 	
@@ -680,6 +689,12 @@ int cmd_config(
 				shapefile->autoClosePolygons = optionValue;
 			}
 			Tcl_SetObjResult(interp, Tcl_NewIntObj(shapefile->autoClosePolygons));
+			break;
+		case 5: /* allowTruncation */
+			if (objc == 4) {
+				shapefile->allowTruncation = optionValue;
+			}
+			Tcl_SetObjResult(interp, Tcl_NewIntObj(shapefile->allowTruncation));
 			break;
 	}
 	
@@ -2465,8 +2480,10 @@ int cmd_attributes_writeField(
 	
 	switch ((int)DBFGetFieldInfo(shapefile->dbf, fieldId, NULL, &width, &precision)) {
 		case FTInteger:
-			if ((Tcl_GetIntFromObj(interp, attrValue, &intValue) != TCL_OK) ||
-					(DBFWriteIntegerAttribute(shapefile->dbf, recordId, fieldId, intValue) == 0)) {
+			if ((Tcl_GetIntFromObj(interp, attrValue, &intValue) != TCL_OK)) {
+				return TCL_ERROR;
+			}
+			if ((DBFWriteIntegerAttribute(shapefile->dbf, recordId, fieldId, intValue) == 0) && !shapefile->allowTruncation) {
 				Tcl_SetObjResult(interp, Tcl_ObjPrintf("failed to write integer attribute \"%d\"", intValue));
 				return TCL_ERROR;
 			}
@@ -2499,16 +2516,18 @@ int cmd_attributes_writeField(
 				}
 			} else {			
 				/* Anticipate this to fail due to truncation if len(buffer) > width
-				   and allowAlternateNotation is false, meaning errors preferred. */
-				if (DBFWriteDoubleAttribute(shapefile->dbf, recordId, fieldId, doubleValue) == 0) {
+				   and allowAlternateNotation and allowTruncation are false, meaning errors preferred. */
+				if ((DBFWriteDoubleAttribute(shapefile->dbf, recordId, fieldId, doubleValue) == 0) && !shapefile->allowTruncation) {
 					Tcl_SetObjResult(interp, Tcl_ObjPrintf("failed to write double attribute \"%lf\"", doubleValue));
 					return TCL_ERROR;
 				}
 			}
 			break;
 		case FTString:
-			if (((stringValue = Tcl_GetString(attrValue)) == NULL) ||
-					(DBFWriteStringAttribute(shapefile->dbf, recordId, fieldId, stringValue) == 0)) {
+			if ((stringValue = Tcl_GetString(attrValue)) == NULL) {
+				return TCL_ERROR;
+			}
+			if ((DBFWriteStringAttribute(shapefile->dbf, recordId, fieldId, stringValue) == 0) && !shapefile->allowTruncation) {
 				Tcl_SetObjResult(interp, Tcl_ObjPrintf("failed to write string attribute \"%s\"", stringValue));
 				return TCL_ERROR;
 			}
@@ -2617,6 +2636,9 @@ int cmd_attributes_validateField(
 			if (Tcl_GetIntFromObj(interp, attrValue, &intValue) != TCL_OK) {
 				return TCL_ERROR;
 			}
+			if (shapefile->allowTruncation) {
+				break;
+			}
 			/* does this integer fit within the field width? */
 			if (snprintf(buffer, NUMERIC_BUFFER_SIZE, "%d", intValue) >= NUMERIC_BUFFER_SIZE) {
 				Tcl_SetObjResult(interp, Tcl_ObjPrintf("integer value too big for buffer"));
@@ -2645,7 +2667,9 @@ int cmd_attributes_validateField(
 			if ((stringValue = Tcl_GetString(attrValue)) == NULL) {
 				return TCL_ERROR;
 			}
-			
+			if (shapefile->allowTruncation) {
+				break;
+			}
 			/* does this string fit within the field width? */
 			if ((int)strlen(stringValue) > width) {
 				Tcl_SetObjResult(interp, Tcl_ObjPrintf("string value (%s) would be truncated to field width (%d)", stringValue, width));

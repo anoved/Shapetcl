@@ -189,6 +189,8 @@ Field padding whitespace is never included in [method {attributes read}] results
 Default: [const 0]. If false, polygon [sectref {Coordinate Lists}] given to [method {write}] or [method {coordinates write}] must be explicitly closed. If true, polygons that appear to be open will be automatically closed by appending a copy of the first vertex. To be considered closed, a polygon's first and last vertices must be identical in all dimensions.
 [para]
 If [option autoClosePolygons] is true, the minimum polygon vertex count is reduced to three (which must be unique), since the closing vertex will be provided automatically.
+[def [option allowTruncation]]
+Default: [const 0]. If false, attribute values that are too large to fit in the field width will generate errors. If true, such values will be silently truncated on output. If both [option allowTruncation] and [option allowAlternateNotation] are true, an effort will first be made to write large floating-point values using exponential notation before falling back to truncation.
 [list_end]
 
 [section {Data Types}]

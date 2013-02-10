@@ -153,6 +153,23 @@ test config-1.6 {
 1
 }
 
+test config-1.7 {
+# check allowTruncation default and confirm config set
+} -setup {
+	set shp [shapefile sample/xy/polygon readonly]
+} -body {
+	# expected to be 0
+	puts [$shp config allowTruncation]
+	
+	# set to true and confirm
+	$shp config allowTruncation 1
+	puts [$shp config allowTruncation]
+} -cleanup {
+	$shp close
+} -result {} -output {0
+1
+}
+
 test config-2.0 {
 # confirm function of allowAlternateNotation config option (exponent-1.3)
 } -setup {
@@ -234,5 +251,48 @@ test config-2.4 {
 	$shp close
 	file delete {*}[glob tmp/foo.*]
 } -result {{0.0 10.0 10.0 10.0 10.0 0.0 0.0 0.0 0.0 10.0}}
+
+test config-2.5 {
+# confirm function of allowTruncation config option with too-large integer
+} -setup {
+	set out [shapefile tmp/config-2-5 point {integer Value 5 0}]
+} -body {
+	$out configure allowTruncation 1
+	$out attributes write 123456
+	$out attributes read 0 0
+} -cleanup {
+	$out close
+	file delete {*}[glob -nocomplain tmp/config-2-5.*]
+} -result {12345}
+
+test config-2.6 {
+# confirm function of allowTruncation config option with too-large double
+} -setup {
+	set out [shapefile tmp/config-2-6 point {double Value 16 6}]
+} -body {
+	# if allowAlternateNotation is left on, it would handle this (see config-2.0)
+	$out config allowAlternateNotation 0
+	
+	# the trailing digit 6 will be truncated
+	$out config allowTruncation 1
+	$out attributes write 1234567890.123456
+	$out attributes read 0 0
+} -cleanup {
+	$out close
+	file delete {*}[glob -nocomplain tmp/config-2-6.*]
+} -result {1234567890.12345}
+
+test config-2.7 {
+# confirm function of allowTruncation config option with too-large string
+} -setup {
+	set out [shapefile tmp/config-2-7 point {string Value 5 0}]
+} -body {
+	$out config allowTruncation 1
+	$out attributes write "abcdef"
+	$out attributes read 0 0
+} -cleanup {
+	$out close
+	file delete {*}[glob -nocomplain tmp/config-2-7.*]
+} -result {abcde}
 
 ::tcltest::cleanupTests

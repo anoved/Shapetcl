@@ -398,6 +398,15 @@ All configuration options are boolean. The possible values are *1* (true) and
         reduced to three (which must be unique), since the closing vertex will
         be provided automatically.
 
+    allowTruncation
+
+        Default: *0*. If false, attribute values that are too large to fit in
+        the field width will generate errors. If true, such values will be
+        silently truncated on output. If both allowTruncation and
+        allowAlternateNotation are true, an effort will first be made to write
+        large floating-point values using exponential notation before falling
+        back to truncation.
+
 Data Types
 ==========
 

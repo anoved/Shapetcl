@@ -332,6 +332,8 @@ $shp attributes write $index {McMurdo Station}</pre>
 <dt><b class="option">autoClosePolygons</b></dt>
 <dd><p>Default: <b class="const">0</b>. If false, polygon <span class="sectref"><a href="#subsection6">Coordinate Lists</a></span> given to <b class="method">write</b> or <b class="method">coordinates write</b> must be explicitly closed. If true, polygons that appear to be open will be automatically closed by appending a copy of the first vertex. To be considered closed, a polygon's first and last vertices must be identical in all dimensions.</p>
 <p>If <b class="option">autoClosePolygons</b> is true, the minimum polygon vertex count is reduced to three (which must be unique), since the closing vertex will be provided automatically.</p></dd>
+<dt><b class="option">allowTruncation</b></dt>
+<dd><p>Default: <b class="const">0</b>. If false, attribute values that are too large to fit in the field width will generate errors. If true, such values will be silently truncated on output. If both <b class="option">allowTruncation</b> and <b class="option">allowAlternateNotation</b> are true, an effort will first be made to write large floating-point values using exponential notation before falling back to truncation.</p></dd>
 </dl>
 </div>
 </div>
