@@ -13,27 +13,29 @@ eval ::tcltest::configure $argv
 
 package require platform
 
-::tcltest::testConstraint libutilsAvailable \
-		[expr {([string match macosx-* [::platform::generic]] && [file exists /usr/bin/otool])
-		|| [file exists /usr/bin/ldd]}]
+::tcltest::testConstraint otoolAvailable \
+		[expr {[string match macosx-* [::platform::generic]]
+		&& ![catch {exec which otool}]}]
+
+::tcltest::testConstraint lddAvailable \
+		[expr {![catch {exec which ldd}]}]
 
 test stubs-1.0 {
-# confirm that the Shapetcl library appears to be stubs-compatible
+# confirm that the library appears stubs-compatible on Mac OS X
 } -constraints {
-	libutilsAvailable
+	otoolAvailable
 } -body {
-	if {[string match macosx-* [::platform::generic]]} {
-		# use otool to list shared libraries on Mac OS X
-		set report [exec /usr/bin/otool -L ../shapetcl.so]
-	} else {
-		# use ldd to list shared libraries on *nix
-		set report [exec /usr/bin/ldd ../shapetcl.so]
-	}
-	# A stubs-compatible extension should not reference Tcl libraries directly.
-	if {[string match *libtcl* $report] ||
-			[string match *Tcl.framework* $report]} {
-		error "Shapetcl not stubs compatible"
-	}
-} -result {}
+	set report [exec otool -L ../shapetcl.so]
+	string match *Tcl.framework* $report
+} -result {0}
+
+test stubs-1.1 {
+# confirm that the library appears stub-compatible on *nix
+} -constraints {
+	lddAvailable
+} -body {
+	set report [exec ldd ../shapetcl.so]
+	string match *libtcl* $report
+} -result {0}
 
 ::tcltest::cleanupTests
