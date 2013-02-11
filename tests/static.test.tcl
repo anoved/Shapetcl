@@ -26,7 +26,7 @@ test static-1.0 {
 } -body {
 	# +unix-lib allows splint to see strcasecmp, unlike default ansi-lib
 	# +quiet suppresses "herald" line and error count (simplifies success case)
-	exec splint -weak +unix-lib +quiet -I../shapelib ../shapetcl.c
+	exec splint -weak +unix-lib +quiet -I../shapelib -I/usr/include/tcl8.5 ../shapetcl.c
 } -result {}
 
 test static-2.0 {
