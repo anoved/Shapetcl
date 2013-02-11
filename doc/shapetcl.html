@@ -155,7 +155,7 @@
 <li><a href="#16"><i class="arg">shapefile</i> <b class="method">fields</b> <b class="method">count</b></a></li>
 <li><a href="#17"><i class="arg">shapefile</i> <b class="method">fields</b> <b class="method">index</b> <i class="arg">name</i></a></li>
 <li><a href="#18"><i class="arg">shapefile</i> <b class="method">fields</b> <b class="method">list</b> <span class="opt">?<i class="arg">index</i>?</span></a></li>
-<li><a href="#19"><i class="arg">shapefile</i> <b class="method">fields</b> <b class="method">add</b> <i class="arg">fields</i></a></li>
+<li><a href="#19"><i class="arg">shapefile</i> <b class="method">fields</b> <b class="method">add</b> <i class="arg">fields</i> <span class="opt">?<i class="arg">defaultValues</i>?</span></a></li>
 <li><a href="#20"><i class="arg">shapefile</i> <b class="method">coordinates</b> <i class="arg">subcommand</i></a></li>
 <li><a href="#21"><i class="arg">shapefile</i> <b class="method">coordinates</b> <b class="method">read</b> <span class="opt">?<i class="arg">index</i>?</span></a></li>
 <li><a href="#22"><i class="arg">shapefile</i> <b class="method">coordinates</b> <b class="method">write</b> <span class="opt">?<i class="arg">index</i>?</span> <i class="arg">coordinates</i></a></li>
@@ -258,10 +258,12 @@ To use <b class="package">Shapetcl</b>:</p>
     # do something with properties of this field...
 }</pre>
 </dd>
-<dt><a name="19"><i class="arg">shapefile</i> <b class="method">fields</b> <b class="method">add</b> <i class="arg">fields</i></a></dt>
-<dd><p>Add fields to <i class="arg">shapefile</i>'s attribute table. The <i class="arg">fields</i> argument must contain a <span class="sectref"><a href="#subsection7">Field Definition List</a></span> describing one or more fields. New fields of existing records are initialized to null values. Returns the index of the last field added.</p>
+<dt><a name="19"><i class="arg">shapefile</i> <b class="method">fields</b> <b class="method">add</b> <i class="arg">fields</i> <span class="opt">?<i class="arg">defaultValues</i>?</span></a></dt>
+<dd><p>Add fields to <i class="arg">shapefile</i>'s attribute table. The <i class="arg">fields</i> argument must contain a <span class="sectref"><a href="#subsection7">Field Definition List</a></span> describing one or more fields. New fields of existing records are initialized to null, unless <i class="arg">defaultValues</i> are given. If specified, the <i class="arg">defaultValues</i> list must contain one&nbsp;value for each new field. Returns the index of the last field added.</p>
 <p>Add a single string field named <b class="const">Title</b> with:</p>
 <pre class="example">$shp fields add {string Title 100 0}</pre>
+<p>Alternatively, add a <b class="const">Title</b> field and initialize the title of all existing records to &quot;Untitled&quot;:</p>
+<pre class="example">$shp fields add {string Title 100 0} {Untitled}</pre>
 <p>Add a pair of floating-point numeric fields with:</p>
 <pre class="example">$shp fields add {double Lat 19 9 double Lon 19 9}</pre>
 </dd>

@@ -111,7 +111,7 @@ int cmd_info_type(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *
 int cmd_info_bounds(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]);
 
 int cmd_fields(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]);
-int cmd_fields_add(Tcl_Interp *interp, DBFHandle dbf, int validate, Tcl_Obj *definitions);
+int cmd_fields_add(Tcl_Interp *interp, DBFHandle dbf, int validate, Tcl_Obj *definitions, Tcl_Obj *attrList, ShapefilePtr shapefile);
 int cmd_fields_validate(Tcl_Interp *interp, Tcl_Obj *definitions, DBFHandle dbf);
 int cmd_fields_validateField(Tcl_Interp *interp, const char *type, const char *name, int width, int precision);
 int cmd_fields_validateFieldName(Tcl_Interp *interp, const char *name);
@@ -240,7 +240,7 @@ int Shapetcl_Init(Tcl_Interp *interp) {
 		}
 		
 		/* add pre-validated fields to the dbf */
-		if (cmd_fields_add(interp, dbf, 0 /* don't validate */, objv[3]) != TCL_OK) {
+		if (cmd_fields_add(interp, dbf, 0 /* don't validate */, objv[3], NULL, NULL) != TCL_OK) {
 			DBFClose(dbf);
 			return TCL_ERROR;
 		}
@@ -1089,9 +1089,10 @@ int cmd_info_bounds(
  *     Get the number of fields in the attribute table.
  *   [$shp fields list ?FIELD?]
  *     Get the field definitions for all or one attribute field.
- *   [$shp fields add FIELDDEFINITIONS]
+ *   [$shp fields add FIELDDEFINITIONS ?DEFAULTVALUELIST?]
  *     Add one or more fields to the attribute table. New fields of existing
- *     attribute records are populated with NULL values.
+ *     attribute records are populated with values from DEFAULTVALUELIST, if
+ *     given, otherwise NULL values are assigned.
  *   [$shp field index FIELDNAME]
  *     Get the index of a field with the given name.
  * 
@@ -1146,8 +1147,8 @@ int cmd_fields(
 
 	switch (actionIndex) {
 		case 0: /* add */
-			if (objc != 4) {
-				Tcl_WrongNumArgs(interp, 3, objv, "fieldDefinitions");
+			if (objc > 5) {
+				Tcl_WrongNumArgs(interp, 3, objv, "fieldDefinitions ?defaultValueList?");
 				return TCL_ERROR;
 			}
 			if (shapefile->readonly) {
@@ -1155,8 +1156,15 @@ int cmd_fields(
 				return TCL_ERROR;
 			}
 			/* sets interp result to index of last added field */
-			if (cmd_fields_add(interp, shapefile->dbf, 1 /* validate */, objv[3]) != TCL_OK) {
-				return TCL_ERROR;
+			if (objc == 4) {
+				if (cmd_fields_add(interp, shapefile->dbf, 1 /* validate */, objv[3], NULL, NULL) != TCL_OK) {
+					return TCL_ERROR;
+				}
+			} else if (objc == 5) {
+				/* if a default value list is provided, pass it along */
+				if (cmd_fields_add(interp, shapefile->dbf, 1 /* validate */, objv[3], objv[4], shapefile) != TCL_OK) {
+					return TCL_ERROR;
+				}
 			}
 			break;
 		case 1: /* count */
@@ -1222,9 +1230,10 @@ int cmd_fields(
 /*
  * cmd_fields_add
  * 
- * Implements the [$shp fields add FIELDDEFINITIONS] action of the [$shp fields]
- * command, used to add new fields to an existing attribute table. Also used by
- * the [shapefile] command to add initial fields to new attribute tables.
+ * Implements the [$shp fields add FIELDDEFINITIONS ?DEFAULTVALUELIST?] action
+ # of the [$shp fields] command, used to add new fields to an existing attribute
+ # table. Also used by the [shapefile] command to add initial fields to new
+ # attribute tables. Field values in DEFAULTVALUELIST used for existing records.
  * 
  * Note that this function takes a DBFHandle argument, instead of a ShapefilePtr
  * like most other util functions, because it may be used by [shapefile] before
@@ -1237,13 +1246,17 @@ int cmd_fields_add(
 		Tcl_Interp *interp,
 		DBFHandle dbf,
 		int validate,
-		Tcl_Obj *definitions) {
+		Tcl_Obj *definitions,
+		Tcl_Obj *attrList,
+		ShapefilePtr shapefile) {
 			
 	Tcl_Obj **definitionElements;
-	int definitionElementCount, i;
+	int definitionElementCount, i, field, fieldCount, attrCount;
 	const char *type, *name;
 	int width, precision;
 	int fieldId = 0;
+	Tcl_Obj *attr;
+	int record, recordCount;
 	
 	/* check field definition list formatting if not already validated */
 	if (validate && (cmd_fields_validate(interp, definitions, dbf) != TCL_OK)) {
@@ -1253,9 +1266,28 @@ int cmd_fields_add(
 	if (Tcl_ListObjGetElements(interp, definitions, &definitionElementCount, &definitionElements) != TCL_OK) {
 		return TCL_ERROR;
 	}
+	
+	fieldCount = definitionElementCount / 4;
 
-	/* add fields to the dbf */
-	for (i = 0; i < definitionElementCount; i += 4) {
+	/* validate default attribute value list, if given */
+	if (attrList != NULL && shapefile != NULL) {
+		
+		/* count how many values are in the attribute list */
+		if (Tcl_ListObjLength(interp, attrList, &attrCount) != TCL_OK) {
+			return TCL_ERROR;
+		}
+		
+		/* assert that there is one and one only value for each new field */
+		if (attrCount != fieldCount) {
+			Tcl_SetObjResult(interp, Tcl_ObjPrintf("default attribute value count (%d) does not match new field count (%d)", attrCount, fieldCount));
+			return TCL_ERROR;
+		}
+		
+		recordCount = DBFGetRecordCount(dbf);
+	}
+
+	/* add fields to the dbf. field variable indexes the new field/attrs. */
+	for (i = 0, field = 0; i < definitionElementCount; i += 4, field++) {
 		if (((type = Tcl_GetString(definitionElements[i])) == NULL)
 				|| ((name = Tcl_GetString(definitionElements[i + 1])) == NULL)
 				|| (Tcl_GetIntFromObj(interp, definitionElements[i + 2], &width) != TCL_OK)
@@ -1279,6 +1311,35 @@ int cmd_fields_add(
 			if ((fieldId = DBFAddField(dbf, name, FTString, width, 0)) == -1) {
 				Tcl_SetObjResult(interp, Tcl_ObjPrintf("failed to create string attribute field \"%s\"", name));
 				return TCL_ERROR;
+			}
+		}
+		else {
+			Tcl_SetObjResult(interp, Tcl_ObjPrintf("unsupported field type: \"%s\"", type));
+			return TCL_ERROR;
+		}
+		
+		/* write default value for this field to all existing records */
+		if (attrList != NULL && shapefile != NULL) {
+
+			/* arguably the validation should occur before the fields are added,
+			   so that if any of the default values are bogus, the function call
+			   fails without adding fields that lack intended default values. */
+			
+			/* get the default attribute value for this new field. */
+			if (Tcl_ListObjIndex(interp, attrList, field, &attr) != TCL_OK) {
+				return TCL_ERROR;
+			}
+			
+			/* validate that it is compatible with the new field definition */
+			if (cmd_attributes_validateField(interp, shapefile, fieldId, attr) != TCL_OK) {
+				return TCL_ERROR;
+			}
+			
+			/* write it to every record we have so far. */
+			for (record = 0; record < recordCount; record++) {
+				if (cmd_attributes_writeField(interp, shapefile, record, fieldId, 0, attr) != TCL_OK) {
+					return TCL_ERROR;
+				}
 			}
 		}
 	}

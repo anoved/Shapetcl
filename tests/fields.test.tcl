@@ -53,7 +53,7 @@ test fields-2.0 {
 } -setup {
 	set shp [shapefile sample/xy/point readonly]
 } -body {
-	$shp fields add foo bar
+	$shp fields add foo bar soom
 } -cleanup {
 	$shp close
 } -returnCodes {
@@ -294,6 +294,82 @@ test fields-2.9 {
 	$shp close
 	file delete {*}[glob -nocomplain tmp/point.*]
 } -result {}
+
+test fields-2.10 {
+# [fields add] with too many default values
+} -setup {
+	set shp [shapefile tmp/foo point {integer Id 10 0}]
+} -body {
+	$shp fields add {string Name 32 0} {foo bar}
+} -cleanup {
+	$shp close
+	file delete {*}[glob tmp/foo.*]
+} -returnCodes {
+	error
+} -match glob -result "default attribute value count (*) does not match new field count (*)"
+
+test fields-2.11 {
+# [fields add] with too few default values
+} -setup {
+	set shp [shapefile tmp/foo point {integer Id 10 0}]
+} -body {
+	$shp fields add {string Name 32 0} {}
+} -cleanup {
+	$shp close
+	file delete {*}[glob tmp/foo.*]
+} -returnCodes {
+	error
+} -match glob -result "default attribute value count (*) does not match new field count (*)"
+
+test fields-2.12 {
+# [fields add] with default value of wrong type for new field
+} -setup {
+	set shp [shapefile tmp/foo point {integer Id 10 0}]
+} -body {
+	$shp fields add {integer Value 10 0} {foo}
+} -cleanup {
+	$shp close
+	file delete {*}[glob tmp/foo.*]
+} -returnCodes {
+	error
+} -match glob -result "expected integer but got *"
+
+test fields-2.13 {
+# [fields add] with default value but no existing records
+} -setup {
+	set shp [shapefile tmp/foo point {integer Id 10 0}]
+} -body {
+	$shp fields add {string Name 32 0} {foo}
+} -cleanup {
+	$shp close
+	file delete {*}[glob tmp/foo.*]
+} -result {1}
+
+test fields-2.14 {
+# [fields add] with default value, added to existing field
+} -setup {
+	set shp [shapefile tmp/foo point {integer Id 10 0}]
+	set recid [$shp attributes write {0}]
+} -body {
+	set newid [$shp fields add {string Name 32 0} {foo}]
+	$shp attributes read $recid $newid
+} -cleanup {
+	$shp close
+	file delete {*}[glob tmp/foo.*]
+} -result {foo}
+
+test fields-2.15 {
+# [fields add] with multiple default values
+} -setup {
+	set shp [shapefile tmp/foo point {integer Id 10 0}]
+	set recid [$shp attributes write {0}]
+} -body {
+	$shp fields add {double Measure 16 6 string Name 32 0} {123.4 foo}
+	$shp attributes read $recid
+} -cleanup {
+	$shp close
+	file delete {*}[glob tmp/foo.*]
+} -result {0 123.4 foo}
 
 #
 # [fields count] action

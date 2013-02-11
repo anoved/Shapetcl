@@ -104,11 +104,13 @@ Or, to process each field in turn:
 [example {foreach {type name width precision} [$shp fields list] {
     # do something with properties of this field...
 }}]
-[call [arg shapefile] [method fields] [method add] [arg fields]]
-Add fields to [arg shapefile]'s attribute table. The [arg fields] argument must contain a [sectref {Field Definition Lists} {Field Definition List}] describing one or more fields. New fields of existing records are initialized to null values. Returns the index of the last field added.
+[call [arg shapefile] [method fields] [method add] [arg fields] [opt [arg defaultValues]]]
+Add fields to [arg shapefile]'s attribute table. The [arg fields] argument must contain a [sectref {Field Definition Lists} {Field Definition List}] describing one or more fields. New fields of existing records are initialized to null, unless [arg defaultValues] are given. If specified, the [arg defaultValues] list must contain one value for each new field. Returns the index of the last field added.
 [para]
 Add a single string field named [const Title] with:
 [example {$shp fields add {string Title 100 0}}]
+Alternatively, add a [const Title] field and initialize the title of all existing records to "Untitled":
+[example {$shp fields add {string Title 100 0} {Untitled}}]
 Add a pair of floating-point numeric fields with:
 [example {$shp fields add {double Lat 19 9 double Lon 19 9}}]
 [list_end]

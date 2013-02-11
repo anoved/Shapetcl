@@ -31,7 +31,7 @@ shapefile fields subcommand
 shapefile fields count
 shapefile fields index name
 shapefile fields list ?index?
-shapefile fields add fields
+shapefile fields add fields ?defaultValues?
 shapefile coordinates subcommand
 shapefile coordinates read ?index?
 shapefile coordinates write ?index? coordinates
@@ -224,16 +224,23 @@ Shapefile Methods
 |     # do something with properties of this field...
 | }
 
-        shapefile fields add fields
+        shapefile fields add fields ?defaultValues?
 
             Add fields to shapefile's attribute table. The fields argument must
             contain a -> Field Definition List describing one or more fields.
-            New fields of existing records are initialized to null values.
-            Returns the index of the last field added.
+            New fields of existing records are initialized to null, unless
+            defaultValues are given. If specified, the defaultValues list must
+            contain one value for each new field. Returns the index of the last
+            field added.
 
             Add a single string field named *Title* with:
 
 | $shp fields add {string Title 100 0}
+
+            Alternatively, add a *Title* field and initialize the title of all
+            existing records to "Untitled":
+
+| $shp fields add {string Title 100 0} {Untitled}
 
             Add a pair of floating-point numeric fields with:
 
