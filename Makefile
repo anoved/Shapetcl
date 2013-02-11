@@ -34,6 +34,10 @@ clean:
 test: shapetcl.so
 	$(TCL) tests/all.tcl
 
+# analyze: run static analysis tests
+analyze: shapetcl.so
+	$(TCL) tests/static.test.tcl -constraint static
+
 # doc: Convert documentation into various formats.
 doc:
 	cd doc && $(TCL) FormatDocs.tcl
