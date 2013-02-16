@@ -83,7 +83,6 @@ Attribute values and X/Y coordinates are preserved.
 
 This script creates a copy of `INFILE` at `OUTFILE`, converted to `multipoint` geometry type. `OUTFILE` will be of the same dimension as `INFILE` (eg M and/or Z coordinates are preserved). All vertices of each `INFILE` feature are simply aggregated into the point set of the corresponding feature in `OUTFILE`. The exception is the final vertex of polygon parts, which is omitted since it is presumed to be a duplicate of the first.
 
-
 ## weather.tcl
 
 	weather.tcl LAT LON RADIUS OUTFILE
@@ -99,3 +98,18 @@ This script retrieves current weather data from [Open Weather Map](http://openwe
 7. `winddeg`: the [wind direction](https://en.wikipedia.org/wiki/Wind_direction) in degrees
 8. `clouds`: cloud cover expressed as a percentage
 
+See the `output/weather` shapefile for a sample.
+
+## ebird.tcl
+
+	ebird.tcl LAT LON RADIUS OUTFILE
+
+This script retrieves recent bird sightings from the [eBird](http://ebird.org/content/ebird/) [API](https://confluence.cornell.edu/display/CLOISAPI/eBird-1.1-RecentNearbyObservations). The `OUTFILE` output shapefile is populated with points representing bird sightings from the last 14 days within `RADIUS` kilometers of the specified `LAT`/`LON` location. The attribute table is populated with the following fields:
+
+1. `id`: a sequential ID number
+2. `comname`: the common name of the observed bird
+3. `sciname`: the scientific name of the observed bird
+4. `locname`: name of the observation location (possibly informal)
+5. `obsdate`: date of the observation in YYYY-MM-DD [hh:mm] format
+
+See the `output/ebird` shapefile for a sample.
