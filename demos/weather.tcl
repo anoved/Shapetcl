@@ -45,7 +45,7 @@ if {![string equal [::http::status $response] "ok"]} {
 set result [::json::json2dict [::http::data $response]]
 set count [dict get $result "cnt"]
 if {$count == 0} {
-	puts stderr [format "No cities found within %s km of %s/%s" [dict get $opts radius] [dict get $opts lat] [dict get $opts lon]]
+	puts stderr [format "No cities found within %s km of %s/%s" $radius $lat $lon]
 	exit 1
 }
 
