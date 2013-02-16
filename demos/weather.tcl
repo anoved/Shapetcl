@@ -51,7 +51,7 @@ if {$count == 0} {
 
 
 
-set shp [::shapetcl::shapefile $outfile point {
+if {[catch {::shapetcl::shapefile $outfile point {
 		integer id 5 0
 		string city 32 0
 		double distance 19 6
@@ -60,7 +60,10 @@ set shp [::shapetcl::shapefile $outfile point {
 		double windspeed 19 6
 		double winddeg 19 6
 		double clouds 19 6
-}]
+}} shp]} {
+	puts stderr $shp
+	exit 1
+}
 
 
 
