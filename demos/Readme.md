@@ -63,7 +63,7 @@ This script lists the coordinate geometry of each feature in `SHAPEFILE`. It fir
 
 This script displays the `SHAPEFILE` geometry in a Tk canvas. Vertex coordinates are assumed to be degrees latitude/longitude in the range ±90/±180 and are scaled via a crude cylindrical projection to fit the initial window dimensions. Features are highlighted in yellow when pointed at with the mouse. Clicking a feature prints its attributes to the terminal. 
 
-[![tkdump screenshot](https://raw.github.com/anoved/Shapetcl/master/demos/tkdump-screenshot.png)](https://github.com/anoved/Shapetcl/blob/master/demos/tkdump-screenshot.png)
+[![tkdump screenshot](https://raw.github.com/anoved/Shapetcl/master/demos/output/tkdump-screenshot.png)](https://github.com/anoved/Shapetcl/blob/master/demos/output/tkdump-screenshot.png)
 
 Note that multi-part polygons are not necessarily rendered correctly as each part is simply drawn as another polygon, whereas some may actually be "holes" instead of "islands" depending on vertex order relative to the outer ring (conventionally, the first part).
 
@@ -79,6 +79,23 @@ Attribute values and X/Y coordinates are preserved.
 
 ## multipointer.tcl
 
-	multipointer INFILE OUTFILE
+	multipointer.tcl INFILE OUTFILE
 
 This script creates a copy of `INFILE` at `OUTFILE`, converted to `multipoint` geometry type. `OUTFILE` will be of the same dimension as `INFILE` (eg M and/or Z coordinates are preserved). All vertices of each `INFILE` feature are simply aggregated into the point set of the corresponding feature in `OUTFILE`. The exception is the final vertex of polygon parts, which is omitted since it is presumed to be a duplicate of the first.
+
+
+## weather.tcl
+
+	weather.tcl LAT LON RADIUS OUTFILE
+
+This script retrieves current weather data from [Open Weather Map](http://openweathermap.org/). The `OUTFILE` output is a point shapefile containing points for each city known to Open Weather Map within `RADIUS` kilometers of the specified `LAT`/`LON` location. The attribute table is populated with the following fields (a subset of the data provided by Open Weather Map's [JSON API](http://openweathermap.org/wiki/API/2.1/JSON_API)):
+
+1. `id`: a sequential ID number
+2. `city`: the name of the city
+3. `distance`: the distance in kilometers from `city` to the `LAT`/`LON` point
+4. `time`: the [Unix time](https://en.wikipedia.org/wiki/Unix_time) at which the weather data was received
+5. `temp`: the temperature in degrees celsius
+6. `windspeed`: the wind speed in meters per second
+7. `winddeg`: the [wind direction](https://en.wikipedia.org/wiki/Wind_direction) in degrees
+8. `clouds`: cloud cover expressed as a percentage
+
