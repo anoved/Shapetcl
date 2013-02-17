@@ -196,7 +196,7 @@ int Shapetcl_Init(Tcl_Interp *interp) {
 	Tcl_Namespace *ns;
 	
 	if (objc < 2 || objc > 4) {
-		Tcl_WrongNumArgs(interp, 1, objv, "path ?mode?|?type fieldDefintions?");
+		Tcl_WrongNumArgs(interp, 1, objv, "path ?mode?|?type fieldDefinitions?");
 		return TCL_ERROR;
 	}
 
