@@ -6,7 +6,7 @@ Shapetcl is a Tcl extension that provides read/write access to shapefiles, a vec
 Documentation
 -------------
 
-Please consult the [documentation](https://github.com/anoved/Shapetcl/blob/master/doc/shapetcl.txt) for installation notes, API reference, limitations, and other information.
+Please consult the [documentation](https://github.com/anoved/Shapetcl/blob/master/doc/shapetcl.txt) for installation notes, API reference, limitations, and other information. ([HTML version here](https://github.com/anoved/Shapetcl/wiki/Documentation); may not be up-to-date.)
 
 License
 -------
