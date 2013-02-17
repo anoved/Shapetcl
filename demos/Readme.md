@@ -126,7 +126,11 @@ This script queries MapQuest's [Open Direction Service](http://open.mapquestapi.
 4. `time`: estimated travel time of segment in HH:MM:SS format
 5. `narrative`: instructive driving description of segment
 
-See the `output/directions` shapefile for a sample generated with:
+The `output/directions` shapefile was generated with:
 
 	directions.tcl "Syracuse, NY" "Rochester, NY" directions
+
+Here is a portion of the shapefile displayed, illustrating the format of the attribute table:
+
+[![directions screenshot](https://raw.github.com/anoved/Shapetcl/master/demos/output/directions-screenshot.png)](https://github.com/anoved/Shapetcl/blob/master/demos/output/directions-screenshot.png)
 
