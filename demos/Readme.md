@@ -113,3 +113,20 @@ This script retrieves recent bird sightings from the [eBird](http://ebird.org/co
 5. `obsdate`: date of the observation in YYYY-MM-DD [hh:mm] format
 
 See the `output/ebird` shapefile for a sample.
+
+## directions.tcl
+
+	directions.tcl STARTLOCATION ENDLOCATION OUTFILE
+
+This script queries MapQuest's [Open Direction Service](http://open.mapquestapi.com/directions/) to retrieve driving directions from `STARTLOCATION` to `ENDLOCATION`. Locations may be specified in [a variety of formats](http://open.mapquestapi.com/common/locations.html). Each step of the route is written as a line segment to `OUTFILE`. Line segments have the following attributes:
+
+1. `id`: a sequential ID number
+2. `distance`: the length of the segment in miles
+3. `direction`: general cardinal or ordinal direction
+4. `time`: estimated travel time of segment in HH:MM:SS format
+5. `narrative`: instructive driving description of segment
+
+See the `output/directions` shapefile for a sample generated with:
+
+	directions.tcl "Syracuse, NY" "Rochester, NY" directions
+
