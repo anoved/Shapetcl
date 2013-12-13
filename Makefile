@@ -1,6 +1,6 @@
 # Redefine these environment variables as needed to select appropriate Tcl.
 ifndef TCL_INCLUDE_DIR
-TCL_INCLUDE_DIR = /usr/include
+TCL_INCLUDE_DIR = /usr/include/tcl8.5
 endif
 ifndef TCL_LIBRARY_DIR
 TCL_LIBRARY_DIR = /usr/lib
@@ -14,7 +14,7 @@ CC = /usr/bin/gcc
 TCL = /usr/bin/tclsh
 CFLAGS = -g -fPIC -Wall -Werror -DUSE_TCL_STUBS
 
-.PHONY: all clean test doc
+.PHONY: all install clean test doc
 
 all: shapetcl.so
 
@@ -25,6 +25,11 @@ shapetcl.o: shapetcl.c
 # shapetcl.so: Link the Shapetcl and Shapelib object code into a shared library.
 shapetcl.so: shapetcl.o $(SHAPELIB_OBJS)
 	$(CC) -o shapetcl.so shapetcl.o $(SHAPELIB_OBJS) -shared -L$(TCL_LIBRARY_DIR) -ltclstub8.5
+
+# install: Put the shared library somewhere in the auto_path (possibly system/sudo dependent)
+install: shapetcl.so
+	mkdir -p /usr/local/lib/tcltk
+	cp pkgIndex.tcl shapetcl.so /usr/local/lib/tcltk
 
 # clean: Remove shared library and compiled object files.
 clean:
