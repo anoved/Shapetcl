@@ -1137,7 +1137,7 @@ int cmd_fields(
 	};
 	
 	if (objc < 3) {
-		Tcl_WrongNumArgs(interp, 2, objv, "add|count|list ?args?");
+		Tcl_WrongNumArgs(interp, 2, objv, "action ?args?");
 		return TCL_ERROR;
 	}
 	if (Tcl_GetIndexFromObj(interp, objv[2], actionNames, "action", TCL_EXACT, &actionIndex) != TCL_OK) {
