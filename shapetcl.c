@@ -133,6 +133,7 @@ int cmd_attributes_validateField(Tcl_Interp *interp, ShapefilePtr shapefile, int
 int cmd_attributes_readAll(Tcl_Interp *interp, ShapefilePtr shapefile);
 int cmd_attributes_read(Tcl_Interp *interp, ShapefilePtr shapefile, int recordId);
 int cmd_attributes_readField(Tcl_Interp *interp, ShapefilePtr shapefile, int recordId, int fieldId);
+int cmd_attributes_search(Tcl_Interp *interp, ShapefilePtr shapefile, int fieldId, Tcl_Obj *attrValue);
 
 int cmd_write(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]);
 
@@ -2242,11 +2243,14 @@ int cmd_coordinates_read(
  *   [$shp attributes write VALUELIST]
  *     Set the value of all fields in a new record. The record is appended to
  *     the attribute table. A new feature with NULL geometry is also created.
+ *   [$shp attributes search FIELD VALUE]
+ *     Return record indices of features that match the given field value.
  * 
  * Result:
  *   Read actions return attribute data in value (X), value list ({X Y Z}), or
  *   value list list ({{X Y Z} {A B C} {1 2 3}}) format, respectively.
  *   Write actions return the index of the written attribute record.
+ *   The search action returns a list of record indices.
  */
 int cmd_attributes(
 		ClientData clientData,
@@ -2260,6 +2264,7 @@ int cmd_attributes(
 	static const char *actionNames[] = {
 			"read",
 			"write",
+			"search",
 			NULL
 	};
 	
@@ -2367,6 +2372,25 @@ int cmd_attributes(
 			}
 		} else {
 			Tcl_WrongNumArgs(interp, 3, objv, "?recordIndex ?fieldIndex?? attributes");
+			return TCL_ERROR;
+		}
+	} else if (actionIndex == 2) {
+		/* search for attribute value */
+		
+		if (objc == 5) {
+			
+			int fieldId;
+			
+			if (Tcl_GetIntFromObj(interp, objv[3], &fieldId) != TCL_OK) {
+				return TCL_ERROR;
+			}
+			
+			if (cmd_attributes_search(interp, shapefile, fieldId, objv[4]) != TCL_OK) {
+				return TCL_ERROR;
+			}
+			
+		} else {
+			Tcl_WrongNumArgs(interp, 3, objv, "FIELD VALUE");
 			return TCL_ERROR;
 		}
 	}
@@ -2880,6 +2904,56 @@ int cmd_attributes_readField(
 	}
 	
 	return TCL_OK;	
+}
+
+/*
+ * cmd_attributes_search
+ * 
+ * Implements the [$shp attributes search FIELD VALUE] action of the [$shp
+ * attributes] command, used to determine the record index of features that
+ * match the given attribute field value. Matching is currently performed by
+ * raw string value comparison. Matches must be exact.
+ * 
+ * Result:
+ *   List of feature indices that match the attribute search query.
+ *   Empty list if no matches.
+ */
+int cmd_attributes_search(
+		Tcl_Interp *interp,
+		ShapefilePtr shapefile,
+		int fieldId,
+		Tcl_Obj *attrValue) {
+	
+	int dbfCount, recordId, fieldCount;
+	const char *searchValue, *fieldValue;
+	Tcl_Obj *hitList;
+	
+	fieldCount = DBFGetFieldCount(shapefile->dbf);
+	if (fieldId < 0 || fieldId >= fieldCount) {
+		Tcl_SetObjResult(interp, Tcl_ObjPrintf("invalid field index %d", fieldId));
+		return TCL_ERROR;
+	}
+	
+	if ((searchValue = Tcl_GetString(attrValue)) == NULL) {
+		return TCL_ERROR;
+	}
+	
+	hitList = Tcl_NewListObj(0, NULL);
+	dbfCount = DBFGetRecordCount(shapefile->dbf);
+	
+	for (recordId = 0; recordId < dbfCount; recordId++) {
+		
+		fieldValue = DBFReadStringAttribute(shapefile->dbf, recordId, fieldId);
+		
+		if (strcmp(fieldValue, searchValue) == 0) {
+			if (Tcl_ListObjAppendElement(interp, hitList, Tcl_NewIntObj(recordId)) != TCL_OK) {
+				return TCL_ERROR;
+			}
+		}
+	}
+	
+	Tcl_SetObjResult(interp, hitList);
+	return TCL_OK;
 }
 
 /*
