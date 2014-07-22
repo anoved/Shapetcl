@@ -164,8 +164,9 @@
 <li><a href="#25"><i class="arg">shapefile</i> <b class="method">attributes</b> <b class="method">read</b> <i class="arg">index</i> <i class="arg">field</i></a></li>
 <li><a href="#26"><i class="arg">shapefile</i> <b class="method">attributes</b> <b class="method">write</b> <span class="opt">?<i class="arg">index</i>?</span> <i class="arg">values</i></a></li>
 <li><a href="#27"><i class="arg">shapefile</i> <b class="method">attributes</b> <b class="method">write</b> <i class="arg">index</i> <i class="arg">field</i> <i class="arg">value</i></a></li>
-<li><a href="#28"><i class="arg">shapefile</i> <b class="method">write</b> <i class="arg">coordinates</i> <i class="arg">values</i></a></li>
-<li><a href="#29"><i class="arg">shapefile</i> <b class="method">close</b></a></li>
+<li><a href="#28"><i class="arg">shapefile</i> <b class="method">attributes</b> <b class="method">search</b> <i class="arg">field</i> <i class="arg">value</i></a></li>
+<li><a href="#29"><i class="arg">shapefile</i> <b class="method">write</b> <i class="arg">coordinates</i> <i class="arg">values</i></a></li>
+<li><a href="#30"><i class="arg">shapefile</i> <b class="method">close</b></a></li>
 </ul>
 </div>
 </div>
@@ -305,13 +306,15 @@ $shp attributes write $index {McMurdo Station}</pre>
 <dd><p>If <i class="arg">index</i> is given, overwrites the specified attribute record. If no <i class="arg">index</i> argument is given, appends a new attribute record and adds an associated null feature. (Use the <i class="arg">shapefile</i> <b class="method">write</b> method to append a new entity with coordinate data and attribute data at the same time.) The <i class="arg">values</i> argument may be an <span class="sectref"><a href="#subsection8">Attribute Record</a></span> or an empty list <b class="const">{}</b>, in which case the attribute record is populated with null values. Returns the index of the written record.</p></dd>
 <dt><a name="27"><i class="arg">shapefile</i> <b class="method">attributes</b> <b class="method">write</b> <i class="arg">index</i> <i class="arg">field</i> <i class="arg">value</i></a></dt>
 <dd><p>Writes a single attribute <i class="arg">value</i> to field <i class="arg">field</i> of record <i class="arg">index</i>. Returns <i class="arg">index</i>.</p></dd>
+<dt><a name="28"><i class="arg">shapefile</i> <b class="method">attributes</b> <b class="method">search</b> <i class="arg">field</i> <i class="arg">value</i></a></dt>
+<dd><p>Returns a list of indices of records matching the given attribute field value. Useful for working with shapefiles that do not have sequential zero-based ID attributes.</p></dd>
 </dl></dd>
-<dt><a name="28"><i class="arg">shapefile</i> <b class="method">write</b> <i class="arg">coordinates</i> <i class="arg">values</i></a></dt>
+<dt><a name="29"><i class="arg">shapefile</i> <b class="method">write</b> <i class="arg">coordinates</i> <i class="arg">values</i></a></dt>
 <dd><p>Appends a new entity to <i class="arg">shapefile</i> and returns the index of the new entity. The <i class="arg">coordinates</i> argument is interpreted like the <i class="arg">coordinates</i> argument to <b class="method">coordinates write</b> and the <i class="arg">values</i> argument is interpreted like the <i class="arg">values</i> argument to <b class="method">attributes write</b>.</p>
 <p>Here an entity is added to a point shapefile with two attribute fields, an integer and a string:</p>
 <pre class="example">$shp write {{-0.001475 51.477812}} {66 {Royal Observatory Greenwich}}</pre>
 </dd>
-<dt><a name="29"><i class="arg">shapefile</i> <b class="method">close</b></a></dt>
+<dt><a name="30"><i class="arg">shapefile</i> <b class="method">close</b></a></dt>
 <dd><p>Close the shapefile. Changes are not necessarily written to shapefiles until closed. (Open shapefiles are automatically closed when the interpreter exits, but it is a best practice to close them explicitly.)</p>
 <p>Closing a shapefile deletes the associated <i class="arg">shapefile</i> command.</p></dd>
 </dl>

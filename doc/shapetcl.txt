@@ -40,6 +40,7 @@ shapefile attributes read ?index?
 shapefile attributes read index field
 shapefile attributes write ?index? values
 shapefile attributes write index field value
+shapefile attributes search field value
 shapefile write coordinates values
 shapefile close
 
@@ -322,6 +323,12 @@ Shapefile Methods
 
             Writes a single attribute value to field field of record index.
             Returns index.
+
+        shapefile attributes search field value
+
+            Returns a list of indices of records matching the given attribute
+            field value. Useful for working with shapefiles that do not have
+            sequential zero-based ID attributes.
 
     shapefile write coordinates values
 

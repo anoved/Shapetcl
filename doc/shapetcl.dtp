@@ -151,6 +151,8 @@ Get the value of a field named [const ID] from the first record:
 If [arg index] is given, overwrites the specified attribute record. If no [arg index] argument is given, appends a new attribute record and adds an associated null feature. (Use the [arg shapefile] [method write] method to append a new entity with coordinate data and attribute data at the same time.) The [arg values] argument may be an [sectref {Attribute Records} {Attribute Record}] or an empty list [const {{}}], in which case the attribute record is populated with null values. Returns the index of the written record.
 [call [arg shapefile] [method attributes] [method write] [arg index] [arg field] [arg value]]
 Writes a single attribute [arg value] to field [arg field] of record [arg index]. Returns [arg index].
+[call [arg shapefile] [method attributes] [method search] [arg field] [arg value]]
+Returns a list of indices of records matching the given attribute field value. Useful for working with shapefiles that do not have sequential zero-based ID attributes.
 [list_end]
 
 [call [arg shapefile] [method write] [arg coordinates] [arg values]]
